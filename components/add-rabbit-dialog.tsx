@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Rabbit } from "lucide-react"
-import { saveToStorage } from "@/lib/storage"
-import { mockRabbits } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 import { generateRabbitId } from "@/lib/utils"
+import axios from "axios"
+import * as utils from "@/lib/utils"
 
 interface AddRabbitDialogProps {
   hutchId: string
@@ -19,6 +19,7 @@ interface AddRabbitDialogProps {
 }
 
 export default function AddRabbitDialog({ hutchId, onClose }: AddRabbitDialogProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     rabbitId: generateRabbitId(),
     gender: "",
@@ -66,43 +67,60 @@ export default function AddRabbitDialog({ hutchId, onClose }: AddRabbitDialogPro
     "Black and white spotted",
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const saveToStorage = (farmId: string, rabbits: any[]) => {
+    try {
+      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(rabbits))
+    } catch (error) {
+      console.error("Error saving to storage:", error)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user?.farm_id) {
+      alert("Farm ID is missing. Please log in again.")
+      return
+    }
 
     const newRabbit = {
-      id: Date.now().toString(),
-      rabbitId: formData.rabbitId,
-      name: formData.rabbitId, // Using ID as name for large scale
+      rabbit_id: formData.rabbitId,
+      farm_id: user.farm_id,
+      name: formData.rabbitId,
       gender: formData.gender as "male" | "female",
       breed: formData.breed,
       color: formData.color,
-      birthDate: formData.birthDate,
+      birth_date: formData.birthDate,
       weight: Number.parseFloat(formData.weight) || 0,
-      hutchId: hutchId,
-      parentMale: formData.parentMale || undefined,
-      parentFemale: formData.parentFemale || undefined,
-      isPregnant: false,
-      totalLitters: 0,
-      totalKits: 0,
-      healthRecords: [],
-      feedingSchedule: {
-        dailyAmount: formData.gender === "male" ? "170g" : "150g",
-        feedType: "Pellets + Hay",
-        times: ["6:00 AM", "6:00 PM"],
-        lastFed: new Date().toISOString(),
-      },
-      createdAt: new Date().toISOString(),
+      hutch_id: hutchId,
+      parent_male: formData.parentMale || undefined,
+      parent_female: formData.parentFemale || undefined,
+      is_pregnant: false,
+      status: "active",
+      // history: [
+      //   {
+      //     hutch_id: hutchId,
+      //     assigned_at: new Date().toISOString(),
+      //   },
+      // ],
     }
 
-    // Save to storage
-    const updatedRabbits = [...mockRabbits, newRabbit]
-    saveToStorage("rabbits", updatedRabbits)
-
-    console.log("New rabbit added:", newRabbit)
-    onClose()
-
-    // Refresh to show new data
-    window.location.reload()
+    try {
+      const response = await axios.post(`${utils.apiUrl}/rabbits`, newRabbit)
+      if (response.data.success) {
+        console.log("New rabbit added:", response.data.data)
+        // Update local storage
+        const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`)
+        const existingRabbits = cachedRabbits ? JSON.parse(cachedRabbits) : []
+        const updatedRabbits = [...existingRabbits, response.data.data]
+        saveToStorage(user.farm_id, updatedRabbits)
+        onClose()
+      } else {
+        throw new Error("Failed to create rabbit")
+      }
+    } catch (error: any) {
+      console.error("Error creating rabbit:", error)
+      alert(error.response?.data?.message || "Error creating rabbit. Please try again.")
+    }
   }
 
   return (

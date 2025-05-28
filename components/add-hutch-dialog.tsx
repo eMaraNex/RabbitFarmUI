@@ -1,18 +1,19 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, AlertTriangle } from "lucide-react"
-import { saveToStorage } from "@/lib/storage"
-import { mockRows, mockHutches } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
+import axios from "axios"
+import * as utils from "@/lib/utils"
 
 export default function AddHutchDialog() {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     rowName: "",
@@ -22,18 +23,77 @@ export default function AddHutchDialog() {
     material: "",
     features: "",
   })
+  const [rows, setRows] = useState<any[]>([])
+  const [hutches, setHutches] = useState<any[]>([])
+
+  const loadFromStorage = (farmId: string) => {
+    try {
+      const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`)
+      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`)
+      return {
+        rows: cachedRows ? JSON.parse(cachedRows) : [],
+        hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
+      }
+    } catch (error) {
+      console.error("Error loading from storage:", error)
+      return { rows: [], hutches: [] }
+    }
+  }
+
+  const saveToStorage = (farmId: string, data: { rows: any[], hutches: any[] }) => {
+    try {
+      localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows))
+      localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches))
+    } catch (error) {
+      console.error("Error saving to storage:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (open && user?.farm_id) {
+      // Check local storage first
+      const cachedData = loadFromStorage(user.farm_id)
+      if (cachedData.rows.length || cachedData.hutches.length) {
+        console.log("Using cached rows and hutches")
+        setRows(cachedData.rows)
+        setHutches(cachedData.hutches)
+      }
+
+      // Fetch fresh data from API
+      const fetchData = async () => {
+        try {
+          const [rowsResponse, hutchesResponse] = await Promise.all([
+            axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
+            axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`),
+          ])
+          const newRows = rowsResponse.data.data || []
+          const newHutches = hutchesResponse.data.data || []
+          setRows(newRows)
+          setHutches(newHutches)
+          saveToStorage(user.farm_id ?? '', { rows: newRows, hutches: newHutches })
+        } catch (error) {
+          console.error("Error fetching data:", error)
+          if (cachedData.rows.length || cachedData.hutches.length) {
+            setRows(cachedData.rows)
+            setHutches(cachedData.hutches)
+          }
+        }
+      }
+      fetchData()
+    }
+  }, [open, user])
 
   const getRowHutchCount = (rowName: string) => {
-    return mockHutches.filter((hutch) => hutch.rowName === rowName).length
+    return hutches.filter((hutch) => hutch.row_name === rowName).length
   }
 
   const getAvailableRows = () => {
-    return mockRows.filter((row) => getRowHutchCount(row.name) < 18)
+    return rows.filter((row) => getRowHutchCount(row.name) < 18)
   }
 
   const getNextAvailablePosition = (rowName: string, level: string) => {
-    const existingPositions = mockHutches
-      .filter((hutch) => hutch.rowName === rowName && hutch.level === level)
+    const existingPositions = hutches
+      .filter((hutch) => hutch.row_name === rowName && hutch.level === level)
       .map((hutch) => hutch.position)
 
     for (let i = 1; i <= 6; i++) {
@@ -44,11 +104,12 @@ export default function AddHutchDialog() {
     return ""
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    const selectedRow = mockRows.find((row) => row.name === formData.rowName)
-    if (!selectedRow) return
+    if (!user?.farm_id) {
+      alert("Farm ID is missing. Please log in again.")
+      return
+    }
 
     const currentHutchCount = getRowHutchCount(formData.rowName)
     if (currentHutchCount >= 18) {
@@ -58,7 +119,8 @@ export default function AddHutchDialog() {
 
     const newHutch = {
       id: `${formData.rowName}-${formData.level}${formData.position}`,
-      rowName: formData.rowName,
+      farm_id: user.farm_id,
+      row_name: formData.rowName,
       level: formData.level,
       position: Number.parseInt(formData.position),
       size: formData.size,
@@ -67,28 +129,33 @@ export default function AddHutchDialog() {
         .split(",")
         .map((f) => f.trim())
         .filter((f) => f),
-      isOccupied: false,
-      createdAt: new Date().toISOString(),
+      is_occupied: false,
     }
 
-    // Save to storage
-    const updatedHutches = [...mockHutches, newHutch]
-    saveToStorage("hutches", updatedHutches)
-
-    console.log("New hutch created:", newHutch)
-
-    setOpen(false)
-    setFormData({
-      rowName: "",
-      level: "",
-      position: "",
-      size: "",
-      material: "",
-      features: "",
-    })
-
-    // Refresh the page to show new data
-    window.location.reload()
+    try {
+      const response = await axios.post(`${utils.apiUrl}/hutches`, newHutch)
+      if (response.data.success) {
+        console.log("New hutch created:", response.data.data)
+        // Update local storage
+        const updatedHutches = [...hutches, response.data.data]
+        saveToStorage(user.farm_id, { rows, hutches: updatedHutches })
+        setHutches(updatedHutches)
+        setOpen(false)
+        setFormData({
+          rowName: "",
+          level: "",
+          position: "",
+          size: "",
+          material: "",
+          features: "",
+        })
+      } else {
+        throw new Error("Failed to create hutch")
+      }
+    } catch (error: any) {
+      console.error("Error creating hutch:", error)
+      alert(error.response?.data?.message || "Error creating hutch. Please try again.")
+    }
   }
 
   const availableRows = getAvailableRows()
@@ -179,8 +246,8 @@ export default function AddHutchDialog() {
                       const isOccupied =
                         formData.rowName &&
                         formData.level &&
-                        mockHutches.some(
-                          (h) => h.rowName === formData.rowName && h.level === formData.level && h.position === num,
+                        hutches.some(
+                          (h) => h.row_name === formData.rowName && h.level === formData.level && h.position === num
                         )
                       return (
                         <SelectItem key={num} value={num.toString()} disabled={isOccupied}>

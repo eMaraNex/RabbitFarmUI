@@ -1,60 +1,57 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import ThemeToggle from "@/components/theme-toggle"
+import type React from "react";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     try {
-      const success = await login(formData.email, formData.password)
+      const success = await login(formData.email, formData.password);
       if (!success) {
-        setError("Invalid email or password")
+        setError("Invalid email or password");
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
+      setError("Login failed. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleGoogleLogin = () => {
-    setIsLoading(true)
-    // Simulate Google SSO - in real app, this would redirect to Google OAuth
-    setTimeout(() => {
-      login("admin@org.com", "admin@2025")
-      setIsLoading(false)
-    }, 1500)
-  }
-
-  const handleDemoLogin = () => {
-    setFormData({
-      email: "admin@org.com",
-      password: "admin@2025",
-    })
-  }
-
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Simulate Google SSO
+      const success = await login("admin@org.com", "admin@2025");
+      if (!success) {
+        setError("Google login failed");
+      }
+    } catch (err) {
+      setError("Google login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       {/* Theme Toggle */}
@@ -179,30 +176,6 @@ export default function LoginPage() {
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Demo Credentials</h4>
-              <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-                Use these credentials to access the system:
-              </p>
-              <div className="space-y-1 text-sm text-blue-700 dark:text-blue-400">
-                <p>
-                  <strong>Email:</strong> admin@org.com
-                </p>
-                <p>
-                  <strong>Password:</strong> admin@2025
-                </p>
-              </div>
-              <Button
-                onClick={handleDemoLogin}
-                variant="outline"
-                size="sm"
-                className="mt-3 w-full border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-              >
-                Fill Demo Credentials
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
@@ -212,5 +185,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

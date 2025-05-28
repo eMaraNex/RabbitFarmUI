@@ -113,13 +113,12 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                       return (
                         <Card
                           key={hutchId}
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
-                            selectedHutch === hutchId
-                              ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
-                              : isOccupied
-                                ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
-                                : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
-                          }`}
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${selectedHutch === hutchId
+                            ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
+                            : isOccupied
+                              ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
+                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
+                            }`}
                           onClick={() => handleHutchClick(hutchId)}
                         >
                           <CardContent className="p-2 sm:p-3 text-center">
@@ -164,13 +163,12 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                       return (
                         <Card
                           key={hutchId}
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
-                            selectedHutch === hutchId
-                              ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
-                              : isOccupied
-                                ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
-                                : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
-                          }`}
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${selectedHutch === hutchId
+                            ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
+                            : isOccupied
+                              ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
+                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
+                            }`}
                           onClick={() => handleHutchClick(hutchId)}
                         >
                           <CardContent className="p-2 sm:p-3 text-center">
@@ -215,13 +213,12 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                       return (
                         <Card
                           key={hutchId}
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
-                            selectedHutch === hutchId
-                              ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
-                              : isOccupied
-                                ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
-                                : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
-                          }`}
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${selectedHutch === hutchId
+                            ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
+                            : isOccupied
+                              ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
+                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
+                            }`}
                           onClick={() => handleHutchClick(hutchId)}
                         >
                           <CardContent className="p-2 sm:p-3 text-center">

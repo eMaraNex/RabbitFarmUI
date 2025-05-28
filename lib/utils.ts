@@ -44,3 +44,6 @@ export function isBreedingReady(rabbit: any): boolean {
     return ageInMonths >= 6
   }
 }
+
+export const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+export const apiUrl = `${baseUrl}/api/v1`
