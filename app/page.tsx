@@ -364,7 +364,7 @@ function DashboardContent() {
 
           <TabsContent value="hutches">
             <HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />
-            {selectedRabbit && <RabbitProfile rabbitId={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
+            {selectedRabbit && <RabbitProfile rabbit_id={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
           </TabsContent>
 
           <TabsContent value="breeding">

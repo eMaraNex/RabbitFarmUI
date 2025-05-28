@@ -145,8 +145,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
         name: newRowName,
         farm_id: user.farm_id,
         description: formData.description || `${newRowName} row with 18 hutches across 3 levels`,
-        capacity: 18,
-        occupied: 0,
+        capacity: 18
       }
 
       const rowResponse = await axios.post(`${utils.apiUrl}/rows`, newRow)
@@ -161,9 +160,9 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
 
       for (const level of levels) {
         for (const position of positions) {
-          const hutchId = `${newRowName}-${level}${position}`
+          const hutch_id = `${newRowName}-${level}${position}`
           newHutches.push({
-            id: hutchId,
+            id: hutch_id,
             farm_id: user.farm_id,
             row_name: newRowName,
             level,
@@ -179,9 +178,9 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       console.log("Creating hutches:", newHutches)
 
       // Save hutches
-      for (const hutch of newHutches) {
-        await axios.post(`${utils.apiUrl}/hutches`, hutch)
-      }
+      // for (const hutch of newHutches) {
+      //   await axios.post(`${utils.apiUrl}/hutches`, hutch)
+      // }
 
       console.log("Successfully created row and hutches")
 

@@ -7,12 +7,12 @@ import { X, Calendar, Heart, Pill, Utensils, Edit } from "lucide-react"
 import { mockRabbits } from "@/lib/mock-data"
 
 interface RabbitProfileProps {
-  rabbitId: string
+  rabbit_id: string
   onClose: () => void
 }
 
-export default function RabbitProfile({ rabbitId, onClose }: RabbitProfileProps) {
-  const rabbit = mockRabbits.find((r) => r.id === rabbitId)
+export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps) {
+  const rabbit = mockRabbits.find((r) => r.id === rabbit_id)
 
   if (!rabbit) return null
 
@@ -62,7 +62,7 @@ export default function RabbitProfile({ rabbitId, onClose }: RabbitProfileProps)
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Hutch:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{rabbit.hutchId}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{rabbit.hutch_id}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Breed:</span>

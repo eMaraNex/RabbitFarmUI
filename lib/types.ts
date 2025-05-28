@@ -1,13 +1,13 @@
 export interface Rabbit {
   id: string
-  rabbitId: string // New: RB-001, RB-002, etc.
+  rabbit_id: string // New: RB-001, RB-002, etc.
   name: string
   gender: "male" | "female"
   breed: string
   color: string
   birthDate: string
   weight: number
-  hutchId: string
+  hutch_id: string
   parentMale?: string
   parentFemale?: string
   isPregnant: boolean
@@ -73,8 +73,8 @@ export interface BreedingRecord {
 }
 
 export interface RemovalRecord {
-  rabbitId: string
-  hutchId: string
+  rabbit_id: string
+  hutch_id: string
   reason: string
   notes: string
   date: string
@@ -84,7 +84,7 @@ export interface RemovalRecord {
 export interface EarningsRecord {
   id: string
   type: "rabbit_sale" | "urine_sale" | "manure_sale" | "other"
-  rabbitId?: string
+  rabbit_id?: string
   amount: number
   currency: string
   date: string

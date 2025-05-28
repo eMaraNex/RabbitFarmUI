@@ -13,31 +13,31 @@ interface HealthTrackerProps {
 export default function HealthTracker({ rabbits }: HealthTrackerProps) {
   const getHealthStatus = (rabbit: Rabbit) => {
     const now = new Date()
-    const overdueMedications = rabbit.healthRecords.filter((record) => {
+    const overdueMedications = rabbit?.healthRecords?.filter((record) => {
       if (record.nextDue) {
         return new Date(record.nextDue) < now && record.status !== "completed"
       }
       return false
     })
 
-    if (overdueMedications.length > 0) return "overdue"
+    if (overdueMedications?.length > 0) return "overdue"
 
-    const upcomingMedications = rabbit.healthRecords.filter((record) => {
+    const upcomingMedications = rabbit?.healthRecords?.filter((record) => {
       if (record.nextDue) {
         const dueDate = new Date(record.nextDue)
         const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
-        return dueDate <= threeDaysFromNow && dueDate >= now && record.status !== "completed"
+        return dueDate <= threeDaysFromNow && dueDate >= now && record?.status !== "completed"
       }
       return false
     })
 
-    if (upcomingMedications.length > 0) return "upcoming"
+    if (upcomingMedications?.length > 0) return "upcoming"
     return "good"
   }
 
-  const overdueRabbits = rabbits.filter((r) => getHealthStatus(r) === "overdue")
-  const upcomingRabbits = rabbits.filter((r) => getHealthStatus(r) === "upcoming")
-  const healthyRabbits = rabbits.filter((r) => getHealthStatus(r) === "good")
+  const overdueRabbits = rabbits?.filter((r) => getHealthStatus(r) === "overdue")
+  const upcomingRabbits = rabbits?.filter((r) => getHealthStatus(r) === "upcoming")
+  const healthyRabbits = rabbits?.filter((r) => getHealthStatus(r) === "good")
 
   return (
     <div className="space-y-6">
@@ -99,7 +99,7 @@ export default function HealthTracker({ rabbits }: HealthTrackerProps) {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">{rabbit.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Hutch {rabbit.hutchId}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Hutch {rabbit.hutch_id}</p>
                       <div className="mt-2 space-y-1">
                         {rabbit.healthRecords
                           .filter(
@@ -155,7 +155,7 @@ export default function HealthTracker({ rabbits }: HealthTrackerProps) {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">{rabbit.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Hutch {rabbit.hutchId}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Hutch {rabbit.hutch_id}</p>
                       <div className="mt-2 space-y-1">
                         {rabbit.healthRecords
                           .filter((record) => {
@@ -207,7 +207,7 @@ export default function HealthTracker({ rabbits }: HealthTrackerProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {rabbits.map((rabbit) => {
+            {rabbits?.map((rabbit) => {
               const status = getHealthStatus(rabbit)
               return (
                 <div
@@ -217,13 +217,13 @@ export default function HealthTracker({ rabbits }: HealthTrackerProps) {
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-gray-100">{rabbit.name}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Hutch {rabbit.hutchId} • {rabbit.breed} • {rabbit.gender === "female" ? "Doe" : "Buck"}
+                      Hutch {rabbit.hutch_id} • {rabbit.breed} • {rabbit.gender === "female" ? "Doe" : "Buck"}
                     </p>
                     <div className="mt-2">
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Last health check:{" "}
-                        {rabbit.healthRecords.length > 0
-                          ? new Date(rabbit.healthRecords[rabbit.healthRecords.length - 1].date).toLocaleDateString()
+                        {rabbit?.healthRecords?.length > 0
+                          ? new Date(rabbit.healthRecords[rabbit?.healthRecords?.length - 1].date).toLocaleDateString()
                           : "Never"}
                       </p>
                     </div>

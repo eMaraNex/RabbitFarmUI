@@ -48,7 +48,7 @@ export default function ReportsDashboard() {
     const buckPerformance = rabbits
       .filter((r) => r.gender === "male")
       .map((buck) => {
-        const offspring = rabbits.filter((r) => r.parentMale === buck.rabbitId)
+        const offspring = rabbits.filter((r) => r.parentMale === buck.rabbit_id)
         const totalKits = offspring.reduce((sum, r) => sum + r.totalKits, 0)
         return {
           ...buck,
@@ -270,7 +270,7 @@ export default function ReportsDashboard() {
             {topBuck ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{topBuck.rabbitId}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{topBuck.rabbit_id}</span>
                   <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">Top Buck</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -288,7 +288,7 @@ export default function ReportsDashboard() {
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Hutch:</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{topBuck.hutchId}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topBuck.hutch_id}</p>
                   </div>
                 </div>
               </div>
@@ -309,7 +309,7 @@ export default function ReportsDashboard() {
             {topDoe ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{topDoe.rabbitId}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{topDoe.rabbit_id}</span>
                   <Badge className="bg-gradient-to-r from-pink-500 to-pink-600 text-white">Top Doe</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">

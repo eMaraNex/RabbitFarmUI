@@ -581,8 +581,8 @@ export default function EarningsTracker() {
                         <span className="font-medium text-gray-900 dark:text-gray-100">
                           {earning.currency} {earning.amount.toFixed(2)}
                         </span>
-                        {earning.rabbitId && (
-                          <span className="text-sm text-gray-600 dark:text-gray-400">({earning.rabbitId})</span>
+                        {earning.rabbit_id && (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">({earning.rabbit_id})</span>
                         )}
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

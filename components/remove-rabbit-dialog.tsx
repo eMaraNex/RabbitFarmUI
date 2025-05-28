@@ -15,12 +15,12 @@ import { mockRabbits } from "@/lib/mock-data"
 import type { Rabbit, EarningsRecord } from "@/lib/types"
 
 interface RemoveRabbitDialogProps {
-  hutchId: string
+  hutch_id: string
   rabbit: Rabbit | undefined
   onClose: () => void
 }
 
-export default function RemoveRabbitDialog({ hutchId, rabbit, onClose }: RemoveRabbitDialogProps) {
+export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: RemoveRabbitDialogProps) {
   const [formData, setFormData] = useState({
     reason: "",
     notes: "",
@@ -62,8 +62,8 @@ export default function RemoveRabbitDialog({ hutchId, rabbit, onClose }: RemoveR
 
     // Create removal record
     const removalRecord = {
-      rabbitId: rabbit.rabbitId,
-      hutchId: hutchId,
+      rabbit_id: rabbit.rabbit_id,
+      hutch_id: hutch_id,
       reason: formData.reason,
       notes: formData.notes,
       date: formData.date,
@@ -75,7 +75,7 @@ export default function RemoveRabbitDialog({ hutchId, rabbit, onClose }: RemoveR
       const earningsRecord: EarningsRecord = {
         id: Date.now().toString(),
         type: "rabbit_sale",
-        rabbitId: rabbit.rabbitId,
+        rabbit_id: rabbit.rabbit_id,
         amount: Number.parseFloat(formData.saleAmount),
         currency: formData.currency,
         date: formData.date,
@@ -123,7 +123,7 @@ export default function RemoveRabbitDialog({ hutchId, rabbit, onClose }: RemoveR
         <DialogHeader className="bg-gradient-to-r from-red-50/80 to-red-100/80 dark:from-red-900/30 dark:to-red-800/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-red-200 dark:border-red-700">
           <DialogTitle className="flex items-center space-x-2 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-5 w-5" />
-            <span>Remove Rabbit from {hutchId}</span>
+            <span>Remove Rabbit from {hutch_id}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -131,7 +131,7 @@ export default function RemoveRabbitDialog({ hutchId, rabbit, onClose }: RemoveR
           <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">Rabbit Details</h4>
           <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
             <p>
-              <strong>ID:</strong> {rabbit.rabbitId}
+              <strong>ID:</strong> {rabbit.rabbit_id}
             </p>
             <p>
               <strong>Breed:</strong> {rabbit.breed}

@@ -250,7 +250,8 @@ export default function AddHutchDialog() {
                           (h) => h.row_name === formData.rowName && h.level === formData.level && h.position === num
                         )
                       return (
-                        <SelectItem key={num} value={num.toString()} disabled={isOccupied}>
+                        <SelectItem key={num} value={num.toString()} >
+                          {/* disabled={isOccupied} */}
                           Position {num} {isOccupied ? "(Occupied)" : ""}
                         </SelectItem>
                       )

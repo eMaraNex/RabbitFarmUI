@@ -106,7 +106,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {availableDoes.map((doe) => (
                     <SelectItem key={doe.id} value={doe.id}>
-                      {doe.name} ({doe.hutchId}) - {doe.breed}
+                      {doe.name} ({doe.hutch_id}) - {doe.breed}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -122,7 +122,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {bucks.map((buck) => (
                     <SelectItem key={buck.id} value={buck.id}>
-                      {buck.name} ({buck.hutchId}) - {buck.breed}
+                      {buck.name} ({buck.hutch_id}) - {buck.breed}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -178,7 +178,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-gray-100">{doe.name}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Hutch {doe.hutchId} • Mated with {doe.matedWith}
+                    Hutch {doe.hutch_id} • Mated with {doe.matedWith}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Mating Date: {doe.lastMatingDate ? new Date(doe.lastMatingDate).toLocaleDateString() : "N/A"}
