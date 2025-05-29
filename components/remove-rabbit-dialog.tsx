@@ -21,26 +21,14 @@ interface RemoveRabbitDialogProps {
 
 export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
-  const [formData, setFormData] = useState<{
-    reason: string;
-    notes: string;
-    date: string;
-    saleAmount: string;
-    currency: string;
-    saleWeight: string;
-    sale_type: "whole" | "meat_only" | "skin_only" | "meat_and_skin" | undefined;
-    includesUrine: boolean;
-    includesManure: boolean;
-    sold_to: string;
-    sale_notes: string;
-  }>({
+  const [formData, setFormData] = useState({
     reason: "",
     notes: "",
     date: new Date().toISOString().split("T")[0],
     saleAmount: "",
     currency: "USD",
     saleWeight: "",
-    sale_type: undefined,
+    sale_type: undefined as "whole" | "meat_only" | "skin_only" | "meat_and_skin" | undefined,
     includesUrine: false,
     includesManure: false,
     sold_to: "",
@@ -107,9 +95,9 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
       );
 
       // If it's a sale, create earnings record
-      if (formData.reason === "Sale" && formData.saleAmount) {
+      if (formData.reason === "Sale" && formData.saleAmount && user?.farm_id) {
         const earningsRecord: EarningsRecord = {
-          id: Date.now().toString(),
+          id: `${rabbit.rabbit_id}-${user.farm_id}`,
           type: "rabbit_sale",
           rabbit_id: rabbit.rabbit_id,
           amount: Number.parseFloat(formData.saleAmount),
@@ -138,12 +126,12 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update local storage
+      // Update local storage for rabbits and hutches
       const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
       const updatedRabbits = cachedRabbits.filter((r: RabbitType) => r.rabbit_id !== rabbit.rabbit_id);
       localStorage.setItem(`rabbit_farm_rabbits_${user.farm_id}`, JSON.stringify(updatedRabbits));
 
-      const cachedHutches = JSON.parse(localStorage.getItem(`rabbit_farm_hutches_${user.farm_id}`) || "[]") as any;
+      const cachedHutches = JSON.parse(localStorage.getItem(`rabbit_farm_hutches_${user.farm_id}`) || "[]") as any[];
       const updatedHutches = cachedHutches.map((h: any) =>
         h.id === hutch_id ? { ...h, isOccupied: false } : h
       );
@@ -168,28 +156,27 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         <DialogHeader className="bg-gradient-to-r from-red-50/80 to-red-100/80 dark:from-red-900/30 dark:to-red-800/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-red-200 dark:border-red-700">
           <DialogTitle className="flex items-center space-x-2 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-5 w-5" />
-            <span>Remove Rabbit from {hutch_id}</span>
+            <span className="text-red-600 dark:text-red-400">Remove Rabbit from {hutch_id}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="bg-gradient-to-r from-red-50/80 to-red-100/80 dark:from-red-900/30 dark:to-red-800/30 p-4 rounded-lg border border-red-200 dark:border-red-700 mb-4">
+        <div className="bg-gradient-to-r from-red-50/80 to-red-100/80 dark:from-red-600/30 dark:to-red-700/30 p-4 rounded-lg border border-red-200 dark:border-red-600 mb-4">
           <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">Rabbit Details</h4>
-          <div className="text-sm text-red-700 dark:text-red-400 space-y-1">            <p>
-            <strong>ID:</strong> {rabbit.id}
-          </p>
+          <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
+            <p><strong>ID:</strong> {rabbit.id}</p>
             <p><strong>Rabbit ID:</strong> {rabbit.rabbit_id}</p>
             <p><strong>Breed:</strong> {rabbit.breed}</p>
             <p><strong>Gender:</strong> {rabbit.gender === "female" ? "Doe" : "Buck"}</p>
             <p><strong>Weight:</strong> {rabbit.weight}kg</p>
             <p>
               <strong>Age:</strong>{" "}
-              {Math.floor((new Date().getTime() - new Date(rabbit.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))}{" "}
+              {Math.floor((new Date().getTime() - new Date(rabbit.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
               months
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label htmlFor="reason" className="text-gray-900 dark:text-gray-100">
               Reason for Removal *
@@ -208,7 +195,19 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
             </Select>
           </div>
 
-          {/* Sale-specific fields */}
+          <div>
+            <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
+              Date of Removal *
+            </Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+              required
+            />
+          </div>
           {isSale && (
             <div className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-lg border border-green-200 dark:border-green-700 space-y-4">
               <div className="flex items-center space-x-2 mb-3">
@@ -224,7 +223,6 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                   <Input
                     id="saleAmount"
                     type="number"
-                    name="saleAmount"
                     step="0.01"
                     placeholder="0.00"
                     value={formData.saleAmount}
@@ -260,9 +258,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                     Sale Weight (kg)
                   </Label>
                   <Input
-                    id="weight"
+                    id="saleWeight"
                     type="number"
-                    name="saleWeight"
                     step="0.1"
                     placeholder={rabbit.weight.toString()}
                     value={formData.saleWeight}
@@ -298,7 +295,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                   Sold To
                 </Label>
                 <Input
-                  name="soldTo"
+                  id="sold_to"
+                  type="text"
                   placeholder="Enter buyer's name..."
                   value={formData.sold_to}
                   onChange={(e) => setFormData({ ...formData, sold_to: e.target.value })}
@@ -306,18 +304,17 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                 />
               </div>
 
-              <div className="flex space-x-4">
-                <label className="flex items-center space-x-2">
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    name="includesUrine"
                     checked={formData.includesUrine}
                     onChange={(e) => setFormData({ ...formData, includesUrine: e.target.checked })}
                     className="rounded border-gray-300 dark:border-gray-600"
                   />
                   <span className="text-sm text-gray-900 dark:text-gray-100">Includes Urine</span>
                 </label>
-                <label className="flex items-center space-x-2">
+                <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={formData.includesManure}
@@ -333,12 +330,12 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                   Sale Notes
                 </Label>
                 <Textarea
-                  name="sale_notes"
+                  id="sale_notes"
                   placeholder="Additional sale details..."
                   value={formData.sale_notes}
                   onChange={(e) => setFormData({ ...formData, sale_notes: e.target.value })}
                   className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                  rows={2}
+                  rows={3}
                 />
               </div>
             </div>

@@ -404,7 +404,7 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                                         </div>
                                         <div className="text-right">
                                           <p className="text-xs text-red-500 dark:text-red-400">
-                                            {new Date(record.removedAt).toLocaleDateString()}
+                                            {new Date(record.date).toLocaleDateString()}
                                           </p>
                                         </div>
                                       </div>

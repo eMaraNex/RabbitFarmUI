@@ -79,11 +79,10 @@ export interface RemovalRecord {
   reason: string
   notes: string
   date: string
-  removedAt: string
 }
 
 export interface EarningsRecord {
-  id: string
+  id?: string
   type: "rabbit_sale" | "urine_sale" | "manure_sale" | "other"
   rabbit_id?: string
   amount: number
@@ -95,7 +94,7 @@ export interface EarningsRecord {
   includesManure?: boolean
   buyer_name?: string
   notes?: string
-  createdAt: string
+  createdAt?: string
   farm_id: string
   hutch_id?: string
 }
