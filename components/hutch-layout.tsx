@@ -111,7 +111,7 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
                       const hutch_id = selectedHutch ?? `${row.name}-A${position}`;
-                      const rabbitsInHutch = useMemo(() => getRabbitsInHutch(hutch_id) ?? [], [hutch_id, getRabbitsInHutch]);
+                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? [];
                       const isOccupied = rabbitsInHutch.length > 0;
                       const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
                       const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
@@ -161,7 +161,7 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
                       const hutch_id = selectedHutch ?? `${row.name}-B${position}`;
-                      const rabbitsInHutch = useMemo(() => getRabbitsInHutch(hutch_id) ?? [], [hutch_id, getRabbitsInHutch]);
+                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? [];
                       const isOccupied = rabbitsInHutch.length > 0;
                       const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
                       const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
@@ -212,7 +212,7 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
                       const hutch_id = selectedHutch ?? `${row.name}-G${position}`;
-                      const rabbitsInHutch = useMemo(() => getRabbitsInHutch(hutch_id) ?? [], [hutch_id, getRabbitsInHutch]);
+                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? [];
                       const isOccupied = rabbitsInHutch.length > 0;
                       const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
                       const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
