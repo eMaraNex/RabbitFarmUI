@@ -1,6 +1,6 @@
 export interface Rabbit {
   id: string
-  rabbit_id: string
+  rabbit_id?: string
   farm_id: string
   name: string
   gender: "male" | "female"
@@ -74,7 +74,7 @@ export interface BreedingRecord {
 }
 
 export interface RemovalRecord {
-  rabbit_id: string
+  rabbit_id?: string
   hutch_id: string
   reason: string
   notes: string
@@ -90,10 +90,10 @@ export interface EarningsRecord {
   currency: string
   date: string
   weight?: number
-  saleType?: "whole" | "meat_only" | "skin_only" | "meat_and_skin"
+  sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin"
   includesUrine?: boolean
   includesManure?: boolean
-  buyerName?: string
+  buyer_name?: string
   notes?: string
   createdAt: string
   farm_id: string
