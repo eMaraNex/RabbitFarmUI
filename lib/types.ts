@@ -19,7 +19,7 @@ export interface Rabbit {
   totalKits: number
   healthRecords: HealthRecord[]
   feedingSchedule: FeedingSchedule
-  createdAt?: string
+  created_at?: string
 }
 
 export interface HealthRecord {
@@ -51,7 +51,7 @@ export interface Hutch {
   features: string[]
   isOccupied: boolean
   lastCleaned?: string
-  createdAt?: string
+  created_at?: string
 }
 
 export interface Row {
@@ -59,7 +59,7 @@ export interface Row {
   description: string
   capacity: number
   occupied: number
-  createdAt?: string
+  created_at?: string
 }
 
 export interface BreedingRecord {
@@ -94,18 +94,18 @@ export interface EarningsRecord {
   includesManure?: boolean
   buyer_name?: string
   notes?: string
-  createdAt?: string
+  created_at?: string
   farm_id: string
   hutch_id?: string
 }
 
 export interface ProductionRecord {
-  id: string
+  id?: string
   type: "urine" | "manure"
   quantity: number
   unit: string
   date: string
-  source?: string // hutch or rabbit ID
+  source?: string
   notes?: string
-  createdAt: string
+  created_at?: string
 }

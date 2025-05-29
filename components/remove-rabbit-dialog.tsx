@@ -110,7 +110,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
           buyer_name: formData.sold_to,
           notes: formData.sale_notes,
           farm_id: user.farm_id,
-          createdAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           hutch_id,
         };
 

@@ -147,7 +147,6 @@ export default function EarningsTracker() {
       }
 
       const newEarning: EarningsRecord = {
-        id: Date.now().toString(),
         type: earningsForm.type,
         rabbit_id: earningsForm.rabbit_id,
         hutch_id: earningsForm.hutch_id,
@@ -160,7 +159,6 @@ export default function EarningsTracker() {
         currency: currency,
         date: earningsForm.date,
         notes: earningsForm.notes || '',
-        createdAt: new Date().toISOString(),
         farm_id: user.farm_id,
       };
 
@@ -192,14 +190,12 @@ export default function EarningsTracker() {
     }
 
     const newProduction: ProductionRecord = {
-      id: Date.now().toString(),
       type: productionForm.type,
       quantity: Number.parseFloat(productionForm.quantity),
       unit: productionForm.unit,
       date: productionForm.date,
       source: productionForm.source,
       notes: productionForm.notes,
-      createdAt: new Date().toISOString(),
     };
 
     const updatedProduction = [...production, newProduction];
@@ -214,16 +210,14 @@ export default function EarningsTracker() {
         }
 
         const saleEarning: EarningsRecord = {
-          id: (Date.now() + 1).toString(),
           type: productionForm.type === "urine" ? "urine_sale" : "manure_sale",
           amount: Number.parseFloat(productionForm.salePrice),
           currency: currency,
           date: productionForm.date,
           buyer_name: productionForm.buyerName || "",
           notes: `Sale of ${productionForm.quantity} ${productionForm.unit} ${productionForm.type}${productionForm.buyerName ? ` to ${productionForm.buyerName}` : ""} `,
-          createdAt: new Date().toISOString(),
           farm_id: user.farm_id,
-          hutch_id: productionForm.source || '',
+          // hutch_id: productionForm.source || '',
         };
 
         await axios.post(`${utils.apiUrl}/earnings`, saleEarning, {
@@ -277,12 +271,6 @@ export default function EarningsTracker() {
 
   // Calculate previous period earnings (e.g., last month)
   const now = new Date();
-  const currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const previousPeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const previousEarnings = earnings
-    .filter((e) => new Date(e.date) >= previousPeriodStart && new Date(e.date) < currentPeriodStart)
-    .reduce((sum, e) => sum + convertToBaseCurrency(e.amount, e.currency as any), 0);
-
   const earningsByType = getEarningsByType();
 
   return (
@@ -752,7 +740,7 @@ export default function EarningsTracker() {
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((earning) => (
                   <div
-                    key={earning.id}
+                    key={`${earning.id}-${earning.created_at}`}
                     className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60"
                   >
                     <div>
