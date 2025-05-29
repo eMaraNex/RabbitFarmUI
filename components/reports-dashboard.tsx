@@ -258,7 +258,7 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Top Performers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 border-b border-gray-200 dark:border-gray-600">
             <CardTitle className="flex items-center space-x-2">
@@ -266,7 +266,7 @@ export default function ReportsDashboard() {
               <span className="text-gray-900 dark:text-gray-100">Top Performing Buck</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
+          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80 mt-5">
             {topBuck ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -305,7 +305,7 @@ export default function ReportsDashboard() {
               <span className="text-gray-900 dark:text-gray-100">Top Performing Doe</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
+          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80 mt-5">
             {topDoe ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -391,7 +391,7 @@ export default function ReportsDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
             <div className="text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">Current Period</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">

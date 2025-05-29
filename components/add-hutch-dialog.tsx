@@ -54,7 +54,6 @@ export default function AddHutchDialog() {
       // Check local storage first
       const cachedData = loadFromStorage(user.farm_id)
       if (cachedData.rows.length || cachedData.hutches.length) {
-        console.log("Using cached rows and hutches")
         setRows(cachedData.rows)
         setHutches(cachedData.hutches)
       }
@@ -135,7 +134,6 @@ export default function AddHutchDialog() {
     try {
       const response = await axios.post(`${utils.apiUrl}/hutches`, newHutch)
       if (response.data.success) {
-        console.log("New hutch created:", response.data.data)
         // Update local storage
         const updatedHutches = [...hutches, response.data.data]
         saveToStorage(user.farm_id, { rows, hutches: updatedHutches })

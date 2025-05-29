@@ -16,7 +16,9 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<{ message: string }>;
+  resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<{ message: string }>;
   isLoading: boolean;
 }
 
@@ -143,17 +145,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("rabbit_farm_token");
-    localStorage.removeItem("rabbit_farm_user");
-    localStorage.removeItem("rabbit_farm_id");
-    setAuthHeader(null); // Clear Axios headers
-    router.push("/"); // Redirect to login page
+  const logout = async (): Promise<boolean> => {
+    setIsLoading(true);
+
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (token) {
+        await axios.post(`${utils.apiUrl}/auth/logout`, { token });
+      }
+      setUser(null);
+      localStorage.removeItem("rabbit_farm_token");
+      localStorage.removeItem("rabbit_farm_user");
+      localStorage.removeItem("rabbit_farm_id");
+      setAuthHeader(null); // Clear Axios headers
+      router.push("/");
+      return true;
+    } catch (error) {
+      console.error("Logout error:", error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const forgotPassword = async (email: string): Promise<{ message: string }> => {
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${utils.apiUrl}/auth/forgot-password`, {
+        email,
+      });
+
+      if (response.status === 200) {
+        return response.data; // Expect { message: "Password reset email sent" }
+      } else {
+        throw new Error("Failed to send password reset email");
+      }
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      throw new Error(error.response?.data?.message || "Failed to send password reset email");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (params: { token: string; currentPassword: string; newPassword: string }): Promise<{ message: string }> => {
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${utils.apiUrl}/auth/reset-password`, {
+        token: params.token,
+        currentPassword: params.currentPassword,
+        newPassword: params.newPassword,
+      });
+
+      if (response.status === 200) {
+        return response.data; // Expect { message: "Password reset successfully" }
+      } else {
+        throw new Error("Failed to reset password");
+      }
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      throw new Error(error.response?.data?.message || "Failed to reset password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, forgotPassword, resetPassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

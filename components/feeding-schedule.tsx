@@ -94,7 +94,7 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
             {["Morning (6:00 AM)", "Afternoon (2:00 PM)", "Evening (6:00 PM)"].map((timeSlot, index) => (
               <div key={timeSlot} className="space-y-3">
                 <h4 className="font-medium text-lg text-gray-900 dark:text-gray-100">{timeSlot}</h4>
@@ -222,7 +222,7 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           <CardTitle className="text-gray-900 dark:text-gray-100">Feed Inventory & Requirements</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
             <div className="p-4 bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-700">
               <h4 className="font-medium mb-3 text-blue-800 dark:text-blue-300">Daily Requirements</h4>
               <div className="space-y-2">

@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertTriangle, Trash2, DollarSign } from "lucide-react"
-import { saveToStorage } from "@/lib/storage"
-import { mockRabbits } from "@/lib/mock-data"
-import type { Rabbit, EarningsRecord } from "@/lib/types"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertTriangle, Trash2, DollarSign } from "lucide-react";
+import axios from "axios";
+import * as utils from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import type { Rabbit as RabbitType, EarningsRecord } from "@/lib/types";
 
 interface RemoveRabbitDialogProps {
-  hutch_id: string
-  rabbit: Rabbit | undefined
-  onClose: () => void
+  hutch_id: string;
+  rabbit: RabbitType | undefined;
+  onClose: () => void;
 }
 
 export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: RemoveRabbitDialogProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     reason: "",
     notes: "",
@@ -41,81 +41,101 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
     "Death - Natural",
     "Death - Disease",
     "Death - Accident",
-    "Transfer to another farm",
-    "Breeding loan",
+    "Transfer to -another farm",
+    "Breeding -loan",
     "Retirement",
     "Health issues",
     "Other",
-  ]
+  ];
 
   const saleTypes = [
     { value: "whole", label: "Whole Rabbit" },
     { value: "meat_only", label: "Meat Only" },
     { value: "skin_only", label: "Skin Only" },
     { value: "meat_and_skin", label: "Meat and Skin" },
-  ]
+  ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (!rabbit) return
-
-    // Create removal record
-    const removalRecord = {
-      rabbit_id: rabbit.rabbit_id,
-      hutch_id: hutch_id,
-      reason: formData.reason,
-      notes: formData.notes,
-      date: formData.date,
-      removedAt: new Date().toISOString(),
+    if (!rabbit || !user?.farm_id) {
+      alert("Missing rabbit or farm ID. Please try again.");
+      return;
     }
 
-    // If it's a sale, create earnings record
-    if (formData.reason === "Sale" && formData.saleAmount) {
-      const earningsRecord: EarningsRecord = {
-        id: Date.now().toString(),
-        type: "rabbit_sale",
-        rabbit_id: rabbit.rabbit_id,
-        amount: Number.parseFloat(formData.saleAmount),
-        currency: formData.currency,
-        date: formData.date,
-        weight: formData.weight ? Number.parseFloat(formData.weight) : rabbit.weight,
-        saleType: formData.saleType as any,
-        includesUrine: formData.includesUrine,
-        includesManure: formData.includesManure,
-        buyerName: formData.buyerName,
-        notes: formData.saleNotes,
-        createdAt: new Date().toISOString(),
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (!token) {
+        throw new Error("No authentication token found");
       }
 
-      // Save earnings record
-      const existingEarnings = JSON.parse(localStorage.getItem("rabbit_farm_earnings") || "[]")
-      existingEarnings.push(earningsRecord)
-      saveToStorage("earnings", existingEarnings)
+      // Create removal record
+      const removalRecord = {
+        rabbit_id: rabbit.rabbit_id,
+        hutch_id: hutch_id,
+        reason: formData.reason,
+        notes: formData.notes,
+        date: formData.date,
+        farm_id: user.farm_id,
+        removed_at: new Date().toISOString(),
+      };
+
+      await axios.post(`${utils.apiUrl}/rabbit_removals`, removalRecord, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // If it's a sale, create earnings record
+      if (formData.reason === "Sale" && formData.saleAmount) {
+        const earningsRecord: EarningsRecord = {
+          id: Date.now().toString(),
+          type: "rabbit_sale",
+          rabbit_id: rabbit.rabbit_id,
+          amount: Number.parseFloat(formData.saleAmount),
+          currency: formData.currency,
+          date: formData.date,
+          weight: formData.weight ? Number.parseFloat(formData.weight) : rabbit.weight,
+          saleType: formData.saleType as any,
+          includesUrine: formData.includesUrine,
+          includesManure: formData.includesManure,
+          buyerName: formData.buyerName,
+          notes: formData.saleNotes,
+          farm_id: user.farm_id,
+          createdAt: new Date().toISOString(),
+        };
+
+        await axios.post(`${utils.apiUrl}/earnings`, earningsRecord, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
+      // Update hutch to mark as unoccupied
+      await axios.patch(`${utils.apiUrl}/hutches/${hutch_id}`,
+        { isOccupied: false }, // Align with Hutch interface
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Update local storage
+      const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
+      const updatedRabbits = cachedRabbits.filter((r: RabbitType) => r.id !== rabbit.id);
+      localStorage.setItem(`rabbit_farm_rabbits_${user.farm_id}`, JSON.stringify(updatedRabbits));
+
+      const cachedHutches = JSON.parse(localStorage.getItem(`rabbit_farm_hutches_${user.farm_id}`) || "[]") as any;
+      const updatedHutches = cachedHutches.map((h: any) =>
+        h.id === hutch_id ? { ...h, isOccupied: false } : h
+      );
+      localStorage.setItem(`rabbit_farm_hutches_${user.farm_id}`, JSON.stringify(updatedHutches));
+      onClose();
+    } catch (error: any) {
+      console.error("Error removing rabbit:", error);
+      alert(error.response?.data?.message || "Error removing rabbit. Please try again.");
     }
-
-    // Remove rabbit from active list
-    const updatedRabbits = mockRabbits.filter((r) => r.id !== rabbit.id)
-
-    // Save removal record
-    const removalRecords = JSON.parse(localStorage.getItem("rabbit_farm_rabbit_removals") || "[]")
-    removalRecords.push(removalRecord)
-
-    saveToStorage("rabbits", updatedRabbits)
-    saveToStorage("rabbit_removals", removalRecords)
-
-    console.log("Rabbit removed:", removalRecord)
-    onClose()
-
-    // Refresh to show updated data
-    window.location.reload()
-  }
+  };
 
   if (!rabbit) {
-    return null
+    return null;
   }
 
-  const isSale = formData.reason === "Sale"
+  const isSale = formData.reason === "Sale";
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -329,14 +349,14 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
             />
           </div>
 
-          <div className="bg-gradient-to-r from-amber-50/80 to-amber-100/80 dark:from-amber-900/30 dark:to-amber-800/30 p-4 rounded-lg border border-amber-200 dark:border-amber-700">
+          <div className="bg-gradient-to-r from-amber-50/80 to-amber-100/80 dark:from-amber-900/30 dark:to-amber-800/30 p-4 rounded-lg border-amber-lg border-200 dark:border-amber-700">
             <div className="flex items-start space-x-2">
               <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div>
                 <h4 className="font-medium text-amber-800 dark:text-amber-300">Warning</h4>
                 <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                  This action will permanently remove the rabbit from the active hutch. The removal will be logged for
-                  record keeping{isSale ? " and earnings will be recorded." : "."}
+                  This action will permanently remove the rabbit from the active hutch. The removal will be logged in for
+                  keeping{isSale ? " and earnings will be recorded." : "."}
                 </p>
               </div>
             </div>

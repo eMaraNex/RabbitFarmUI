@@ -42,7 +42,7 @@ export default function HealthTracker({ rabbits }: HealthTrackerProps) {
   return (
     <div className="space-y-6">
       {/* Health Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
             <CardTitle className="text-lg text-red-600 dark:text-red-400">Overdue</CardTitle>

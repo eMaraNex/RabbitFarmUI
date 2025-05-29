@@ -60,13 +60,11 @@ function DashboardContent() {
   }, [])
 
   const loadData = useCallback(async () => {
-    if (!user?.farm_id) return
-    console.log("Loading data for farm:", user.farm_id)
+    if (!user?.farm_id) return;
 
     // Check local storage first
     const cachedData = loadFromStorage(user.farm_id)
     if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
-      console.log("Using cached data")
       setRows(cachedData.rows)
       setHutches(cachedData.hutches)
       setRabbits(cachedData.rabbits)
@@ -75,6 +73,11 @@ function DashboardContent() {
     }
 
     try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
       // Fetch fresh data from API
       const [rowsResponse, hutchesResponse, rabbitsResponse] = await Promise.all([
         axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
@@ -85,10 +88,6 @@ function DashboardContent() {
       const newRows = rowsResponse.data.data || []
       const newHutches = hutchesResponse.data.data || []
       const newRabbits = rabbitsResponse.data.data || []
-
-      console.log("Rows fetched:", newRows.length)
-      console.log("Hutches fetched:", newHutches.length)
-      console.log("Rabbits fetched:", newRabbits.length)
 
       // Update state
       setRows(newRows)
@@ -106,7 +105,6 @@ function DashboardContent() {
     } catch (error) {
       console.error("Error fetching data:", error)
       if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
-        console.log("Falling back to cached data")
         setRows(cachedData.rows)
         setHutches(cachedData.hutches)
         setRabbits(cachedData.rabbits)
@@ -120,7 +118,6 @@ function DashboardContent() {
   }, [loadData])
 
   const handleRowAdded = useCallback(() => {
-    console.log("Row added, refreshing data...")
     loadData()
   }, [loadData])
 
@@ -324,7 +321,7 @@ function DashboardContent() {
                     <div>
                       <p className="font-medium text-red-800 dark:text-red-300 text-sm sm:text-base">Medication Due</p>
                       <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
-                        RB-001 (Mercury-A1) - Vaccination overdue by 2 days
+                        RB-001 (Earth-A1) - Vaccination overdue by 2 days
                       </p>
                     </div>
                     <Badge variant="destructive" className="text-xs">
@@ -337,7 +334,7 @@ function DashboardContent() {
                         Birth Expected
                       </p>
                       <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">
-                        RB-002 (Mercury-B2) - Expected to give birth in 3 days
+                        RB-002 (Earth-B2) - Expected to give birth in 3 days
                       </p>
                     </div>
                     <Badge variant="secondary" className="text-xs">
@@ -350,7 +347,7 @@ function DashboardContent() {
                         Breeding Ready
                       </p>
                       <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                        RB-003 (Mercury-C1) - Ready for next breeding cycle
+                        RB-003 (Earth-C1) - Ready for next breeding cycle
                       </p>
                     </div>
                     <Badge variant="outline" className="text-xs">

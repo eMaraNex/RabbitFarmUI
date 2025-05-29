@@ -1,26 +1,109 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { X, Calendar, Heart, Pill, Utensils, Edit } from "lucide-react"
-import { mockRabbits } from "@/lib/mock-data"
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { X, Calendar, Heart, AlertTriangle, Pill, Edit, Utensils } from "lucide-react";
+import axios from "axios";
+import * as utils from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import type { Rabbit as RabbitType } from "@/lib/types";
 
 interface RabbitProfileProps {
-  rabbit_id: string
-  onClose: () => void
+  rabbit_id: string;
+  onClose: () => void;
 }
 
 export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps) {
-  const rabbit = mockRabbits.find((r) => r.id === rabbit_id)
-
-  if (!rabbit) return null
+  const { user } = useAuth();
+  const [rabbit, setRabbit] = useState<RabbitType | null>(null);
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const calculateAge = (birthDate: string) => {
-    const birth = new Date(birthDate)
-    const now = new Date()
-    const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
-    return months
+    const birth = new Date(birthDate);
+    const now = new Date();
+    const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+    return months;
+  };
+
+  useEffect(() => {
+    const fetchRabbit = async () => {
+      if (!user?.farm_id) {
+        setError("Missing farm ID. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("rabbit_farm_token");
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        // Try localStorage first
+        const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`);
+        if (cachedRabbits) {
+          const rabbits: RabbitType[] = JSON.parse(cachedRabbits);
+          const cachedRabbit = rabbits.find((r: RabbitType) => r.id === rabbit_id);
+          if (cachedRabbit) {
+            setRabbit(rabbit);
+            setLoading(true);
+          }
+        }
+
+        // Fetch from API
+        const response = await axios.get(`${utils.apiUrl}/rabbits/${rabbit_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { farm_id: user.farm_id },
+        });
+
+        if (response.data.success) {
+          setRabbit(response.data.data);
+          // Update localStorage
+          const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
+          const updatedRabbits = cachedRabbits.filter((r: RabbitType) => r.id !== rabbit_id).concat(response.data.data);
+          localStorage.setItem(`rabbit_farm_rabbits_${user.farm_id}`, JSON.stringify(updatedRabbits));
+        } else {
+          throw new Error("Failed to fetch rabbit data");
+        }
+      } catch (err: any) {
+        console.error("Error fetching rabbit:", err);
+        setError(err.response?.data?.message || "Failed to load rabbit data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRabbit();
+  }, [rabbit_id, user]);
+
+  // if (isLoading) {
+  //   return (
+  //     <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  //       <div className="text-center">
+  //         <Rabbit className="h-12 w-12 mx-auto text-green-600 dark:text-green-400 animate-bounce mb-4" />
+  //         <p className="text-lg text-gray-600 dark:text-gray-300">Loading Rabbit Profile...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
+  if (error || !rabbit) {
+    return (
+      <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <Card className="w-full max-w-md bg-white/95 dark:bg-gray-800/95">
+          <CardHeader>
+            <CardTitle className="text-red-600 dark:text-red-400">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 dark:text-gray-300">{error || "Rabbit not found"}</p>
+            <Button onClick={onClose} className="mt-4">Close</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -53,7 +136,7 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
           </Button>
         </CardHeader>
         <CardContent className="space-y-6 bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
             {/* Basic Information */}
             <Card className="bg-gradient-to-br from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-200 dark:border-blue-700">
               <CardHeader>
@@ -154,7 +237,7 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rabbit.healthRecords.map((record, index) => (
+                {rabbit?.healthRecords?.map((record, index) => (
                   <div
                     key={index}
                     className="flex justify-between items-center p-3 bg-white/60 dark:bg-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600"
@@ -189,20 +272,20 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Daily Feed Amount:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{rabbit.feedingSchedule.dailyAmount}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{rabbit?.feedingSchedule?.dailyAmount ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Feed Type:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{rabbit.feedingSchedule.feedType}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{rabbit?.feedingSchedule?.feedType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Feeding Times:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{rabbit.feedingSchedule.times.join(", ")}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{rabbit?.feedingSchedule?.times.join(", ")}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Last Fed:</span>
                   <span className="text-gray-700 dark:text-gray-300">
-                    {new Date(rabbit.feedingSchedule.lastFed).toLocaleDateString()}
+                    {new Date(rabbit?.feedingSchedule?.lastFed).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -225,5 +308,5 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

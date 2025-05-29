@@ -1,6 +1,7 @@
 export interface Rabbit {
   id: string
-  rabbit_id: string // New: RB-001, RB-002, etc.
+  rabbit_id: string
+  farm_id: string
   name: string
   gender: "male" | "female"
   breed: string
@@ -95,6 +96,8 @@ export interface EarningsRecord {
   buyerName?: string
   notes?: string
   createdAt: string
+  farm_id: string
+  hutch_id?: string
 }
 
 export interface ProductionRecord {

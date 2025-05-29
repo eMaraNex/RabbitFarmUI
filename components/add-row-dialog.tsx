@@ -82,7 +82,6 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       // Check local storage first
       const cachedData = loadFromStorage(user.farm_id)
       if (cachedData.rows.length || cachedData.hutches.length) {
-        console.log("Using cached rows and hutches")
         setExistingRows(cachedData.rows)
         setExistingHutches(cachedData.hutches)
       }
@@ -98,8 +97,6 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
           const newHutches = hutchesResponse.data.data || []
           setExistingRows(newRows)
           setExistingHutches(newHutches)
-          console.log("Loaded existing rows:", newRows)
-          console.log("Loaded existing hutches:", newHutches)
           // Save to local storage
           saveToStorage(user.farm_id ?? '', { rows: newRows, hutches: newHutches })
         } catch (error) {
@@ -138,8 +135,6 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
         return
       }
 
-      console.log("Creating new row:", newRowName)
-
       // Create new row
       const newRow = {
         name: newRowName,
@@ -174,15 +169,10 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
           })
         }
       }
-
-      console.log("Creating hutches:", newHutches)
-
       // Save hutches
       // for (const hutch of newHutches) {
       //   await axios.post(`${utils.apiUrl}/hutches`, hutch)
       // }
-
-      console.log("Successfully created row and hutches")
 
       // Update local storage with new data
       const updatedRows = [...existingRows, rowResponse.data.data]
