@@ -90,8 +90,8 @@ export interface EarningsRecord {
   date: string
   weight?: number
   sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin"
-  includesUrine?: boolean
-  includesManure?: boolean
+  includes_urine?: boolean
+  includes_manure?: boolean
   buyer_name?: string
   notes?: string
   created_at?: string

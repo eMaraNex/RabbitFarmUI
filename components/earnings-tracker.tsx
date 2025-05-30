@@ -35,8 +35,8 @@ export default function EarningsTracker() {
     date: string;
     weight?: string;
     sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin";
-    includesUrine?: boolean;
-    includesManure?: boolean;
+    includes_urine?: boolean;
+    includes_manure?: boolean;
     buyer_name?: string;
     notes: string;
   }>({
@@ -152,8 +152,8 @@ export default function EarningsTracker() {
         hutch_id: earningsForm.hutch_id,
         weight: earningsForm.weight ? Number.parseFloat(earningsForm.weight) : 0,
         sale_type: earningsForm.sale_type,
-        includesUrine: earningsForm.includesUrine,
-        includesManure: earningsForm.includesManure,
+        includes_urine: earningsForm.includes_urine,
+        includes_manure: earningsForm.includes_manure,
         buyer_name: earningsForm.buyer_name,
         amount: Number.parseFloat(earningsForm.amount),
         currency: currency,
@@ -531,8 +531,8 @@ export default function EarningsTracker() {
                               hutch_id: undefined,
                               sale_type: undefined,
                               weight: undefined,
-                              includesUrine: undefined,
-                              includesManure: undefined,
+                              includes_urine: undefined,
+                              includes_manure: undefined,
                               buyer_name: undefined,
                             }),
                           })
@@ -603,8 +603,8 @@ export default function EarningsTracker() {
                           <label className="flex items-center space-x-2">
                             <input
                               type="checkbox"
-                              checked={earningsForm.includesUrine || false}
-                              onChange={(e) => setEarningsForm({ ...earningsForm, includesUrine: e.target.checked })}
+                              checked={earningsForm.includes_urine || false}
+                              onChange={(e) => setEarningsForm({ ...earningsForm, includes_urine: e.target.checked })}
                               className="rounded border-gray-300 dark:border-gray-600"
                             />
                             <span className="text-sm text-gray-900 dark:text-gray-100">Includes Urine</span>
@@ -612,8 +612,8 @@ export default function EarningsTracker() {
                           <label className="flex items-center space-x-2">
                             <input
                               type="checkbox"
-                              checked={earningsForm.includesManure || false}
-                              onChange={(e) => setEarningsForm({ ...earningsForm, includesManure: e.target.checked })}
+                              checked={earningsForm.includes_manure || false}
+                              onChange={(e) => setEarningsForm({ ...earningsForm, includes_manure: e.target.checked })}
                               className="rounded border-gray-300 dark:border-gray-600"
                             />
                             <span className="text-sm text-gray-900 dark:text-gray-100">Includes Manure</span>

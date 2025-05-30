@@ -29,8 +29,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
     currency: "USD",
     saleWeight: "",
     sale_type: undefined as "whole" | "meat_only" | "skin_only" | "meat_and_skin" | undefined,
-    includesUrine: false,
-    includesManure: false,
+    includes_urine: false,
+    includes_manure: false,
     sold_to: "",
     sale_notes: "",
   });
@@ -68,7 +68,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         throw new Error("No authentication token found");
       }
 
-      // Create removal record
+      // Create removal record - update rabbit removals table
       const removalRecord = {
         rabbit_id: rabbit.rabbit_id,
         hutch_id,
@@ -86,9 +86,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         }),
       };
 
-      await axios.post(
-        `${utils.apiUrl}/rabbits/rabbit_removals/${user.farm_id}/${rabbit.rabbit_id}`,
-        removalRecord,
+      await axios.post(`${utils.apiUrl}/rabbits/rabbit_removals/${user.farm_id}/${rabbit.rabbit_id}`, removalRecord,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -97,7 +95,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
       // If it's a sale, create earnings record
       if (formData.reason === "Sale" && formData.saleAmount && user?.farm_id) {
         const earningsRecord: EarningsRecord = {
-          id: `${rabbit.rabbit_id}-${user.farm_id}`,
+          // id: `${rabbit.rabbit_id}-${user.farm_id}`,
           type: "rabbit_sale",
           rabbit_id: rabbit.rabbit_id,
           amount: Number.parseFloat(formData.saleAmount),
@@ -105,12 +103,11 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
           date: formData.date,
           weight: formData.saleWeight ? Number.parseFloat(formData.saleWeight) : rabbit.weight,
           sale_type: formData.sale_type,
-          includesUrine: formData.includesUrine,
-          includesManure: formData.includesManure,
+          includes_urine: formData.includes_urine,
+          includes_manure: formData.includes_manure,
           buyer_name: formData.sold_to,
           notes: formData.sale_notes,
           farm_id: user.farm_id,
-          created_at: new Date().toISOString(),
           hutch_id,
         };
 
@@ -119,12 +116,14 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         });
       }
 
-      // Update hutch to mark as unoccupied
-      await axios.patch(
-        `${utils.apiUrl}/hutches/${hutch_id}`,
-        { isOccupied: false },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Todo: Update rabbit status to removed
+      // Update hutch to mark as unoccupied - only if all the rabbits in the hutch are removed
+      // This assumes the hutch will be unoccupied if this rabbit is removed
+      // await axios.patch(
+      //   `${utils.apiUrl}/hutches/${hutch_id}`,
+      //   { isOccupied: false },
+      //   { headers: { Authorization: `Bearer ${token}` } }
+      // );
 
       // Update local storage for rabbits and hutches
       const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
@@ -308,8 +307,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={formData.includesUrine}
-                    onChange={(e) => setFormData({ ...formData, includesUrine: e.target.checked })}
+                    checked={formData.includes_urine}
+                    onChange={(e) => setFormData({ ...formData, includes_urine: e.target.checked })}
                     className="rounded border-gray-300 dark:border-gray-600"
                   />
                   <span className="text-sm text-gray-900 dark:text-gray-100">Includes Urine</span>
@@ -317,8 +316,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={formData.includesManure}
-                    onChange={(e) => setFormData({ ...formData, includesManure: e.target.checked })}
+                    checked={formData.includes_manure}
+                    onChange={(e) => setFormData({ ...formData, includes_manure: e.target.checked })}
                     className="rounded border-gray-300 dark:border-gray-600"
                   />
                   <span className="text-sm text-gray-900 dark:text-gray-100">Includes Manure</span>

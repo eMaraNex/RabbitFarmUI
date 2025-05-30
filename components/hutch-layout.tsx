@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Building, Rabbit, Plus, Trash2, History, Eye } from "lucide-react"
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import AddRabbitDialog from "@/components/add-rabbit-dialog"
 import RemoveRabbitDialog from "@/components/remove-rabbit-dialog"
 import type { Hutch as HutchType, Rabbit as RabbitType, Row as RowType } from "@/lib/types"
 import * as utils from "@/lib/utils"
+import axios from "axios"
+import { useAuth } from "@/lib/auth-context"
 interface HutchLayoutProps {
   hutches: HutchType[]
   rabbits: RabbitType[]
@@ -21,7 +23,8 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
   const [addRabbitOpen, setAddRabbitOpen] = useState(false)
   const [removeRabbitOpen, setRemoveRabbitOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-
+  const [removalHistory, setRemovalHistory] = useState<any[]>([])
+  const { user } = useAuth();
   const getRabbitsInHutch = useCallback((hutch_id: string) => {
     const result = rabbits.filter((rabbit) => rabbit.hutch_id === hutch_id);
     return result ?? null;
@@ -32,10 +35,32 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
     return result || null
   }, [hutches])
 
-  const getRemovalHistory = useCallback((hutch_id: string) => {
-    const removalRecords = JSON.parse(localStorage.getItem("rabbit_farm_rabbit_removals") || "[]")
-    return removalRecords.filter((record: any) => record.hutch_id === hutch_id)
-  }, [])
+
+  const getRemovalHistory = useCallback(async (user?: any, selectedHutch?: string): Promise<any[]> => {
+    const removalRecords: any[] = JSON.parse(localStorage.getItem('rabbit_farm_rabbit_removals') || '[]');
+    const cachedUser = JSON.parse(localStorage.getItem('rabbit_farm_user') || '{}');
+    if (removalRecords.length === 0) {
+      const records = await axios.get(`${utils.apiUrl}/hutches/${user?.farm_id ?? cachedUser?.farm_id}/${selectedHutch}/history`);
+      const newRemovalRecords = records.data?.data || [];
+      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === selectedHutch);
+      localStorage.setItem('rabbit_farm_rabbit_removals', JSON.stringify(filteredRecords || []));
+      return records.data;
+    }
+    return removalRecords.filter((record: any) => record.hutch_id === selectedHutch);
+  }, [user, selectedHutch]);
+
+  useEffect(() => {
+    const fetchRemovalHistory = async () => {
+      if (selectedHutch) {
+        const history = await getRemovalHistory(user, selectedHutch);
+        setRemovalHistory(history);
+      }
+    }
+
+    if (selectedHutch) {
+      fetchRemovalHistory();
+    }
+  }, [getRemovalHistory, selectedHutch])
 
   const handleHutchClick = (hutch_id: string) => {
     setSelectedHutch(hutch_id)
@@ -280,7 +305,6 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
               {(() => {
                 const hutch = getHutch(selectedHutch)
                 const rabbitsInHutch = getRabbitsInHutch(selectedHutch)
-                const removalHistory = getRemovalHistory(selectedHutch)
 
                 return (
                   <>
@@ -378,11 +402,11 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                         {showHistory && (
                           <div>
                             <h4 className="font-medium text-lg mb-4 text-gray-900 dark:text-gray-100">
-                              Removal History ({removalHistory.length})
+                              Removal History ({removalHistory?.length})
                             </h4>
-                            {removalHistory.length > 0 ? (
+                            {removalHistory?.length > 0 ? (
                               <div className="space-y-3 max-h-60 overflow-y-auto">
-                                {removalHistory.map((record: any, index: number) => (
+                                {removalHistory?.map((record: any, index: number) => (
                                   <Card
                                     key={index}
                                     className="bg-gradient-to-br from-red-50/80 to-red-100/80 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-700"
@@ -394,17 +418,17 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
                                             {record.rabbit_id}
                                           </p>
                                           <p className="text-sm text-red-600 dark:text-red-400">
-                                            Reason: {record.reason}
+                                            Reason: {record.removal_reason}
                                           </p>
                                           {record.notes && (
                                             <p className="text-sm text-red-600 dark:text-red-400">
-                                              Notes: {record.notes}
+                                              Notes: {record.removal_notes}
                                             </p>
                                           )}
                                         </div>
                                         <div className="text-right">
                                           <p className="text-xs text-red-500 dark:text-red-400">
-                                            {new Date(record.date).toLocaleDateString()}
+                                            {new Date(record.removed_at).toLocaleDateString()}
                                           </p>
                                         </div>
                                       </div>
