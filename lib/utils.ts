@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 export function generateRabbitId(): string {
   const existingIds = JSON.parse(localStorage.getItem("rabbit_farm_rabbits") || "[]")
   const maxId = existingIds.reduce((max: number, rabbit: any) => {
-    const idNum = Number.parseInt(rabbit.rabbitId?.replace("RB-", "") || "0")
+    const idNum = Number.parseInt(rabbit.rabbit_id?.replace("RB-", "") || "0")
     return Math.max(max, idNum)
   }, 0)
 
@@ -43,4 +43,17 @@ export function isBreedingReady(rabbit: any): boolean {
   } else {
     return ageInMonths >= 6
   }
+}
+
+export const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+export const apiUrl = `${baseUrl}/api/v1`;
+
+export function formatRabbitCount(does: number, bucks: number): string {
+  const doeText = does === 1 ? "1 doe" : does > 1 ? `${does} does` : "";
+  const buckText = bucks === 1 ? "1 buck" : bucks > 1 ? `${bucks} bucks` : "";
+
+  if (doeText && buckText) {
+    return `${doeText}, ${buckText}`;
+  }
+  return doeText || buckText;
 }

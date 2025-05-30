@@ -1,59 +1,79 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import ThemeToggle from "@/components/theme-toggle"
+import type React from "react";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, forgotPassword } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  });
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     try {
-      const success = await login(formData.email, formData.password)
+      const success = await login(formData.email, formData.password);
       if (!success) {
-        setError("Invalid email or password")
+        setError("Invalid email or password");
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
+      setError("Login failed. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleGoogleLogin = () => {
-    setIsLoading(true)
-    // Simulate Google SSO - in real app, this would redirect to Google OAuth
-    setTimeout(() => {
-      login("admin@org.com", "admin@2025")
-      setIsLoading(false)
-    }, 1500)
-  }
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Simulate Google SSO
+      const success = await login("admin@org.com", "admin@2025");
+      if (!success) {
+        setError("Google login failed");
+      }
+    } catch (err) {
+      setError("Google login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleDemoLogin = () => {
-    setFormData({
-      email: "admin@org.com",
-      password: "admin@2025",
-    })
-  }
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setForgotPasswordError("");
+    setForgotPasswordMessage("");
+
+    try {
+      const response = await forgotPassword(forgotPasswordEmail);
+      setForgotPasswordMessage(response.message);
+      setForgotPasswordEmail("");
+    } catch (err: any) {
+      setForgotPasswordError(err.message || "Failed to send reset email. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
@@ -165,6 +185,16 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(true)}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
                   {error}
@@ -179,32 +209,66 @@ export default function LoginPage() {
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Demo Credentials</h4>
-              <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-                Use these credentials to access the system:
-              </p>
-              <div className="space-y-1 text-sm text-blue-700 dark:text-blue-400">
-                <p>
-                  <strong>Email:</strong> admin@org.com
-                </p>
-                <p>
-                  <strong>Password:</strong> admin@2025
-                </p>
-              </div>
-              <Button
-                onClick={handleDemoLogin}
-                variant="outline"
-                size="sm"
-                className="mt-3 w-full border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-              >
-                Fill Demo Credentials
-              </Button>
-            </div>
           </CardContent>
         </Card>
+
+        {/* Forgot Password Modal */}
+        <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+          <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
+            <DialogHeader>
+              <DialogTitle className="dark:text-white">Reset Password</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email" className="dark:text-gray-200">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    required
+                  />
+                </div>
+              </div>
+
+              {forgotPasswordError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+                  {forgotPasswordError}
+                </div>
+              )}
+
+              {forgotPasswordMessage && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
+                  {forgotPasswordMessage}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsForgotPasswordOpen(false)}
+                  className="dark:border-gray-600 dark:text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                >
+                  {isLoading ? "Sending..." : "Send Reset Link"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
@@ -212,5 +276,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,13 +1,14 @@
 export interface Rabbit {
   id: string
-  rabbitId: string // New: RB-001, RB-002, etc.
+  rabbit_id?: string
+  farm_id: string
   name: string
   gender: "male" | "female"
   breed: string
   color: string
   birthDate: string
   weight: number
-  hutchId: string
+  hutch_id: string
   parentMale?: string
   parentFemale?: string
   isPregnant: boolean
@@ -18,7 +19,7 @@ export interface Rabbit {
   totalKits: number
   healthRecords: HealthRecord[]
   feedingSchedule: FeedingSchedule
-  createdAt?: string
+  created_at?: string
 }
 
 export interface HealthRecord {
@@ -50,7 +51,7 @@ export interface Hutch {
   features: string[]
   isOccupied: boolean
   lastCleaned?: string
-  createdAt?: string
+  created_at?: string
 }
 
 export interface Row {
@@ -58,7 +59,7 @@ export interface Row {
   description: string
   capacity: number
   occupied: number
-  createdAt?: string
+  created_at?: string
 }
 
 export interface BreedingRecord {
@@ -73,37 +74,38 @@ export interface BreedingRecord {
 }
 
 export interface RemovalRecord {
-  rabbitId: string
-  hutchId: string
+  rabbit_id?: string
+  hutch_id: string
   reason: string
   notes: string
   date: string
-  removedAt: string
 }
 
 export interface EarningsRecord {
-  id: string
+  id?: string
   type: "rabbit_sale" | "urine_sale" | "manure_sale" | "other"
-  rabbitId?: string
+  rabbit_id?: string
   amount: number
   currency: string
   date: string
   weight?: number
-  saleType?: "whole" | "meat_only" | "skin_only" | "meat_and_skin"
-  includesUrine?: boolean
-  includesManure?: boolean
-  buyerName?: string
+  sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin"
+  includes_urine?: boolean
+  includes_manure?: boolean
+  buyer_name?: string
   notes?: string
-  createdAt: string
+  created_at?: string
+  farm_id: string
+  hutch_id?: string
 }
 
 export interface ProductionRecord {
-  id: string
+  id?: string
   type: "urine" | "manure"
   quantity: number
   unit: string
   date: string
-  source?: string // hutch or rabbit ID
+  source?: string
   notes?: string
-  createdAt: string
+  created_at?: string
 }

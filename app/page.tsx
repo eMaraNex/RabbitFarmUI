@@ -21,8 +21,8 @@ import ThemeToggle from "@/components/theme-toggle"
 import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { ThemeProvider } from "@/lib/theme-context"
 import { CurrencyProvider } from "@/lib/currency-context"
-import { loadFromStorage, saveToStorage } from "@/lib/storage"
-import { mockRabbits, mockHutches, mockRows } from "@/lib/mock-data"
+import axios from "axios"
+import * as utils from "@/lib/utils"
 
 function DashboardContent() {
   const { user, logout } = useAuth()
@@ -33,61 +33,100 @@ function DashboardContent() {
   const [rows, setRows] = useState<any[]>([])
   const [dataLoaded, setDataLoaded] = useState(false)
 
-  const loadData = useCallback(() => {
-    console.log("Loading data from storage...")
-
-    // Load data from storage
-    const storedRabbits = loadFromStorage("rabbits", [])
-    const storedHutches = loadFromStorage("hutches", [])
-    const storedRows = loadFromStorage("rows", [])
-
-    console.log("Stored rabbits:", storedRabbits.length)
-    console.log("Stored hutches:", storedHutches.length)
-    console.log("Stored rows:", storedRows.length)
-
-    // If no data in storage, use mock data and save it
-    if (storedRabbits.length === 0) {
-      console.log("No rabbits in storage, using mock data")
-      saveToStorage("rabbits", mockRabbits)
-      setRabbits(mockRabbits)
-    } else {
-      setRabbits(storedRabbits)
+  const loadFromStorage = useCallback((farmId: string) => {
+    try {
+      const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`)
+      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`)
+      const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`)
+      return {
+        rows: cachedRows ? JSON.parse(cachedRows) : [],
+        hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
+        rabbits: cachedRabbits ? JSON.parse(cachedRabbits) : [],
+      }
+    } catch (error) {
+      console.error("Error loading from storage:", error)
+      return { rows: [], hutches: [], rabbits: [] }
     }
-
-    if (storedHutches.length === 0) {
-      console.log("No hutches in storage, using mock data")
-      saveToStorage("hutches", mockHutches)
-      setHutches(mockHutches)
-    } else {
-      setHutches(storedHutches)
-    }
-
-    if (storedRows.length === 0) {
-      console.log("No rows in storage, using mock data")
-      saveToStorage("rows", mockRows)
-      setRows(mockRows)
-    } else {
-      setRows(storedRows)
-    }
-
-    setDataLoaded(true)
   }, [])
+
+  const saveToStorage = useCallback((farmId: string, data: { rows: any[], hutches: any[], rabbits: any[] }) => {
+    try {
+      localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows))
+      localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches))
+      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(data.rabbits))
+    } catch (error) {
+      console.error("Error saving to storage:", error)
+    }
+  }, [])
+
+  const loadData = useCallback(async () => {
+    if (!user?.farm_id) return;
+
+    // Check local storage first
+    const cachedData = loadFromStorage(user.farm_id)
+    if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
+      setRows(cachedData.rows)
+      setHutches(cachedData.hutches)
+      setRabbits(cachedData.rabbits)
+      setDataLoaded(true)
+      // Optionally, fetch fresh data in the background
+    }
+
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      // Fetch fresh data from API
+      const [rowsResponse, hutchesResponse, rabbitsResponse] = await Promise.all([
+        axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
+        axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`),
+        axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`),
+      ])
+
+      const newRows = rowsResponse.data.data || []
+      const newHutches = hutchesResponse.data.data || []
+      const newRabbits = rabbitsResponse.data.data || []
+
+      // Update state
+      setRows(newRows)
+      setHutches(newHutches)
+      setRabbits(newRabbits)
+
+      // Save to local storage
+      saveToStorage(user.farm_id, {
+        rows: newRows,
+        hutches: newHutches,
+        rabbits: newRabbits,
+      })
+
+      setDataLoaded(true)
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
+        setRows(cachedData.rows)
+        setHutches(cachedData.hutches)
+        setRabbits(cachedData.rabbits)
+      }
+      setDataLoaded(true)
+    }
+  }, [user, loadFromStorage, saveToStorage])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
   const handleRowAdded = useCallback(() => {
-    console.log("Row added, refreshing data...")
     loadData()
   }, [loadData])
 
   const totalRabbits = rabbits.length
   const does = rabbits.filter((r) => r.gender === "female").length
   const bucks = rabbits.filter((r) => r.gender === "male").length
-  const pregnantDoes = rabbits.filter((r) => r.isPregnant).length
+  const pregnantDoes = rabbits.filter((r) => r.is_pregnant).length
   const upcomingBirths = rabbits.filter(
-    (r) => r.expectedBirthDate && new Date(r.expectedBirthDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    (r) => r.expected_birth_date && new Date(r.expected_birth_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   ).length
 
   if (!dataLoaded) {
@@ -282,7 +321,7 @@ function DashboardContent() {
                     <div>
                       <p className="font-medium text-red-800 dark:text-red-300 text-sm sm:text-base">Medication Due</p>
                       <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
-                        RB-001 (Mercury-A1) - Vaccination overdue by 2 days
+                        RB-001 (Earth-A1) - Vaccination overdue by 2 days
                       </p>
                     </div>
                     <Badge variant="destructive" className="text-xs">
@@ -295,7 +334,7 @@ function DashboardContent() {
                         Birth Expected
                       </p>
                       <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">
-                        RB-002 (Mercury-B2) - Expected to give birth in 3 days
+                        RB-002 (Earth-B2) - Expected to give birth in 3 days
                       </p>
                     </div>
                     <Badge variant="secondary" className="text-xs">
@@ -308,7 +347,7 @@ function DashboardContent() {
                         Breeding Ready
                       </p>
                       <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                        RB-003 (Mercury-C1) - Ready for next breeding cycle
+                        RB-003 (Earth-C1) - Ready for next breeding cycle
                       </p>
                     </div>
                     <Badge variant="outline" className="text-xs">
@@ -322,7 +361,7 @@ function DashboardContent() {
 
           <TabsContent value="hutches">
             <HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />
-            {selectedRabbit && <RabbitProfile rabbitId={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
+            {selectedRabbit && <RabbitProfile rabbit_id={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
           </TabsContent>
 
           <TabsContent value="breeding">

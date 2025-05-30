@@ -45,7 +45,7 @@ export default function AnalyticsCharts() {
 
     return {
       earnings: earnings.filter((e) => new Date(e.date) >= startDate),
-      rabbits: rabbits.filter((r) => new Date(r.createdAt || r.birthDate) >= startDate),
+      rabbits: rabbits.filter((r) => new Date(r.created_at || r.birthDate) >= startDate),
     }
   }
 

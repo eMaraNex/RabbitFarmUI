@@ -49,7 +49,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
             <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Available Does</CardTitle>
@@ -96,7 +96,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
             <div>
               <label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">Select Doe</label>
               <Select value={selectedDoe} onValueChange={setSelectedDoe}>
@@ -106,7 +106,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {availableDoes.map((doe) => (
                     <SelectItem key={doe.id} value={doe.id}>
-                      {doe.name} ({doe.hutchId}) - {doe.breed}
+                      {doe.name} ({doe.hutch_id}) - {doe.breed}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -122,7 +122,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {bucks.map((buck) => (
                     <SelectItem key={buck.id} value={buck.id}>
-                      {buck.name} ({buck.hutchId}) - {buck.breed}
+                      {buck.name} ({buck.hutch_id}) - {buck.breed}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -178,7 +178,7 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-gray-100">{doe.name}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Hutch {doe.hutchId} • Mated with {doe.matedWith}
+                    Hutch {doe.hutch_id} • Mated with {doe.matedWith}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Mating Date: {doe.lastMatingDate ? new Date(doe.lastMatingDate).toLocaleDateString() : "N/A"}

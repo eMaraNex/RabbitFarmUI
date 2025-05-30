@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,18 +8,20 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Rabbit } from "lucide-react"
-import { saveToStorage } from "@/lib/storage"
-import { mockRabbits } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 import { generateRabbitId } from "@/lib/utils"
+import axios from "axios"
+import * as utils from "@/lib/utils"
 
 interface AddRabbitDialogProps {
-  hutchId: string
+  hutch_id: string
   onClose: () => void
 }
 
-export default function AddRabbitDialog({ hutchId, onClose }: AddRabbitDialogProps) {
+export default function AddRabbitDialog({ hutch_id, onClose }: AddRabbitDialogProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
-    rabbitId: generateRabbitId(),
+    rabbit_id: generateRabbitId(),
     gender: "",
     breed: "",
     color: "",
@@ -66,43 +67,56 @@ export default function AddRabbitDialog({ hutchId, onClose }: AddRabbitDialogPro
     "Black and white spotted",
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const saveToStorage = (farmId: string, rabbits: any[]) => {
+    try {
+      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(rabbits))
+    } catch (error) {
+      console.error("Error saving to storage:", error)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user?.farm_id) {
+      alert("Farm ID is missing. Please log in again.")
+      return
+    }
 
     const newRabbit = {
-      id: Date.now().toString(),
-      rabbitId: formData.rabbitId,
-      name: formData.rabbitId, // Using ID as name for large scale
+      rabbit_id: formData.rabbit_id,
+      farm_id: user.farm_id,
+      name: formData.rabbit_id,
       gender: formData.gender as "male" | "female",
       breed: formData.breed,
       color: formData.color,
-      birthDate: formData.birthDate,
+      birth_date: formData.birthDate,
       weight: Number.parseFloat(formData.weight) || 0,
-      hutchId: hutchId,
-      parentMale: formData.parentMale || undefined,
-      parentFemale: formData.parentFemale || undefined,
-      isPregnant: false,
-      totalLitters: 0,
-      totalKits: 0,
-      healthRecords: [],
-      feedingSchedule: {
-        dailyAmount: formData.gender === "male" ? "170g" : "150g",
-        feedType: "Pellets + Hay",
-        times: ["6:00 AM", "6:00 PM"],
-        lastFed: new Date().toISOString(),
-      },
-      createdAt: new Date().toISOString(),
+      hutch_id: hutch_id,
+      parent_male: formData.parentMale || undefined,
+      parent_female: formData.parentFemale || undefined,
+      is_pregnant: false,
+      status: "active"
     }
 
-    // Save to storage
-    const updatedRabbits = [...mockRabbits, newRabbit]
-    saveToStorage("rabbits", updatedRabbits)
-
-    console.log("New rabbit added:", newRabbit)
-    onClose()
-
-    // Refresh to show new data
-    window.location.reload()
+    try {
+      const response = await axios.post(`${utils.apiUrl}/rabbits`, newRabbit, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
+      })
+      if (response.data.success) {
+        const addedRabbit = response.data.data
+        // Update local storage
+        const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`)
+        const existingRabbits = cachedRabbits ? JSON.parse(cachedRabbits) : []
+        const updatedRabbits = [...existingRabbits, addedRabbit]
+        saveToStorage(user.farm_id, updatedRabbits)
+        onClose()
+      } else {
+        throw new Error("Failed to create rabbit")
+      }
+    } catch (error: any) {
+      console.error("Error creating rabbit:", error)
+      alert(error.response?.data?.message || "Error creating rabbit. Please try again.")
+    }
   }
 
   return (
@@ -111,19 +125,19 @@ export default function AddRabbitDialog({ hutchId, onClose }: AddRabbitDialogPro
         <DialogHeader className="bg-gradient-to-r from-green-50/80 to-blue-50/80 dark:from-green-900/30 dark:to-blue-900/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-gray-200 dark:border-gray-600">
           <DialogTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <Rabbit className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <span>Add Rabbit to {hutchId}</span>
+            <span>Add Rabbit to {hutch_id}</span>
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="rabbitId" className="text-gray-900 dark:text-gray-100">
+              <Label htmlFor="rabbit_id" className="text-gray-900 dark:text-gray-100">
                 Rabbit ID
               </Label>
               <Input
-                id="rabbitId"
-                value={formData.rabbitId}
-                onChange={(e) => setFormData({ ...formData, rabbitId: e.target.value })}
+                id="rabbit_id"
+                value={formData.rabbit_id}
+                onChange={(e) => setFormData({ ...formData, rabbit_id: e.target.value })}
                 className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 required
               />
@@ -244,7 +258,7 @@ export default function AddRabbitDialog({ hutchId, onClose }: AddRabbitDialogPro
               <li>• Feeding schedule: {formData.gender === "male" ? "170g" : "150g"} daily</li>
               <li>• Health records: Empty (ready for first checkup)</li>
               <li>• Breeding status: Not pregnant</li>
-              <li>• Hutch assignment: {hutchId}</li>
+              <li>• Hutch assignment: {hutch_id}</li>
             </ul>
           </div>
 

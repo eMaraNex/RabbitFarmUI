@@ -13,7 +13,7 @@ interface FeedingScheduleProps {
 export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
   const getCurrentFeedingStatus = (rabbit: Rabbit) => {
     const now = new Date()
-    const lastFed = new Date(rabbit.feedingSchedule.lastFed)
+    const lastFed = new Date(rabbit?.feedingSchedule?.lastFed)
     const hoursSinceLastFed = (now.getTime() - lastFed.getTime()) / (1000 * 60 * 60)
 
     if (hoursSinceLastFed > 24) return "overdue"
@@ -21,13 +21,13 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
     return "fed"
   }
 
-  const overdueRabbits = rabbits.filter((r) => getCurrentFeedingStatus(r) === "overdue")
-  const dueRabbits = rabbits.filter((r) => getCurrentFeedingStatus(r) === "due")
-  const fedRabbits = rabbits.filter((r) => getCurrentFeedingStatus(r) === "fed")
+  const overdueRabbits = rabbits?.filter((r) => getCurrentFeedingStatus(r) === "overdue")
+  const dueRabbits = rabbits?.filter((r) => getCurrentFeedingStatus(r) === "due")
+  const fedRabbits = rabbits?.filter((r) => getCurrentFeedingStatus(r) === "fed")
 
   const getTotalDailyFeed = () => {
-    return rabbits.reduce((total, rabbit) => {
-      const amount = Number.parseFloat(rabbit.feedingSchedule.dailyAmount.replace(/[^\d.]/g, ""))
+    return rabbits?.reduce((total, rabbit) => {
+      const amount = Number.parseFloat(rabbit?.feedingSchedule?.dailyAmount.replace(/[^\d.]/g, ""))
       return total + (isNaN(amount) ? 0 : amount)
     }, 0)
   }
@@ -42,7 +42,7 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-700 dark:from-red-400 dark:to-red-500 bg-clip-text text-transparent">
-              {overdueRabbits.length}
+              {overdueRabbits?.length ?? 0}
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Not fed in 24+ hours</p>
           </CardContent>
@@ -54,7 +54,7 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent">
-              {dueRabbits.length}
+              {dueRabbits?.length ?? 0}
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Due for feeding</p>
           </CardContent>
@@ -66,7 +66,7 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 dark:from-green-400 dark:to-green-500 bg-clip-text text-transparent">
-              {fedRabbits.length}
+              {fedRabbits?.length ?? 0}
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Fed today</p>
           </CardContent>
@@ -94,14 +94,14 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
             {["Morning (6:00 AM)", "Afternoon (2:00 PM)", "Evening (6:00 PM)"].map((timeSlot, index) => (
               <div key={timeSlot} className="space-y-3">
                 <h4 className="font-medium text-lg text-gray-900 dark:text-gray-100">{timeSlot}</h4>
                 <div className="space-y-2">
                   {rabbits
                     .filter((rabbit) =>
-                      rabbit.feedingSchedule.times.some((time) => {
+                      rabbit?.feedingSchedule?.times.some((time) => {
                         if (index === 0) return time.includes("6:00") && time.includes("AM")
                         if (index === 1) return time.includes("2:00") && time.includes("PM")
                         return time.includes("6:00") && time.includes("PM")
@@ -111,13 +111,13 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
                       const status = getCurrentFeedingStatus(rabbit)
                       return (
                         <div
-                          key={rabbit.id}
+                          key={rabbit?.id}
                           className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-600 rounded bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60"
                         >
                           <div>
-                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{rabbit.name}</p>
+                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{rabbit?.name}</p>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              {rabbit.hutchId} • {rabbit.feedingSchedule.dailyAmount}
+                              {rabbit?.hutch_id} • {rabbit?.feedingSchedule?.dailyAmount}
                             </p>
                           </div>
                           <Badge
@@ -155,9 +155,9 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {rabbits.map((rabbit) => {
+            {rabbits?.map((rabbit) => {
               const status = getCurrentFeedingStatus(rabbit)
-              const lastFed = new Date(rabbit.feedingSchedule.lastFed)
+              const lastFed = new Date(rabbit?.feedingSchedule?.lastFed)
               const hoursSinceLastFed = Math.floor((new Date().getTime() - lastFed.getTime()) / (1000 * 60 * 60))
 
               return (
@@ -168,17 +168,17 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-gray-100">{rabbit.name}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Hutch {rabbit.hutchId} • {rabbit.breed} • {rabbit.gender === "female" ? "Doe" : "Buck"}
+                      Hutch {rabbit?.hutch_id} • {rabbit?.breed} • {rabbit?.gender === "female" ? "Doe" : "Buck"}
                     </p>
                     <div className="mt-2 space-y-1">
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Daily Amount:</span> {rabbit.feedingSchedule.dailyAmount}
+                        <span className="font-medium">Daily Amount:</span> {rabbit?.feedingSchedule?.dailyAmount}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Feed Type:</span> {rabbit.feedingSchedule.feedType}
+                        <span className="font-medium">Feed Type:</span> {rabbit?.feedingSchedule?.feedType}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Schedule:</span> {rabbit.feedingSchedule.times.join(", ")}
+                        <span className="font-medium">Schedule:</span> {rabbit?.feedingSchedule?.times.join(", ")}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         <span className="font-medium">Last Fed:</span> {lastFed.toLocaleDateString()} at{" "}
@@ -222,7 +222,7 @@ export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
           <CardTitle className="text-gray-900 dark:text-gray-100">Feed Inventory & Requirements</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
             <div className="p-4 bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-700">
               <h4 className="font-medium mb-3 text-blue-800 dark:text-blue-300">Daily Requirements</h4>
               <div className="space-y-2">

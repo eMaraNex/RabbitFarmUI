@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Building } from "lucide-react"
-import { saveToStorage, loadFromStorage } from "@/lib/storage"
+import { useAuth } from "@/lib/auth-context"
+import axios from "axios"
+import * as utils from "@/lib/utils"
 
 const planetNames = [
   "Mercury",
@@ -43,6 +44,7 @@ interface AddRowDialogProps {
 }
 
 export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -52,17 +54,62 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
   const [existingHutches, setExistingHutches] = useState<any[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (open) {
-      // Load existing data when dialog opens
-      const rows = loadFromStorage("rows", [])
-      const hutches = loadFromStorage("hutches", [])
-      setExistingRows(rows)
-      setExistingHutches(hutches)
-      console.log("Loaded existing rows:", rows)
-      console.log("Loaded existing hutches:", hutches)
+  const loadFromStorage = (farmId: string) => {
+    try {
+      const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`)
+      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`)
+      return {
+        rows: cachedRows ? JSON.parse(cachedRows) : [],
+        hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
+      }
+    } catch (error) {
+      console.error("Error loading from storage:", error)
+      return { rows: [], hutches: [] }
     }
-  }, [open])
+  }
+
+  const saveToStorage = (farmId: string, data: { rows: any[], hutches: any[] }) => {
+    try {
+      localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows))
+      localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches))
+    } catch (error) {
+      console.error("Error saving to storage:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (open && user?.farm_id) {
+      // Check local storage first
+      const cachedData = loadFromStorage(user.farm_id)
+      if (cachedData.rows.length || cachedData.hutches.length) {
+        setExistingRows(cachedData.rows)
+        setExistingHutches(cachedData.hutches)
+      }
+
+      // Fetch fresh data from API
+      const fetchData = async () => {
+        try {
+          const [rowsResponse, hutchesResponse] = await Promise.all([
+            axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
+            axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`),
+          ])
+          const newRows = rowsResponse.data.data || []
+          const newHutches = hutchesResponse.data.data || []
+          setExistingRows(newRows)
+          setExistingHutches(newHutches)
+          // Save to local storage
+          saveToStorage(user.farm_id ?? '', { rows: newRows, hutches: newHutches })
+        } catch (error) {
+          console.error("Error fetching data:", error)
+          if (cachedData.rows.length || cachedData.hutches.length) {
+            setExistingRows(cachedData.rows)
+            setExistingHutches(cachedData.hutches)
+          }
+        }
+      }
+      fetchData()
+    }
+  }, [open, user])
 
   const getNextPlanetName = () => {
     const usedNames = existingRows.map((row) => row.name)
@@ -72,6 +119,10 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user?.farm_id) {
+      alert("Farm ID is missing. Please log in again.")
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -84,76 +135,66 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
         return
       }
 
-      console.log("Creating new row:", newRowName)
-
       // Create new row
       const newRow = {
         name: newRowName,
+        farm_id: user.farm_id,
         description: formData.description || `${newRowName} row with 18 hutches across 3 levels`,
-        capacity: 18,
-        occupied: 0,
-        createdAt: new Date().toISOString(),
+        capacity: 18
+      }
+
+      const rowResponse = await axios.post(`${utils.apiUrl}/rows`, newRow)
+      if (!rowResponse.data.success) {
+        throw new Error("Failed to create row")
       }
 
       // Create 18 hutches for the new row (6 per level, 3 levels)
-      const newHutches = []
       const levels = ["A", "B", "C"]
       const positions = [1, 2, 3, 4, 5, 6]
+      const newHutches = []
 
       for (const level of levels) {
         for (const position of positions) {
-          const hutchId = `${newRowName}-${level}${position}`
+          const hutch_id = `${newRowName}-${level}${position}`
           newHutches.push({
-            id: hutchId,
-            rowName: newRowName,
+            id: hutch_id,
+            farm_id: user.farm_id,
+            row_name: newRowName,
             level,
             position,
             size: "medium",
             material: "wire",
             features: ["water bottle", "feeder"],
-            isOccupied: false,
-            createdAt: new Date().toISOString(),
+            is_occupied: false,
           })
         }
       }
+      // Save hutches
+      // for (const hutch of newHutches) {
+      //   await axios.post(`${utils.apiUrl}/hutches`, hutch)
+      // }
 
-      console.log("Creating hutches:", newHutches)
-
-      // Save to storage
-      const updatedRows = [...existingRows, newRow]
+      // Update local storage with new data
+      const updatedRows = [...existingRows, rowResponse.data.data]
       const updatedHutches = [...existingHutches, ...newHutches]
+      saveToStorage(user.farm_id, { rows: updatedRows, hutches: updatedHutches })
+      setExistingRows(updatedRows)
+      setExistingHutches(updatedHutches)
 
-      console.log("Saving updated rows:", updatedRows)
-      console.log("Saving updated hutches:", updatedHutches)
+      // Reset form
+      setFormData({ name: "", description: "" })
+      setOpen(false)
 
-      const rowsSaved = saveToStorage("rows", updatedRows)
-      const hutchesSaved = saveToStorage("hutches", updatedHutches)
+      // Show success message
+      alert(`Successfully created "${newRowName}" row with 18 empty hutches!`)
 
-      if (rowsSaved && hutchesSaved) {
-        console.log("Successfully saved new row and hutches")
-
-        // Reset form
-        setFormData({ name: "", description: "" })
-        setOpen(false)
-
-        // Show success message
-        alert(`Successfully created "${newRowName}" row with 18 empty hutches!`)
-
-        // Call callback to refresh parent component
-        if (onRowAdded) {
-          onRowAdded()
-        }
-
-        // Force page refresh as backup
-        setTimeout(() => {
-          window.location.reload()
-        }, 500)
-      } else {
-        throw new Error("Failed to save to storage")
+      // Call callback to refresh parent component
+      if (onRowAdded) {
+        onRowAdded()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating row:", error)
-      alert("Error creating row. Please try again.")
+      alert(error.response?.data?.message || "Error creating row. Please try again.")
     } finally {
       setIsSubmitting(false)
     }

@@ -1,115 +1,137 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { BarChart3, Calendar, Award, Heart, DollarSign, Download } from "lucide-react"
-import { loadFromStorage } from "@/lib/storage"
-import { useCurrency } from "@/lib/currency-context"
-import type { Rabbit, EarningsRecord } from "@/lib/types"
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { BarChart3, Calendar, Award, Heart, DollarSign, Download } from "lucide-react";
+import { useCurrency } from "@/lib/currency-context";
+import { useAuth } from "@/lib/auth-context";
+import axios from "axios";
+import * as utils from "@/lib/utils";
+import type { Rabbit, EarningsRecord } from "@/lib/types";
 
 export default function ReportsDashboard() {
-  const { formatAmount, convertToBaseCurrency } = useCurrency()
-  const [rabbits, setRabbits] = useState<Rabbit[]>([])
-  const [earnings, setEarnings] = useState<EarningsRecord[]>([])
-  const [dateRange, setDateRange] = useState("month")
-  const [reportType, setReportType] = useState("overview")
+  const { formatAmount, convertToBaseCurrency } = useCurrency();
+  const { user } = useAuth();
+  const [rabbits, setRabbits] = useState<Rabbit[]>([]);
+  const [earnings, setEarnings] = useState<EarningsRecord[]>([]);
+  const [dateRange, setDateRange] = useState("month");
+  const [reportType, setReportType] = useState("overview");
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (user?.farm_id) {
+      loadData();
+    }
+  }, [user?.farm_id]);
 
-  const loadData = () => {
-    const rabbitsData = loadFromStorage("rabbits", [])
-    const earningsData = loadFromStorage("earnings", [])
-    setRabbits(rabbitsData)
-    setEarnings(earningsData)
-  }
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const [rabbitsResponse, earningsResponse] = await Promise.all([
+        axios.get(`${utils.apiUrl}/rabbits/${user?.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/earnings/${user?.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      setRabbits(rabbitsResponse.data.data || []);
+      setEarnings(earningsResponse.data.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setRabbits([]);
+      setEarnings([]);
+    }
+  };
 
   const getDateRangeFilter = () => {
-    const now = new Date()
+    const now = new Date();
     switch (dateRange) {
       case "week":
-        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       case "month":
-        return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+        return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       case "quarter":
-        return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+        return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
       case "year":
-        return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+        return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
       default:
-        return new Date(0)
+        return new Date(0);
     }
-  }
+  };
 
   const getTopPerformingBuck = () => {
     const buckPerformance = rabbits
       .filter((r) => r.gender === "male")
       .map((buck) => {
-        const offspring = rabbits.filter((r) => r.parentMale === buck.rabbitId)
-        const totalKits = offspring.reduce((sum, r) => sum + r.totalKits, 0)
+        const offspring = rabbits.filter((r) => r.parentMale === buck.rabbit_id);
+        const totalKits = offspring.reduce((sum, r) => sum + r.totalKits, 0);
         return {
           ...buck,
           totalOffspring: offspring.length,
           totalKits: totalKits,
-        }
+        };
       })
-      .sort((a, b) => b.totalKits - a.totalKits)
+      .sort((a, b) => b.totalKits - a.totalKits);
 
-    return buckPerformance[0] || null
-  }
+    return buckPerformance[0] || null;
+  };
 
   const getTopPerformingDoe = () => {
-    const doesPerformance = rabbits.filter((r) => r.gender === "female").sort((a, b) => b.totalKits - a.totalKits)
-
-    return doesPerformance[0] || null
-  }
+    const doesPerformance = rabbits.filter((r) => r.gender === "female").sort((a, b) => b.totalKits - a.totalKits);
+    return doesPerformance[0] || null;
+  };
 
   const getBirthsInPeriod = () => {
-    const startDate = getDateRangeFilter()
-    return rabbits.filter((r) => new Date(r.birthDate) >= startDate).length
-  }
+    const startDate = getDateRangeFilter();
+    return rabbits.filter((r) => new Date(r.birthDate) >= startDate).length;
+  };
 
   const getEarningsComparison = () => {
-    const currentPeriodStart = getDateRangeFilter()
+    const currentPeriodStart = getDateRangeFilter();
     const previousPeriodStart = new Date(
-      currentPeriodStart.getTime() - (new Date().getTime() - currentPeriodStart.getTime()),
-    )
+      currentPeriodStart.getTime() - (new Date().getTime() - currentPeriodStart.getTime())
+    );
 
     const currentEarnings = earnings
       .filter((e) => new Date(e.date) >= currentPeriodStart)
-      .reduce((sum, e) => sum + convertToBaseCurrency(e.amount, e.currency as any), 0)
+      .reduce((sum, e) => sum + convertToBaseCurrency(e.amount, e.currency as any), 0);
 
     const previousEarnings = earnings
       .filter((e) => new Date(e.date) >= previousPeriodStart && new Date(e.date) < currentPeriodStart)
-      .reduce((sum, e) => sum + convertToBaseCurrency(e.amount, e.currency as any), 0)
+      .reduce((sum, e) => sum + convertToBaseCurrency(e.amount, e.currency as any), 0);
 
-    const change = previousEarnings > 0 ? ((currentEarnings - previousEarnings) / previousEarnings) * 100 : 0
+    const change = previousEarnings > 0 ? ((currentEarnings - previousEarnings) / previousEarnings) * 100 : 0;
 
     return {
       current: currentEarnings,
       previous: previousEarnings,
       change: change,
-    }
-  }
+    };
+  };
 
   const getBreedingEfficiency = () => {
-    const pregnantDoes = rabbits.filter((r) => r.isPregnant).length
-    const totalDoes = rabbits.filter((r) => r.gender === "female").length
-    return totalDoes > 0 ? (pregnantDoes / totalDoes) * 100 : 0
-  }
+    const pregnantDoes = rabbits.filter((r) => r.isPregnant).length;
+    const totalDoes = rabbits.filter((r) => r.gender === "female").length;
+    return totalDoes > 0 ? (pregnantDoes / totalDoes) * 100 : 0;
+  };
 
   const getAverageKitsPerLitter = () => {
-    const doesWithLitters = rabbits.filter((r) => r.gender === "female" && r.totalLitters > 0)
-    if (doesWithLitters.length === 0) return 0
+    const doesWithLitters = rabbits.filter((r) => r.gender === "female" && r.totalLitters > 0);
+    if (doesWithLitters.length === 0) return 0;
 
-    const totalKits = doesWithLitters.reduce((sum, r) => sum + r.totalKits, 0)
-    const totalLitters = doesWithLitters.reduce((sum, r) => sum + r.totalLitters, 0)
+    const totalKits = doesWithLitters.reduce((sum, r) => sum + r.totalKits, 0) || 0;
+    const totalLitters = doesWithLitters.reduce((sum, r) => sum + r.totalLitters, 0) || 0;
 
-    return totalLitters > 0 ? totalKits / totalLitters : 0
-  }
+    return totalLitters > 0 ? totalKits / totalLitters : 0;
+  };
 
   const getProductivityByBreed = () => {
     const breedStats = rabbits.reduce(
@@ -121,36 +143,36 @@ export default function ReportsDashboard() {
             totalLitters: 0,
             avgWeight: 0,
             totalWeight: 0,
-          }
+          };
         }
 
-        acc[rabbit.breed].count++
-        acc[rabbit.breed].totalKits += rabbit.totalKits
-        acc[rabbit.breed].totalLitters += rabbit.totalLitters
-        acc[rabbit.breed].totalWeight += rabbit.weight
+        acc[rabbit.breed].count++;
+        acc[rabbit.breed].totalKits += rabbit.totalKits;
+        acc[rabbit.breed].totalLitters += rabbit.totalLitters;
+        acc[rabbit.breed].totalWeight += rabbit.weight;
 
-        return acc
+        return acc;
       },
-      {} as Record<string, any>,
-    )
+      {} as Record<string, any>
+    );
 
     Object.keys(breedStats).forEach((breed) => {
-      breedStats[breed].avgWeight = breedStats[breed].totalWeight / breedStats[breed].count
-      breedStats[breed].avgKitsPerRabbit = breedStats[breed].totalKits / breedStats[breed].count
-    })
+      breedStats[breed].avgWeight = breedStats[breed].totalWeight / breedStats[breed].count || 0;
+      breedStats[breed].avgKitsPerRabbit = breedStats[breed].totalKits / breedStats[breed].count || 0;
+    });
 
     return Object.entries(breedStats)
       .map(([breed, stats]) => ({ breed, ...stats }))
-      .sort((a, b) => b.avgKitsPerRabbit - a.avgKitsPerRabbit)
-  }
+      .sort((a, b) => b.avgKitsPerRabbit - a.avgKitsPerRabbit);
+  };
 
-  const topBuck = getTopPerformingBuck()
-  const topDoe = getTopPerformingDoe()
-  const birthsInPeriod = getBirthsInPeriod()
-  const earningsComparison = getEarningsComparison()
-  const breedingEfficiency = getBreedingEfficiency()
-  const avgKitsPerLitter = getAverageKitsPerLitter()
-  const breedProductivity = getProductivityByBreed()
+  const topBuck = getTopPerformingBuck();
+  const topDoe = getTopPerformingDoe();
+  const birthsInPeriod = getBirthsInPeriod();
+  const earningsComparison = getEarningsComparison();
+  const breedingEfficiency = getBreedingEfficiency();
+  const avgKitsPerLitter = getAverageKitsPerLitter();
+  const breedProductivity = getProductivityByBreed();
 
   return (
     <div className="space-y-6">
@@ -258,7 +280,7 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Top Performers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 border-b border-gray-200 dark:border-gray-600">
             <CardTitle className="flex items-center space-x-2">
@@ -266,11 +288,11 @@ export default function ReportsDashboard() {
               <span className="text-gray-900 dark:text-gray-100">Top Performing Buck</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
+          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80 mt-5">
             {topBuck ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{topBuck.rabbitId}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{topBuck.rabbit_id}</span>
                   <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">Top Buck</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -288,7 +310,7 @@ export default function ReportsDashboard() {
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Hutch:</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{topBuck.hutchId}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topBuck.hutch_id}</p>
                   </div>
                 </div>
               </div>
@@ -305,11 +327,11 @@ export default function ReportsDashboard() {
               <span className="text-gray-900 dark:text-gray-100">Top Performing Doe</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
+          <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80 mt-5">
             {topDoe ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{topDoe.rabbitId}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{topDoe.rabbit_id}</span>
                   <Badge className="bg-gradient-to-r from-pink-500 to-pink-600 text-white">Top Doe</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -317,7 +339,7 @@ export default function ReportsDashboard() {
                     <p className="text-gray-600 dark:text-gray-400">Breed:</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.breed}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <p className="text-gray-600 dark:text-gray-400">Total Kits:</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.totalKits}</p>
                   </div>
@@ -330,6 +352,14 @@ export default function ReportsDashboard() {
                     <p className="font-medium text-gray-900 dark:text-gray-100">
                       {topDoe.isPregnant ? "Pregnant" : "Available"}
                     </p>
+                  </div> */}
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400">Weight</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.weight}kg</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400">Hutch:</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.hutch_id}</p>
                   </div>
                 </div>
               </div>
@@ -372,9 +402,9 @@ export default function ReportsDashboard() {
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {breed.avgKitsPerRabbit.toFixed(1)} kits/rabbit
+                    {breed.avgKitsPerRabbit.toFixed(1) ?? 0} kits/rabbit
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{breed.totalKits} total kits</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{breed.totalKits ?? 0} total kits</p>
                 </div>
               </div>
             ))}
@@ -387,35 +417,35 @@ export default function ReportsDashboard() {
         <CardHeader className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 border-b border-gray-200 dark:border-gray-600">
           <CardTitle className="flex items-center space-x-2">
             <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <span className="text-gray-900 dark:text-gray-100">Financial Performance</span>
+            <span className="text-gray-900 dark:text-gray-100">Breed Productivity</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Current Period</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {formatAmount(earningsComparison.current)}
-              </p>
+        <CardContent className="bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80 mt-5">
+          {breedProductivity.length > 0 ? (
+            <div className="space-y-4">
+              {breedProductivity.map((breed) => (
+                <div
+                  key={breed.breed}
+                  className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60"
+                >
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{breed.breed}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {breed.count} rabbits • Avg {breed.avgKitsPerRabbit.toFixed(1) ?? 0} kits/rabbit
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Avg Weight</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{breed.avgWeight.toFixed(1)}kg</div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Previous Period</p>
-              <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                {formatAmount(earningsComparison.previous)}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Change</p>
-              <p
-                className={`text-2xl font-bold ${earningsComparison.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-              >
-                {earningsComparison.change > 0 ? "+" : ""}
-                {earningsComparison.change.toFixed(1)}%
-              </p>
-            </div>
-          </div>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">No breed data available</p>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

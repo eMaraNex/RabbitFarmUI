@@ -1,82 +1,228 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import * as utils from "./utils";
 
 interface User {
-  email: string
-  name: string
-  avatar?: string
+  email: string;
+  name: string;
+  farm_id?: string;
+  role_id?: string;
 }
 
 interface AuthContextType {
-  user: User | null
-  login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
-  isLoading: boolean
+  user: User | null;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<{ message: string }>;
+  resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<{ message: string }>;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-  // Static credentials
-  const VALID_CREDENTIALS = {
-    email: "admin@org.com",
-    password: "admin@2025",
-  }
+  // Function to decode JWT and check expiration
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(atob(base64));
+      const expiry = payload.exp * 1000; // Convert to milliseconds
+      return Date.now() >= expiry;
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      return true; // Treat invalid tokens as expired
+    }
+  };
+
+  // Function to set or clear Axios Authorization header
+  const setAuthHeader = (token: string | null) => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  };
 
   useEffect(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem("rabbit_farm_user")
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser))
-      } catch (error) {
-        console.error("Error parsing saved user:", error)
-        localStorage.removeItem("rabbit_farm_user")
+    // Initialize auth state
+    const initializeAuth = async () => {
+      const savedToken = localStorage.getItem("rabbit_farm_token");
+      const savedUser = localStorage.getItem("rabbit_farm_user");
+
+      if (savedToken && savedUser) {
+        try {
+          // Check if token is expired
+          if (!isTokenExpired(savedToken)) {
+            setUser(JSON.parse(savedUser));
+            setAuthHeader(savedToken); // Set token in Axios headers
+          } else {
+            // Clear expired token and user data
+            localStorage.removeItem("rabbit_farm_token");
+            localStorage.removeItem("rabbit_farm_user");
+            localStorage.removeItem("rabbit_farm_id");
+            setAuthHeader(null);
+          }
+        } catch (error) {
+          console.error("Error parsing saved user or token:", error);
+          localStorage.removeItem("rabbit_farm_token");
+          localStorage.removeItem("rabbit_farm_user");
+          localStorage.removeItem("rabbit_farm_id");
+          setAuthHeader(null);
+        }
       }
-    }
-    setIsLoading(false)
-  }, [])
+
+      // Set up Axios interceptor for 401 responses
+      const interceptor = axios.interceptors.response.use(
+        (response) => response,
+        (error) => {
+          if (error.response?.status === 401) {
+            localStorage.removeItem("rabbit_farm_token");
+            localStorage.removeItem("rabbit_farm_user");
+            localStorage.removeItem("rabbit_farm_id");
+            setAuthHeader(null);
+            setUser(null);
+            router.push("/");
+          }
+          return Promise.reject(error);
+        }
+      );
+
+      setIsLoading(false);
+
+      // Cleanup interceptor on unmount
+      return () => {
+        axios.interceptors.response.eject(interceptor);
+      };
+    };
+
+    initializeAuth();
+  }, [router]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
+    setIsLoading(true);
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await axios.post(`${utils.apiUrl}/auth/login`, {
+        email,
+        password,
+      });
 
-    if (email === VALID_CREDENTIALS.email && password === VALID_CREDENTIALS.password) {
-      const userData: User = {
-        email: email,
-        name: "Farm Administrator",
-        avatar: undefined,
+      if (response.status === 200) {
+        const { user, token } = response?.data?.data ?? {};
+        const userData: User = {
+          email: user?.email ?? "",
+          name: user?.name ?? "Farm Administrator",
+          farm_id: user?.farm_id ?? "",
+          role_id: user?.role_id ?? "",
+        };
+
+        // Store token and user data
+        localStorage.setItem("rabbit_farm_token", token);
+        localStorage.setItem("rabbit_farm_user", JSON.stringify(userData));
+        localStorage.setItem("rabbit_farm_id", JSON.stringify(userData.farm_id));
+        setUser(userData);
+        setAuthHeader(token); // Set token in Axios headers
+
+        router.push("/");
+        return true;
+      } else {
+        return false;
       }
-
-      setUser(userData)
-      localStorage.setItem("rabbit_farm_user", JSON.stringify(userData))
-      setIsLoading(false)
-      return true
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setIsLoading(false)
-    return false
-  }
+  const logout = async (): Promise<boolean> => {
+    setIsLoading(true);
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("rabbit_farm_user")
-  }
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (token) {
+        await axios.post(`${utils.apiUrl}/auth/logout`, { token });
+      }
+      setUser(null);
+      localStorage.removeItem("rabbit_farm_token");
+      localStorage.removeItem("rabbit_farm_user");
+      localStorage.removeItem("rabbit_farm_id");
+      setAuthHeader(null); // Clear Axios headers
+      router.push("/");
+      return true;
+    } catch (error) {
+      console.error("Logout error:", error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  return <AuthContext.Provider value={{ user, login, logout, isLoading }}>{children}</AuthContext.Provider>
+  const forgotPassword = async (email: string): Promise<{ message: string }> => {
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${utils.apiUrl}/auth/forgot-password`, {
+        email,
+      });
+
+      if (response.status === 200) {
+        return response.data; // Expect { message: "Password reset email sent" }
+      } else {
+        throw new Error("Failed to send password reset email");
+      }
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      throw new Error(error.response?.data?.message || "Failed to send password reset email");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (params: { token: string; currentPassword: string; newPassword: string }): Promise<{ message: string }> => {
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${utils.apiUrl}/auth/reset-password`, {
+        token: params.token,
+        currentPassword: params.currentPassword,
+        newPassword: params.newPassword,
+      });
+
+      if (response.status === 200) {
+        return response.data; // Expect { message: "Password reset successfully" }
+      } else {
+        throw new Error("Failed to reset password");
+      }
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      throw new Error(error.response?.data?.message || "Failed to reset password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, forgotPassword, resetPassword, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }
