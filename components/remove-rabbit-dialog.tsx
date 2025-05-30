@@ -17,9 +17,10 @@ interface RemoveRabbitDialogProps {
   hutch_id: string;
   rabbit: RabbitType | undefined;
   onClose: () => void;
+  onRemovalSuccess?: () => void;
 }
 
-export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: RemoveRabbitDialogProps) {
+export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     reason: "",
@@ -95,7 +96,6 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
       // If it's a sale, create earnings record
       if (formData.reason === "Sale" && formData.saleAmount && user?.farm_id) {
         const earningsRecord: EarningsRecord = {
-          // id: `${rabbit.rabbit_id}-${user.farm_id}`,
           type: "rabbit_sale",
           rabbit_id: rabbit.rabbit_id,
           amount: Number.parseFloat(formData.saleAmount),
@@ -116,14 +116,12 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         });
       }
 
-      // Todo: Update rabbit status to removed
-      // Update hutch to mark as unoccupied - only if all the rabbits in the hutch are removed
-      // This assumes the hutch will be unoccupied if this rabbit is removed
-      // await axios.patch(
-      //   `${utils.apiUrl}/hutches/${hutch_id}`,
-      //   { isOccupied: false },
-      //   { headers: { Authorization: `Bearer ${token}` } }
-      // );
+      // Fetch the latest removal history for the hutch
+      const response = await axios.get(`${utils.apiUrl}/hutches/${user.farm_id}/${hutch_id}/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const newRemovalRecords = response.data?.data || [];
+      localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(newRemovalRecords));
 
       // Update local storage for rabbits and hutches
       const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
@@ -135,6 +133,9 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose }: Remove
         h.id === hutch_id ? { ...h, isOccupied: false } : h
       );
       localStorage.setItem(`rabbit_farm_hutches_${user.farm_id}`, JSON.stringify(updatedHutches));
+
+      // Notify parent component of successful removal
+      onRemovalSuccess?.();
 
       onClose();
     } catch (error: any) {

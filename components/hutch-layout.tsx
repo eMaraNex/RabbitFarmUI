@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Building, Rabbit, Plus, Trash2, History, Eye } from "lucide-react"
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { useState, useCallback, useEffect } from "react"
 import AddRabbitDialog from "@/components/add-rabbit-dialog"
 import RemoveRabbitDialog from "@/components/remove-rabbit-dialog"
 import type { Hutch as HutchType, Rabbit as RabbitType, Row as RowType } from "@/lib/types"
@@ -26,41 +26,50 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
   const [removalHistory, setRemovalHistory] = useState<any[]>([])
   const { user } = useAuth();
   const getRabbitsInHutch = useCallback((hutch_id: string) => {
-    const result = rabbits.filter((rabbit) => rabbit.hutch_id === hutch_id);
-    return result ?? null;
-  }, [rabbits])
+    return rabbits.filter((rabbit) => rabbit.hutch_id === hutch_id) ?? [];
+  }, [rabbits]);
 
   const getHutch = useCallback((hutch_id: string) => {
-    const result = hutches.find((hutch) => hutch.id === hutch_id)
-    return result || null
-  }, [hutches])
+    return hutches.find((hutch) => hutch.id === hutch_id) || null;
+  }, [hutches]);
 
+  const getRemovalHistory = useCallback(async (hutchId: string) => {
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      const cachedUser = JSON.parse(localStorage.getItem("rabbit_farm_user") || "{}");
+      const farmId = user?.farm_id ?? cachedUser?.farm_id;
+      if (!farmId || !token) return [];
 
-  const getRemovalHistory = useCallback(async (user?: any, selectedHutch?: string): Promise<any[]> => {
-    const removalRecords: any[] = JSON.parse(localStorage.getItem('rabbit_farm_rabbit_removals') || '[]');
-    const cachedUser = JSON.parse(localStorage.getItem('rabbit_farm_user') || '{}');
-    if (removalRecords.length === 0) {
-      const records = await axios.get(`${utils.apiUrl}/hutches/${user?.farm_id ?? cachedUser?.farm_id}/${selectedHutch}/history`);
-      const newRemovalRecords = records.data?.data || [];
-      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === selectedHutch);
-      localStorage.setItem('rabbit_farm_rabbit_removals', JSON.stringify(filteredRecords || []));
-      return records.data;
+      const response = await axios.get(`${utils.apiUrl}/hutches/${farmId}/${hutchId}/history`, {
+        headers: { Authorization: `Bearer ${token} ` },
+      });
+      const newRemovalRecords = response.data?.data || [];
+      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === (selectedHutch ?? hutchId));
+      localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(filteredRecords));
+      return filteredRecords;
+    } catch (error) {
+      console.error("Error fetching removal history:", error);
+      return [];
     }
-    return removalRecords.filter((record: any) => record.hutch_id === selectedHutch);
   }, [user, selectedHutch]);
 
   useEffect(() => {
     const fetchRemovalHistory = async () => {
       if (selectedHutch) {
-        const history = await getRemovalHistory(user, selectedHutch);
+        const history = await getRemovalHistory(selectedHutch);
         setRemovalHistory(history);
       }
-    }
+    };
 
+    fetchRemovalHistory();
+  }, [selectedHutch, getRemovalHistory]);
+
+  const handleRemovalSuccess = useCallback(async () => {
     if (selectedHutch) {
-      fetchRemovalHistory();
+      const history = await getRemovalHistory(selectedHutch);
+      setRemovalHistory(history);
     }
-  }, [getRemovalHistory, selectedHutch])
+  }, [selectedHutch, getRemovalHistory]);
 
   const handleHutchClick = (hutch_id: string) => {
     setSelectedHutch(hutch_id)
@@ -496,10 +505,7 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
 
       {/* Dialogs */}
       {addRabbitOpen && selectedHutch && (
-        <AddRabbitDialog
-          hutch_id={selectedHutch}
-          onClose={handleCloseDialogs}
-        />
+        <AddRabbitDialog hutch_id={selectedHutch} onClose={handleCloseDialogs} />
       )}
 
       {removeRabbitOpen && selectedHutch && (
@@ -507,6 +513,7 @@ export default function HutchLayout({ hutches, rabbits, rows, onRabbitSelect }: 
           hutch_id={selectedHutch}
           rabbit={rabbits.find((r) => r.hutch_id === selectedHutch)}
           onClose={handleCloseDialogs}
+          onRemovalSuccess={handleRemovalSuccess}
         />
       )}
     </div>
