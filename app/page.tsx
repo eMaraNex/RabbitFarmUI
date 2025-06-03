@@ -1,4 +1,5 @@
-'use client';
+"use client"
+
 import React, { useEffect, useRef } from "react";
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,13 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
+
+// Define the Alert type
+interface Alert {
+  type: string;
+  message: string;
+  variant: "destructive" | "secondary" | "outline";
+}
 
 interface SidebarProps {
   isOpen: boolean;
@@ -94,6 +102,7 @@ const DashboardContent: React.FC = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]); // Typed as Alert[]
   const tabsListRef = useRef<HTMLDivElement>(null);
 
   const loadFromStorage = useCallback((farmId: string) => {
@@ -156,11 +165,7 @@ const DashboardContent: React.FC = () => {
       setHutches(newHutches);
       setRabbits(newRabbits);
       // Save to local storage
-      saveToStorage(user.farm_id, {
-        rows: newRows,
-        hutches: newHutches,
-        rabbits: newRabbits,
-      });
+      saveToStorage(user.farm_id, { rows: newRows, hutches: newHutches, rabbits: newRabbits });
 
       setDataLoaded(true);
     } catch (error) {
@@ -173,12 +178,97 @@ const DashboardContent: React.FC = () => {
       setDataLoaded(true);
     }
   }, [user, loadFromStorage, saveToStorage]);
+  const generateAlerts = useCallback(() => {
+    const currentDate = new Date("2025-06-03T14:51:00+03:00"); // 02:51 PM EAT, June 03, 2025
+    const alertsList: Alert[] = [];
+
+    rabbits.forEach((rabbit) => {
+      // Pregnancy Noticed Alert (from pregnancy_start_date to day 25)
+      if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
+        const pregnancyStart = new Date(rabbit.pregnancy_start_date);
+        const daysSincePregnancy = Math.ceil((currentDate.getTime() - pregnancyStart.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSincePregnancy >= 0 && daysSincePregnancy < 26) { // Day 0 to day 25
+          alertsList.push({
+            type: "Pregnancy Noticed",
+            message: `${rabbit.name} (${rabbit.hutch_id}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
+            variant: "secondary",
+          });
+        }
+
+        // Nesting Box Needed Alert (26 days after pregnancy_start_date to day 30)
+        if (daysSincePregnancy >= 26 && daysSincePregnancy < 31) { // Day 26 to day 30
+          alertsList.push({
+            type: "Nesting Box Needed",
+            message: `${rabbit.name} (${rabbit.hutch_id}) - Add nesting box, 26 days since mating on ${pregnancyStart.toLocaleDateString()}`,
+            variant: "secondary",
+          });
+        }
+
+        // Birth Expected Alert (within 7 days before or 2 days after expected_birth_date)
+        if (rabbit.expected_birth_date) {
+          const expectedDate = new Date(rabbit.expected_birth_date);
+          const daysDiff = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysDiff <= 7 && daysDiff >= -2) {
+            alertsList.push({
+              type: "Birth Expected",
+              message: `${rabbit.name} (${rabbit.hutch_id}) - Expected to give birth in ${daysDiff > 0 ? `${daysDiff} days` : "overdue by " + Math.abs(daysDiff) + " days"}`,
+              variant: daysDiff <= 0 ? "destructive" : "secondary",
+            });
+          }
+        }
+      }
+
+      // Ready for Servicing Alert
+      if (rabbit.gender === "female" && !rabbit.is_pregnant) {
+        const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
+        const weaningDate = lastBirth ? new Date(lastBirth.getTime() + 42 * 24 * 60 * 60 * 1000) : null;
+        const oneWeekAfterWeaning = weaningDate ? new Date(weaningDate.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+
+        if (
+          (!rabbit.pregnancy_start_date || (rabbit.pregnancy_start_date && currentDate > new Date(new Date(rabbit.pregnancy_start_date).getTime() + 42 * 24 * 60 * 60 * 1000))) &&
+          (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
+        ) {
+          alertsList.push({
+            type: "Breeding Ready",
+            message: `${rabbit.name} (${rabbit.hutch_id}) - Ready for next breeding cycle`,
+            variant: "outline",
+          });
+        }
+      }
+
+      // Medication Due Alert (Simulated)
+      if (rabbit.next_due) {
+        const nextDueDate = new Date(rabbit.next_due);
+        const daysDiff = Math.ceil((nextDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff <= 0) {
+          alertsList.push({
+            type: "Medication Due",
+            message: `${rabbit.name} (${rabbit.hutch_id}) - Vaccination overdue by ${Math.abs(daysDiff)} days`,
+            variant: "destructive",
+          });
+        }
+      }
+    });
+
+    // Sort alerts by urgency (overdue > upcoming > ready)
+    alertsList.sort((a, b) => {
+      const order = { destructive: 0, secondary: 1, outline: 2 } as const;
+      return order[a.variant] - order[b.variant];
+    });
+
+    setAlerts(alertsList.slice(0, 3));
+  }, [rabbits]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Ensure the scroll starts at the beginning on initial load
+  useEffect(() => {
+    if (dataLoaded) {
+      generateAlerts();
+    }
+  }, [dataLoaded, generateAlerts]);
+
   useEffect(() => {
     if (tabsListRef.current) {
       tabsListRef.current.scrollLeft = 0;
@@ -198,7 +288,7 @@ const DashboardContent: React.FC = () => {
         "reports",
         "analytics",
       ].indexOf(activeTab);
-      const tabWidth = 70; // Matches min-w-[70px]
+      const tabWidth = 70;
       tabsListRef.current.scrollTo({
         left: tabIndex * tabWidth,
         behavior: "smooth",
@@ -426,7 +516,6 @@ const DashboardContent: React.FC = () => {
               </Card>
             </div>
 
-            {/* Recent Alerts */}
             <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-sm sm:text-base dark:text-gray-200">
@@ -436,43 +525,33 @@ const DashboardContent: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl border border-red-200 dark:border-red-800">
-                    <div>
-                      <p className="font-medium text-red-800 dark:text-red-300 text-sm sm:text-base">Medication Due</p>
-                      <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
-                        RB-001 (Earth-A1) - Vaccination overdue by 2 days
-                      </p>
+                  {alerts.map((alert, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
+                        ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                        : alert.variant === "secondary"
+                          ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
+                          : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
+                        }`}
+                    >
+                      <div>
+                        <p className="font-medium text-sm sm:text-base">
+                          {alert.type === "Medication Due" ? (
+                            <span className="text-red-800 dark:text-red-300">{alert.type}</span>
+                          ) : alert.type === "Birth Expected" ? (
+                            <span className="text-amber-800 dark:text-amber-300">{alert.type}</span>
+                          ) : (
+                            <span className="text-blue-800 dark:text-blue-300">{alert.type}</span>
+                          )}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{alert.message}</p>
+                      </div>
+                      <Badge variant={alert.variant} className="text-xs">
+                        {alert.variant === "destructive" ? "Overdue" : alert.variant === "secondary" ? "Upcoming" : "Ready"}
+                      </Badge>
                     </div>
-                    <Badge variant="destructive" className="text-xs">
-                      Overdue
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 rounded-xl border border-amber-200 dark:border-amber-800">
-                    <div>
-                      <p className="font-medium text-amber-800 dark:text-amber-300 text-sm sm:text-base">
-                        Birth Expected
-                      </p>
-                      <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">
-                        RB-002 (Earth-B2) - Expected to give birth in 3 days
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      Upcoming
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                    <div>
-                      <p className="font-medium text-blue-800 dark:text-blue-300 text-sm sm:text-base">
-                        Breeding Ready
-                      </p>
-                      <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                        RB-003 (Earth-C1) - Ready for next breeding cycle
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      Ready
-                    </Badge>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
