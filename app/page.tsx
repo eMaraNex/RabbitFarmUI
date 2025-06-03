@@ -1,63 +1,126 @@
-"use client"
+'use client';
+import React, { useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X } from "lucide-react";
+import HutchLayout from "@/components/hutch-layout";
+import RabbitProfile from "@/components/rabbit-profile";
+import BreedingManager from "@/components/breeding-manager";
+import HealthTracker from "@/components/health-tracker";
+import FeedingSchedule from "@/components/feeding-schedule";
+import EarningsTracker from "@/components/earnings-tracker";
+import ReportsDashboard from "@/components/reports-dashboard";
+import AnalyticsCharts from "@/components/analytics-charts";
+import CurrencySelector from "@/components/currency-selector";
+import AddRowDialog from "@/components/add-row-dialog";
+import ProtectedRoute from "@/components/auth/protected-route";
+import ThemeToggle from "@/components/theme-toggle";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
+import { CurrencyProvider } from "@/lib/currency-context";
+import axios from "axios";
+import * as utils from "@/lib/utils";
 
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User } from "lucide-react"
-import HutchLayout from "@/components/hutch-layout"
-import RabbitProfile from "@/components/rabbit-profile"
-import BreedingManager from "@/components/breeding-manager"
-import HealthTracker from "@/components/health-tracker"
-import FeedingSchedule from "@/components/feeding-schedule"
-import EarningsTracker from "@/components/earnings-tracker"
-import ReportsDashboard from "@/components/reports-dashboard"
-import AnalyticsCharts from "@/components/analytics-charts"
-import CurrencySelector from "@/components/currency-selector"
-import AddRowDialog from "@/components/add-row-dialog"
-import ProtectedRoute from "@/components/auth/protected-route"
-import ThemeToggle from "@/components/theme-toggle"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
-import { ThemeProvider } from "@/lib/theme-context"
-import { CurrencyProvider } from "@/lib/currency-context"
-import axios from "axios"
-import * as utils from "@/lib/utils"
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+  rows: any[];
+  logout: () => void;
+  handleRowAdded: () => void;
+}
 
-function DashboardContent() {
-  const { user, logout } = useAuth()
-  const [selectedRabbit, setSelectedRabbit] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("overview")
-  const [rabbits, setRabbits] = useState<any[]>([])
-  const [hutches, setHutches] = useState<any[]>([])
-  const [rows, setRows] = useState<any[]>([])
-  const [dataLoaded, setDataLoaded] = useState(false)
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user, rows, logout, handleRowAdded }) => {
+  return (
+    <div
+      className={`fixed inset-y-0 right-0 z-50 w-72 bg-gray-900 text-white transform ${isOpen ? "translate-x-0" : "translate-x-full"
+        } transition-transform duration-400 ease-in-out shadow-lg md:hidden overflow-y-auto`}
+    >
+      <div className="flex justify-between items-center p-4 border-b border-gray-700">
+        <h2 className="text-lg font-bold">Menu</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="hover:bg-gray-800 rounded-full"
+        >
+          <X className="h-6 w-6" />
+        </Button>
+      </div>
+      <div className="flex flex-col space-y-4 p-4">
+        <div className="flex items-center space-x-2 text-sm bg-gray-800 rounded-lg px-4 py-3">
+          <User className="h-4 w-4" />
+          <span className="truncate">{user?.name}</span>
+        </div>
+        <Badge
+          variant="outline"
+          className="bg-gray-800 border-gray-600 flex items-center justify-center px-4 py-3"
+        >
+          <Building className="h-4 w-4 mr-2" />
+          {rows.length} Rows Active
+        </Badge>
+        <div className="py-1">
+          <CurrencySelector />
+        </div>
+        <div className="py-1">
+          <ThemeToggle />
+        </div>
+        <div className="py-1">
+          <AddRowDialog onRowAdded={handleRowAdded} />
+        </div>
+        <Button
+          onClick={logout}
+          variant="outline"
+          size="sm"
+          className="bg-gray-800 border-gray-600 hover:bg-red-900/50 hover:border-red-600 hover:text-red-300 flex items-center justify-center px-4 py-3"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const DashboardContent: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [selectedRabbit, setSelectedRabbit] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<any>("overview");
+  const [rabbits, setRabbits] = useState<any[]>([]);
+  const [hutches, setHutches] = useState<any[]>([]);
+  const [rows, setRows] = useState<any[]>([]);
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const tabsListRef = useRef<HTMLDivElement>(null);
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
-      const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`)
-      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`)
-      const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`)
+      const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`);
+      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`);
+      const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`);
       return {
         rows: cachedRows ? JSON.parse(cachedRows) : [],
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
         rabbits: cachedRabbits ? JSON.parse(cachedRabbits) : [],
-      }
+      };
     } catch (error) {
-      console.error("Error loading from storage:", error)
-      return { rows: [], hutches: [], rabbits: [] }
+      console.error("Error loading from storage:", error);
+      return { rows: [], hutches: [], rabbits: [] };
     }
-  }, [])
+  }, []);
 
-  const saveToStorage = useCallback((farmId: string, data: { rows: any[], hutches: any[], rabbits: any[] }) => {
+  const saveToStorage = useCallback((farmId: string, data: { rows: any[]; hutches: any[]; rabbits: any[] }) => {
     try {
-      localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows))
-      localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches))
-      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(data.rabbits))
+      localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows));
+      localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches));
+      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(data.rabbits));
     } catch (error) {
-      console.error("Error saving to storage:", error)
+      console.error("Error saving to storage:", error);
     }
-  }, [])
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!user?.farm_id) return;
@@ -65,11 +128,10 @@ function DashboardContent() {
     // Check local storage first
     const cachedData = loadFromStorage(user.farm_id)
     if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
-      setRows(cachedData.rows)
-      setHutches(cachedData.hutches)
-      setRabbits(cachedData.rabbits)
-      setDataLoaded(true)
-      // Optionally, fetch fresh data in the background
+      setRows(cachedData.rows);
+      setHutches(cachedData.hutches);
+      setRabbits(cachedData.rabbits);
+      setDataLoaded(true);
     }
 
     try {
@@ -83,51 +145,82 @@ function DashboardContent() {
         axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
         axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`),
         axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`),
-      ])
+      ]);
 
-      const newRows = rowsResponse.data.data || []
-      const newHutches = hutchesResponse.data.data || []
-      const newRabbits = rabbitsResponse.data.data || []
+      const newRows = rowsResponse.data.data || [];
+      const newHutches = hutchesResponse.data.data || [];
+      const newRabbits = rabbitsResponse.data.data || [];
 
       // Update state
-      setRows(newRows)
-      setHutches(newHutches)
-      setRabbits(newRabbits)
-
+      setRows(newRows);
+      setHutches(newHutches);
+      setRabbits(newRabbits);
       // Save to local storage
       saveToStorage(user.farm_id, {
         rows: newRows,
         hutches: newHutches,
         rabbits: newRabbits,
-      })
+      });
 
-      setDataLoaded(true)
+      setDataLoaded(true);
     } catch (error) {
-      console.error("Error fetching data:", error)
+      console.error("Error fetching data:", error);
       if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
-        setRows(cachedData.rows)
-        setHutches(cachedData.hutches)
-        setRabbits(cachedData.rabbits)
+        setRows(cachedData.rows);
+        setHutches(cachedData.hutches);
+        setRabbits(cachedData.rabbits);
       }
-      setDataLoaded(true)
+      setDataLoaded(true);
     }
-  }, [user, loadFromStorage, saveToStorage])
+  }, [user, loadFromStorage, saveToStorage]);
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadData();
+  }, [loadData]);
+
+  // Ensure the scroll starts at the beginning on initial load
+  useEffect(() => {
+    if (tabsListRef.current) {
+      tabsListRef.current.scrollLeft = 0;
+    }
+  }, []);
+
+  // Scroll to the active tab when it changes
+  useEffect(() => {
+    if (tabsListRef.current) {
+      const tabIndex = [
+        "overview",
+        "hutches",
+        "breeding",
+        "health",
+        "feeding",
+        "earnings",
+        "reports",
+        "analytics",
+      ].indexOf(activeTab);
+      const tabWidth = 70; // Matches min-w-[70px]
+      tabsListRef.current.scrollTo({
+        left: tabIndex * tabWidth,
+        behavior: "smooth",
+      });
+    }
+  }, [activeTab]);
 
   const handleRowAdded = useCallback(() => {
-    loadData()
-  }, [loadData])
+    loadData();
+  }, [loadData]);
 
-  const totalRabbits = rabbits.length
-  const does = rabbits.filter((r) => r.gender === "female").length
-  const bucks = rabbits.filter((r) => r.gender === "male").length
-  const pregnantDoes = rabbits.filter((r) => r.is_pregnant).length
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const totalRabbits = rabbits.length;
+  const does = rabbits.filter((r) => r.gender === "female").length;
+  const bucks = rabbits.filter((r) => r.gender === "male").length;
+  const pregnantDoes = rabbits.filter((r) => r.is_pregnant).length;
   const upcomingBirths = rabbits.filter(
     (r) => r.expected_birth_date && new Date(r.expected_birth_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  ).length
+  ).length;
 
   if (!dataLoaded) {
     return (
@@ -137,7 +230,7 @@ function DashboardContent() {
           <p className="text-lg text-gray-600 dark:text-gray-300">Loading Rabbit Farm Data...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -158,14 +251,14 @@ function DashboardContent() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Badge variant="outline" className="bg-white/50 dark:bg-gray-700/50 hidden sm:flex">
+            <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
+              <Badge variant="outline" className="bg-white/60 dark:bg-gray-700/60 shadow-sm">
                 <Building className="h-3 w-3 mr-1" />
                 {rows.length} Rows Active
               </Badge>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-3 py-2 shadow-sm">
                 <User className="h-4 w-4" />
-                <span className="hidden sm:inline">{user?.name}</span>
+                <span className="truncate">{user?.name}</span>
               </div>
               <CurrencySelector />
               <ThemeToggle />
@@ -174,64 +267,90 @@ function DashboardContent() {
                 onClick={logout}
                 variant="outline"
                 size="sm"
-                className="bg-white/50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800"
+                className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 shadow-sm"
               >
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+              onClick={toggleSidebar}
+            >
+              <Menu className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+            </Button>
           </div>
         </div>
       </header>
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={toggleSidebar}
+        user={user}
+        rows={rows}
+        logout={logout}
+        handleRowAdded={handleRowAdded}
+      />
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <TabsList
+            ref={tabsListRef}
+            key={activeTab}
+            className="inline-flex justify-start w-full md:grid md:grid-cols-8 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
+          >
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Overview
             </TabsTrigger>
             <TabsTrigger
               value="hutches"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Hutches
             </TabsTrigger>
             <TabsTrigger
               value="breeding"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Breeding
             </TabsTrigger>
             <TabsTrigger
               value="health"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Health
             </TabsTrigger>
             <TabsTrigger
               value="feeding"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Feeding
             </TabsTrigger>
             <TabsTrigger
               value="earnings"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Earnings
             </TabsTrigger>
             <TabsTrigger
               value="reports"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Reports
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm"
+              className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
             >
               Analytics
             </TabsTrigger>
@@ -390,10 +509,10 @@ function DashboardContent() {
         </Tabs>
       </main>
     </div>
-  )
-}
+  );
+};
 
-export default function RabbitFarmDashboard() {
+const RabbitFarmDashboard: React.FC = () => {
   return (
     <CurrencyProvider>
       <ThemeProvider>
@@ -404,5 +523,7 @@ export default function RabbitFarmDashboard() {
         </AuthProvider>
       </ThemeProvider>
     </CurrencyProvider>
-  )
-}
+  );
+};
+
+export default RabbitFarmDashboard;
