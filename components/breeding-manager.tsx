@@ -1,20 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Heart, Plus, AlertTriangle } from "lucide-react"
+import axios from "axios"
+import * as utils from "@/lib/utils"
+import { useAuth } from "@/lib/auth-context"
 import type { Rabbit } from "@/lib/types"
 
 interface BreedingManagerProps {
   rabbits: Rabbit[]
 }
 
-export default function BreedingManager({ rabbits }: BreedingManagerProps) {
+export default function BreedingManager({ rabbits: initialRabbits }: BreedingManagerProps) {
+  const { user } = useAuth()
   const [selectedDoe, setSelectedDoe] = useState("")
   const [selectedBuck, setSelectedBuck] = useState("")
+  const [rabbits, setRabbits] = useState<Rabbit[]>(initialRabbits)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   const does = rabbits.filter((r) => r.gender === "female")
   const bucks = rabbits.filter((r) => r.gender === "male")
@@ -22,7 +30,6 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
   const availableDoes = does.filter((r) => !r.isPregnant)
 
   const checkInbreeding = (doe: Rabbit, buck: Rabbit) => {
-    // Check if they share parents
     if (doe.parentMale === buck.id || doe.parentFemale === buck.id) return true
     if (buck.parentMale === doe.id || buck.parentFemale === doe.id) return true
     if (doe.parentMale === buck.parentMale && doe.parentMale) return true
@@ -46,6 +53,65 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
 
     return { compatible: true, reason: "Compatible for breeding" }
   }
+
+  const handleScheduleBreeding = async () => {
+    if (!selectedDoe || !selectedBuck || !user?.farm_id) return
+
+    setIsLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const doe = rabbits.find((r) => r.id === selectedDoe)
+      const buck = rabbits.find((r) => r.id === selectedBuck)
+      if (!doe || !buck) throw new Error("Invalid rabbit selection")
+
+      const matingDate = new Date().toISOString().split("T")[0] // Current date in YYYY-MM-DD
+      const expectedBirthDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split("T")[0] // Approx 31 days gestation
+
+      const response = await axios.post(`${utils.apiUrl}/breeds`, {
+        farm_id: user.farm_id,
+        doe_id: doe.rabbit_id,
+        buck_id: buck.rabbit_id,
+        mating_date: matingDate,
+        expected_birth_date: expectedBirthDate,
+        notes: `Scheduled on ${matingDate}`,
+      })
+
+      if (response.status === 201) {
+        setSuccess("Breeding scheduled successfully!")
+        setSelectedDoe("")
+        setSelectedBuck("")
+        // Update local rabbit state to reflect pregnancy (simplified)
+        setRabbits(
+          rabbits.map((r) =>
+            r.id === selectedDoe
+              ? { ...r, isPregnant: true, lastMatingDate: matingDate, expectedBirthDate, matedWith: buck.name }
+              : r
+          )
+        )
+      }
+    } catch (err) {
+      // setError(err.response?.data?.message || "Failed to schedule breeding. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user?.farm_id) {
+      const fetchRabbits = async () => {
+        try {
+          const response = await axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`)
+          setRabbits(response.data.data || [])
+        } catch (err) {
+          console.error("Error fetching rabbits:", err)
+          setRabbits(initialRabbits) // Fallback to props if API fails
+        }
+      }
+      fetchRabbits()
+    }
+  }, [user?.farm_id, initialRabbits])
 
   return (
     <div className="space-y-6">
@@ -155,11 +221,15 @@ export default function BreedingManager({ rabbits }: BreedingManagerProps) {
 
           <Button
             className="w-full bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white"
-            disabled={!selectedDoe || !selectedBuck}
+            disabled={!selectedDoe || !selectedBuck || isLoading}
+            onClick={handleScheduleBreeding}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Schedule Breeding
+            {isLoading ? "Scheduling..." : "Schedule Breeding"}
           </Button>
+
+          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {success && <div className="text-green-500 text-sm">{success}</div>}
         </CardContent>
       </Card>
 
