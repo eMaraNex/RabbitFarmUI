@@ -11,6 +11,7 @@ import type { Hutch as HutchType, Rabbit as RabbitType, Row as RowType } from "@
 import * as utils from "@/lib/utils"
 import axios from "axios"
 import { useAuth } from "@/lib/auth-context"
+import { useSnackbar } from "notistack";
 interface HutchLayoutProps {
   hutches: HutchType[]
   rabbits: RabbitType[]
@@ -25,8 +26,8 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const [showHistory, setShowHistory] = useState(false)
   const [removalHistory, setRemovalHistory] = useState<any[]>([])
   const [rabbits, setRabbits] = useState<RabbitType[]>(initialRabbits)
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: "" })
   const { user } = useAuth()
+  const { enqueueSnackbar } = useSnackbar();
 
   const getRabbitsInHutch = useCallback((hutch_id: string) => {
     return rabbits.filter((rabbit) => rabbit.hutch_id === hutch_id) ?? []
@@ -51,7 +52,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(filteredRecords))
       return filteredRecords
     } catch (error) {
-      console.error("Error fetching removal history:", error)
+      enqueueSnackbar("Error fetching removal history. Please try again later.", { variant: 'error' })
       return []
     }
   }, [user, selectedHutch])
@@ -97,19 +98,10 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
   const handleRabbitAdded = useCallback((newRabbit: any) => {
     setRabbits((prev) => [...prev, newRabbit])
-    setSnackbar({ open: true, message: `Rabbit ${newRabbit.rabbit_id} has been added successfully!` })
+    enqueueSnackbar(`Rabbit ${newRabbit.rabbit_id} has been added successfully!`, { variant: 'success' })
     setShowHistory(false)
     setAddRabbitOpen(false)
   }, [])
-
-  useEffect(() => {
-    if (snackbar.open) {
-      const timer = setTimeout(() => {
-        setSnackbar({ open: false, message: "" })
-      }, 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [snackbar.open])
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -535,13 +527,6 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
           onClose={handleCloseDialogs}
           onRemovalSuccess={handleRemovalSuccess}
         />
-      )}
-
-      {/* Snackbar */}
-      {snackbar.open && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <p>{snackbar.message}</p>
-        </div>
       )}
     </div>
   )
