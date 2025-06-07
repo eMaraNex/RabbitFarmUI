@@ -13,95 +13,101 @@ import axios from "axios"
 import { useAuth } from "@/lib/auth-context"
 import { useSnackbar } from "notistack";
 interface HutchLayoutProps {
-  hutches: HutchType[]
-  rabbits: RabbitType[]
-  rows: RowType[]
-  onRabbitSelect: (rabbit_id: string) => void
+  hutches: HutchType[];
+  rabbits: RabbitType[];
+  rows: RowType[];
+  onRabbitSelect: (rabbit_id: string) => void;
 }
 
 export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect }: HutchLayoutProps) {
-  const [selectedHutch, setSelectedHutch] = useState<string | null>(null)
-  const [addRabbitOpen, setAddRabbitOpen] = useState(false)
-  const [removeRabbitOpen, setRemoveRabbitOpen] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [removalHistory, setRemovalHistory] = useState<any[]>([])
-  const [rabbits, setRabbits] = useState<RabbitType[]>(initialRabbits)
-  const { user } = useAuth()
+  const [selectedHutch, setSelectedHutch] = useState<string | null>(null);
+  const [addRabbitOpen, setAddRabbitOpen] = useState(false);
+  const [removeRabbitOpen, setRemoveRabbitOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [removalHistory, setRemovalHistory] = useState<any[]>([]);
+  const [rabbits, setRabbits] = useState<RabbitType[]>(initialRabbits);
+  const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
   const getRabbitsInHutch = useCallback((hutch_id: string) => {
-    return rabbits.filter((rabbit) => rabbit.hutch_id === hutch_id) ?? []
-  }, [rabbits])
+    return rabbits.filter((rabbit) => rabbit.hutch_id === hutch_id) ?? [];
+  }, [rabbits]);
 
   const getHutch = useCallback((hutch_id: string) => {
-    return hutches.find((hutch) => hutch.id === hutch_id) || null
-  }, [hutches])
+    return hutches.find((hutch) => hutch.id === hutch_id) || null;
+  }, [hutches]);
 
   const getRemovalHistory = useCallback(async (hutchId: string) => {
     try {
-      const token = localStorage.getItem("rabbit_farm_token")
-      const cachedUser = JSON.parse(localStorage.getItem("rabbit_farm_user") || "{}")
-      const farmId = user?.farm_id ?? cachedUser?.farm_id
-      if (!farmId || !token) return []
+      const token = localStorage.getItem("rabbit_farm_token");
+      const cachedUser = JSON.parse(localStorage.getItem("rabbit_farm_user") || "{}");
+      const farmId = user?.farm_id ?? cachedUser?.farm_id;
+      if (!farmId || !token) return [];
 
       const response = await axios.get(`${utils.apiUrl}/hutches/${farmId}/${hutchId}/history`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      const newRemovalRecords = response.data?.data || []
-      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === (selectedHutch ?? hutchId))
-      localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(filteredRecords))
-      return filteredRecords
+      });
+      const newRemovalRecords = response.data?.data || [];
+      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === hutchId);
+      localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(filteredRecords));
+      return filteredRecords;
     } catch (error) {
-      enqueueSnackbar("Error fetching removal history. Please try again later.", { variant: 'error' })
-      return []
+      enqueueSnackbar("Error fetching removal history. Please try again later.", { variant: "error" });
+      return [];
     }
-  }, [user, selectedHutch])
+  }, [user]);
 
   useEffect(() => {
     const fetchRemovalHistory = async () => {
       if (selectedHutch) {
-        const history = await getRemovalHistory(selectedHutch)
-        setRemovalHistory(history)
+        const history = await getRemovalHistory(selectedHutch);
+        setRemovalHistory(history);
       }
-    }
-    fetchRemovalHistory()
-  }, [selectedHutch, getRemovalHistory])
+    };
+    fetchRemovalHistory();
+  }, [selectedHutch, getRemovalHistory]);
 
-  const handleRemovalSuccess = useCallback(async () => {
+  const handleRemovalSuccess = useCallback(async (removedRabbitId: string) => {
     if (selectedHutch) {
-      const history = await getRemovalHistory(selectedHutch)
-      setRemovalHistory(history)
+      // Update rabbits state to remove the rabbit
+      setRabbits((prev) => prev.filter((r) => r.rabbit_id !== removedRabbitId));
+
+      // Fetch and update removal history
+      const history = await getRemovalHistory(selectedHutch);
+      setRemovalHistory(history);
+
+      // Automatically show history after removal
+      setShowHistory(true);
     }
-  }, [selectedHutch, getRemovalHistory])
+  }, [selectedHutch, getRemovalHistory]);
 
   const handleHutchClick = (hutch_id: string) => {
-    setSelectedHutch(hutch_id)
-  }
+    setSelectedHutch(hutch_id);
+  };
 
   const handleAddRabbit = () => {
-    setAddRabbitOpen(true)
-  }
+    setAddRabbitOpen(true);
+  };
 
   const handleRemoveRabbit = () => {
-    setRemoveRabbitOpen(true)
-  }
+    setRemoveRabbitOpen(true);
+  };
 
   const handleCloseDialogs = useCallback(() => {
-    setAddRabbitOpen(false)
-    setRemoveRabbitOpen(false)
-    setShowHistory(false)
-    // Only reset selectedHutch if no dialogs are open
+    setAddRabbitOpen(false);
+    setRemoveRabbitOpen(false);
+    setShowHistory(false);
     if (!addRabbitOpen && !removeRabbitOpen) {
-      setSelectedHutch(null)
+      setSelectedHutch(null);
     }
-  }, [addRabbitOpen, removeRabbitOpen])
+  }, [addRabbitOpen, removeRabbitOpen]);
 
   const handleRabbitAdded = useCallback((newRabbit: any) => {
-    setRabbits((prev) => [...prev, newRabbit])
-    enqueueSnackbar(`Rabbit ${newRabbit.rabbit_id} has been added successfully!`, { variant: 'success' })
-    setShowHistory(false)
-    setAddRabbitOpen(false)
-  }, [])
+    setRabbits((prev) => [...prev, newRabbit]);
+    enqueueSnackbar(`Rabbit ${newRabbit.rabbit_id} has been added successfully!`, { variant: "success" });
+    setShowHistory(false);
+    setAddRabbitOpen(false);
+  }, []);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -153,11 +159,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
-                      const hutch_id = selectedHutch ?? `${row.name}-A${position}`
-                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? []
-                      const isOccupied = rabbitsInHutch.length > 0
-                      const does = rabbitsInHutch.filter((r) => r.gender === "female").length
-                      const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length
+                      const hutch_id = selectedHutch ?? `${row.name}-A${position}`;
+                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? [];
+                      const isOccupied = rabbitsInHutch.length > 0;
+                      const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
+                      const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
                       return (
                         <Card
                           key={`${hutch_id}-${position}`}
@@ -186,7 +192,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                             )}
                           </CardContent>
                         </Card>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -203,11 +209,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
-                      const hutch_id = selectedHutch ?? `${row.name}-B${position}`
-                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? []
-                      const isOccupied = rabbitsInHutch.length > 0
-                      const does = rabbitsInHutch.filter((r) => r.gender === "female").length
-                      const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length
+                      const hutch_id = selectedHutch ?? `${row.name}-B${position}`;
+                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? [];
+                      const isOccupied = rabbitsInHutch.length > 0;
+                      const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
+                      const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
                       return (
                         <Card
                           key={`${hutch_id}-${position}`}
@@ -236,7 +242,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                             )}
                           </CardContent>
                         </Card>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -253,11 +259,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
-                      const hutch_id = selectedHutch ?? `${row.name}-G${position}`
-                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? []
-                      const isOccupied = rabbitsInHutch.length > 0
-                      const does = rabbitsInHutch.filter((r) => r.gender === "female").length
-                      const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length
+                      const hutch_id = selectedHutch ?? `${row.name}-G${position}`;
+                      const rabbitsInHutch = getRabbitsInHutch(hutch_id) ?? [];
+                      const isOccupied = rabbitsInHutch.length > 0;
+                      const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
+                      const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
                       return (
                         <Card
                           key={`${hutch_id}-${position}`}
@@ -286,7 +292,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                             )}
                           </CardContent>
                         </Card>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -320,8 +326,8 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
             </CardHeader>
             <CardContent className="space-y-6 bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
               {(() => {
-                const hutch = getHutch(selectedHutch)
-                const rabbitsInHutch = getRabbitsInHutch(selectedHutch)
+                const hutch = getHutch(selectedHutch);
+                const rabbitsInHutch = getRabbitsInHutch(selectedHutch);
 
                 return (
                   <>
@@ -465,14 +471,14 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                       <p className="text-sm text-gray-600 dark:text-gray-400">Hutch not found.</p>
                     )}
                   </>
-                )
+                );
               })()}
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
                 {(() => {
-                  const hutch = getHutch(selectedHutch)
-                  const rabbitsInHutch = hutch ? getRabbitsInHutch(selectedHutch) : []
+                  const hutch = getHutch(selectedHutch);
+                  const rabbitsInHutch = hutch ? getRabbitsInHutch(selectedHutch) : [];
 
                   return (
                     <>
@@ -503,7 +509,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                         Close
                       </Button>
                     </>
-                  )
+                  );
                 })()}
               </div>
             </CardContent>
@@ -529,5 +535,5 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         />
       )}
     </div>
-  )
+  );
 }
