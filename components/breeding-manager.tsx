@@ -26,14 +26,14 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
 
   const does = rabbits.filter((r) => r.gender === "female")
   const bucks = rabbits.filter((r) => r.gender === "male")
-  const pregnantDoes = does.filter((r) => r.isPregnant)
-  const availableDoes = does.filter((r) => !r.isPregnant)
+  const pregnantDoes = does.filter((r) => r.is_pregnant)
+  const availableDoes = does.filter((r) => !r.is_pregnant)
 
   const checkInbreeding = (doe: Rabbit, buck: Rabbit) => {
-    if (doe.parentMale === buck.id || doe.parentFemale === buck.id) return true
-    if (buck.parentMale === doe.id || buck.parentFemale === doe.id) return true
-    if (doe.parentMale === buck.parentMale && doe.parentMale) return true
-    if (doe.parentFemale === buck.parentFemale && doe.parentFemale) return true
+    if (doe.parent_male === buck.id || doe.parent_female === buck.id) return true
+    if (buck.parent_male === doe.id || buck.parent_female === doe.id) return true
+    if (doe.parent_male === buck.parent_male && doe.parent_male) return true
+    if (doe.parent_female === buck.parent_female && doe.parent_female) return true
     return false
   }
 
@@ -47,7 +47,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
       return { compatible: false, reason: "Potential inbreeding detected" }
     }
 
-    if (doe.isPregnant) {
+    if (doe.is_pregnant) {
       return { compatible: false, reason: "Doe is currently pregnant" }
     }
 
@@ -86,7 +86,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
         setRabbits(
           rabbits.map((r) =>
             r.id === selectedDoe
-              ? { ...r, isPregnant: true, lastMatingDate: matingDate, expectedBirthDate, matedWith: buck.name }
+              ? { ...r, is_pregnant: true, last_mating_date: matingDate, expectedBirthDate, mated_with: buck.name }
               : r
           )
         )
@@ -171,7 +171,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {availableDoes.map((doe) => (
-                    <SelectItem key={doe.id} value={doe.id}>
+                    <SelectItem key={doe.id} value={doe.id || ''}>
                       {doe.name} ({doe.hutch_id}) - {doe.breed}
                     </SelectItem>
                   ))}
@@ -187,7 +187,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {bucks.map((buck) => (
-                    <SelectItem key={buck.id} value={buck.id}>
+                    <SelectItem key={buck.id} value={buck.id || ''}>
                       {buck.name} ({buck.hutch_id}) - {buck.breed}
                     </SelectItem>
                   ))}
@@ -248,10 +248,10 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-gray-100">{doe.name}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Hutch {doe.hutch_id} • Mated with {doe.matedWith}
+                    Hutch {doe.hutch_id} • Mated with {doe.mated_with}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Mating Date: {doe.lastMatingDate ? new Date(doe.lastMatingDate).toLocaleDateString() : "N/A"}
+                    Mating Date: {doe.last_mating_date ? new Date(doe.last_mating_date).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
                 <div className="text-right">
@@ -281,8 +281,8 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
         <CardContent>
           <div className="space-y-3">
             {rabbits
-              .filter((r) => r.lastMatingDate)
-              .sort((a, b) => new Date(b.lastMatingDate!).getTime() - new Date(a.lastMatingDate!).getTime())
+              .filter((r) => r.last_mating_date)
+              .sort((a, b) => new Date(b.last_mating_date!).getTime() - new Date(a.last_mating_date!).getTime())
               .slice(0, 5)
               .map((rabbit) => (
                 <div
@@ -291,21 +291,21 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
                 >
                   <div>
                     <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {rabbit.name} × {rabbit.matedWith}
+                      {rabbit.name} × {rabbit.mated_with}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(rabbit.lastMatingDate!).toLocaleDateString()}
+                      {new Date(rabbit.last_mating_date!).toLocaleDateString()}
                     </p>
                   </div>
                   <Badge
-                    variant={rabbit.isPregnant ? "default" : "outline"}
+                    variant={rabbit.is_pregnant ? "default" : "outline"}
                     className={
-                      rabbit.isPregnant
+                      rabbit.is_pregnant
                         ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
                         : "bg-white/50 dark:bg-gray-800/50"
                     }
                   >
-                    {rabbit.isPregnant ? "Pregnant" : "Completed"}
+                    {rabbit.is_pregnant ? "Pregnant" : "Completed"}
                   </Badge>
                 </div>
               ))}

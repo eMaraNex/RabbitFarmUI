@@ -21,8 +21,8 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const calculateAge = (birthDate: string) => {
-    const birth = new Date(birthDate);
+  const calculateAge = (birth_date: string) => {
+    const birth = new Date(birth_date);
     const now = new Date();
     const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
     return months;
@@ -122,7 +122,7 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
             >
               {rabbit.gender === "female" ? "Doe" : "Buck"}
             </Badge>
-            {rabbit.isPregnant && (
+            {rabbit.is_pregnant && (
               <Badge
                 variant="outline"
                 className="bg-pink-50 dark:bg-pink-900/30 border-pink-200 dark:border-pink-700 text-pink-800 dark:text-pink-300"
@@ -158,12 +158,12 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Birth Date:</span>
                   <span className="text-gray-700 dark:text-gray-300">
-                    {new Date(rabbit.birthDate).toLocaleDateString()}
+                    {new Date(rabbit.birth_date).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Age:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{calculateAge(rabbit.birthDate)} months</span>
+                  <span className="text-gray-700 dark:text-gray-300">{calculateAge(rabbit.birth_date)} months</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Weight:</span>
@@ -181,18 +181,18 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {rabbit.lastMatingDate && (
+                {rabbit.last_mating_date && (
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Last Mating:</span>
                     <span className="text-gray-700 dark:text-gray-300">
-                      {new Date(rabbit.lastMatingDate).toLocaleDateString()}
+                      {new Date(rabbit.last_mating_date).toLocaleDateString()}
                     </span>
                   </div>
                 )}
-                {rabbit.matedWith && (
+                {rabbit.mated_with && (
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Mated With:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{rabbit.matedWith}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{rabbit.mated_with}</span>
                   </div>
                 )}
                 {rabbit.expectedBirthDate && (
@@ -211,16 +211,16 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
                   <span className="font-medium text-gray-900 dark:text-gray-100">Total Kits:</span>
                   <span className="text-gray-700 dark:text-gray-300">{rabbit.totalKits}</span>
                 </div>
-                {rabbit.parentMale && (
+                {rabbit.parent_male && (
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Father:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{rabbit.parentMale}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{rabbit.parent_male}</span>
                   </div>
                 )}
-                {rabbit.parentFemale && (
+                {rabbit.parent_female && (
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Mother:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{rabbit.parentFemale}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{rabbit.parent_female}</span>
                   </div>
                 )}
               </CardContent>
@@ -285,7 +285,7 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-900 dark:text-gray-100">Last Fed:</span>
                   <span className="text-gray-700 dark:text-gray-300">
-                    {new Date(rabbit?.feedingSchedule?.lastFed).toLocaleDateString()}
+                    {new Date(rabbit?.feedingSchedule?.lastFed || '').toLocaleDateString()}
                   </span>
                 </div>
               </div>

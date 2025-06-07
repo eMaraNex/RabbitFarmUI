@@ -7,29 +7,32 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Rabbit } from "lucide-react"
+import { Rabbit as RabbitIcon } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { generateRabbitId } from "@/lib/utils"
 import axios from "axios"
 import * as utils from "@/lib/utils"
+import { Rabbit } from "@/lib/types"
 
 interface AddRabbitDialogProps {
-  hutch_id: string
-  onClose: () => void
+  hutch_id: string;
+  onClose: () => void;
+  onRabbitAdded: (newRabbit: Rabbit) => void;
 }
 
-export default function AddRabbitDialog({ hutch_id, onClose }: AddRabbitDialogProps) {
-  const { user } = useAuth()
+export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: AddRabbitDialogProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     rabbit_id: generateRabbitId(),
     gender: "",
     breed: "",
     color: "",
-    birthDate: "",
+    birth_date: "",
     weight: "",
-    parentMale: "",
-    parentFemale: "",
-  })
+    pair: "",
+    parent_male: "",
+    parent_female: "",
+  });
 
   const breeds = [
     "New Zealand White",
@@ -67,64 +70,65 @@ export default function AddRabbitDialog({ hutch_id, onClose }: AddRabbitDialogPr
     "Black and white spotted",
   ]
 
-  const saveToStorage = (farmId: string, rabbits: any[]) => {
+  const saveToStorage = (farmId: string, rabbits: Rabbit[]) => {
     try {
-      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(rabbits))
+      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(rabbits));
     } catch (error) {
-      console.error("Error saving to storage:", error)
+      console.error("Error saving to storage:", error);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!user?.farm_id) {
-      alert("Farm ID is missing. Please log in again.")
-      return
+      alert("Farm ID is missing. Please log in again.");
+      return;
     }
 
-    const newRabbit = {
+    const newRabbit: Rabbit = {
       rabbit_id: formData.rabbit_id,
       farm_id: user.farm_id,
       name: formData.rabbit_id,
       gender: formData.gender as "male" | "female",
       breed: formData.breed,
       color: formData.color,
-      birth_date: formData.birthDate,
+      birth_date: formData.birth_date,
       weight: Number.parseFloat(formData.weight) || 0,
       hutch_id: hutch_id,
-      parent_male: formData.parentMale || undefined,
-      parent_female: formData.parentFemale || undefined,
+      parent_male: formData.parent_male || undefined,
+      parent_female: formData.parent_female || undefined,
       is_pregnant: false,
       status: "active"
-    }
+    };
 
     try {
       const response = await axios.post(`${utils.apiUrl}/rabbits`, newRabbit, {
         headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
-      })
+      });
       if (response.data.success) {
-        const addedRabbit = response.data.data
+        const addedRabbit: Rabbit = response.data.data;
         // Update local storage
-        const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`)
-        const existingRabbits = cachedRabbits ? JSON.parse(cachedRabbits) : []
-        const updatedRabbits = [...existingRabbits, addedRabbit]
-        saveToStorage(user.farm_id, updatedRabbits)
-        onClose()
+        const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`);
+        const existingRabbits: Rabbit[] = cachedRabbits ? JSON.parse(cachedRabbits) : [];
+        const updatedRabbits = [...existingRabbits, addedRabbit];
+        saveToStorage(user.farm_id, updatedRabbits);
+        onRabbitAdded(addedRabbit);
+        onClose();
       } else {
-        throw new Error("Failed to create rabbit")
+        throw new Error("Failed to create rabbit");
       }
     } catch (error: any) {
-      console.error("Error creating rabbit:", error)
-      alert(error.response?.data?.message || "Error creating rabbit. Please try again.")
+      console.error("Error creating rabbit:", error);
+      alert(error.response?.data?.message || "Error creating rabbit. Please try again.");
     }
-  }
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[90vh] overflow-y-auto shadow-2xl">
         <DialogHeader className="bg-gradient-to-r from-green-50/80 to-blue-50/80 dark:from-green-900/30 dark:to-blue-900/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-gray-200 dark:border-gray-600">
           <DialogTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
-            <Rabbit className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <RabbitIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span>Add Rabbit to {hutch_id}</span>
           </DialogTitle>
         </DialogHeader>
@@ -197,14 +201,14 @@ export default function AddRabbitDialog({ hutch_id, onClose }: AddRabbitDialogPr
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="birthDate" className="text-gray-900 dark:text-gray-100">
+              <Label htmlFor="birth_date" className="text-gray-900 dark:text-gray-100">
                 Birth Date
               </Label>
               <Input
-                id="birthDate"
+                id="birth_date"
                 type="date"
-                value={formData.birthDate}
-                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                value={formData.birth_date}
+                onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                 className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 required
               />
@@ -227,26 +231,26 @@ export default function AddRabbitDialog({ hutch_id, onClose }: AddRabbitDialogPr
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="parentMale" className="text-gray-900 dark:text-gray-100">
+              <Label htmlFor="parent_male" className="text-gray-900 dark:text-gray-100">
                 Father ID (Optional)
               </Label>
               <Input
-                id="parentMale"
+                id="parent_male"
                 placeholder="e.g., RB-001"
-                value={formData.parentMale}
-                onChange={(e) => setFormData({ ...formData, parentMale: e.target.value })}
+                value={formData.parent_male}
+                onChange={(e) => setFormData({ ...formData, parent_male: e.target.value })}
                 className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
               />
             </div>
             <div>
-              <Label htmlFor="parentFemale" className="text-gray-900 dark:text-gray-100">
+              <Label htmlFor="parent_female" className="text-gray-900 dark:text-gray-100">
                 Mother ID (Optional)
               </Label>
               <Input
-                id="parentFemale"
+                id="parent_female"
                 placeholder="e.g., RB-002"
-                value={formData.parentFemale}
-                onChange={(e) => setFormData({ ...formData, parentFemale: e.target.value })}
+                value={formData.parent_female}
+                onChange={(e) => setFormData({ ...formData, parent_female: e.target.value })}
                 className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
               />
             </div>

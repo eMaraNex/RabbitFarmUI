@@ -23,8 +23,8 @@ export function generateRabbitName(id: string): string {
 }
 
 // Calculate age in months
-export function calculateAge(birthDate: string): number {
-  const birth = new Date(birthDate)
+export function calculateAge(birth_date: string): number {
+  const birth = new Date(birth_date)
   const now = new Date()
   const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
   return months
@@ -37,9 +37,9 @@ export function formatDate(dateString: string): string {
 
 // Check if rabbit is ready for breeding
 export function isBreedingReady(rabbit: any): boolean {
-  const ageInMonths = calculateAge(rabbit.birthDate)
+  const ageInMonths = calculateAge(rabbit.birth_date)
   if (rabbit.gender === "female") {
-    return ageInMonths >= 6 && !rabbit.isPregnant
+    return ageInMonths >= 6 && !rabbit.is_pregnant
   } else {
     return ageInMonths >= 6
   }

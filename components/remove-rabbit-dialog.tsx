@@ -170,7 +170,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
             <p><strong>Weight:</strong> {rabbit.weight}kg</p>
             <p>
               <strong>Age:</strong>{" "}
-              {Math.floor((new Date().getTime() - new Date(rabbit.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
+              {Math.floor((new Date().getTime() - new Date(rabbit.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
               months
             </p>
           </div>

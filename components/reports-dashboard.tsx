@@ -71,8 +71,8 @@ export default function ReportsDashboard() {
     const buckPerformance = rabbits
       .filter((r) => r.gender === "male")
       .map((buck) => {
-        const offspring = rabbits.filter((r) => r.parentMale === buck.rabbit_id);
-        const totalKits = offspring.reduce((sum, r) => sum + r.totalKits, 0);
+        const offspring = rabbits.filter((r) => r.parent_male === buck.rabbit_id);
+        const totalKits = offspring.reduce((sum, r) => sum + (r.totalKits || 0), 0);
         return {
           ...buck,
           totalOffspring: offspring.length,
@@ -85,13 +85,13 @@ export default function ReportsDashboard() {
   };
 
   const getTopPerformingDoe = () => {
-    const doesPerformance = rabbits.filter((r) => r.gender === "female").sort((a, b) => b.totalKits - a.totalKits);
+    const doesPerformance = rabbits.filter((r) => r.gender === "female").sort((a, b) => (b.totalKits || 0) - (a.totalKits || 0));
     return doesPerformance[0] || null;
   };
 
   const getBirthsInPeriod = () => {
     const startDate = getDateRangeFilter();
-    return rabbits.filter((r) => new Date(r.birthDate) >= startDate).length;
+    return rabbits.filter((r) => new Date(r.birth_date) >= startDate).length;
   };
 
   const getEarningsComparison = () => {
@@ -118,17 +118,17 @@ export default function ReportsDashboard() {
   };
 
   const getBreedingEfficiency = () => {
-    const pregnantDoes = rabbits.filter((r) => r.isPregnant).length;
+    const pregnantDoes = rabbits.filter((r) => r.is_pregnant).length;
     const totalDoes = rabbits.filter((r) => r.gender === "female").length;
     return totalDoes > 0 ? (pregnantDoes / totalDoes) * 100 : 0;
   };
 
   const getAverageKitsPerLitter = () => {
-    const doesWithLitters = rabbits.filter((r) => r.gender === "female" && r.totalLitters > 0);
+    const doesWithLitters = rabbits.filter((r) => r.gender === "female" && (r.totalLitters || 0) > 0);
     if (doesWithLitters.length === 0) return 0;
 
-    const totalKits = doesWithLitters.reduce((sum, r) => sum + r.totalKits, 0) || 0;
-    const totalLitters = doesWithLitters.reduce((sum, r) => sum + r.totalLitters, 0) || 0;
+    const totalKits = doesWithLitters.reduce((sum, r) => sum + (r.totalKits || 0), 0) || 0;
+    const totalLitters = doesWithLitters.reduce((sum, r) => sum + (r.totalLitters || 0), 0) || 0;
 
     return totalLitters > 0 ? totalKits / totalLitters : 0;
   };
@@ -350,7 +350,7 @@ export default function ReportsDashboard() {
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Status:</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {topDoe.isPregnant ? "Pregnant" : "Available"}
+                      {topDoe.is_pregnant ? "Pregnant" : "Available"}
                     </p>
                   </div> */}
                   <div>

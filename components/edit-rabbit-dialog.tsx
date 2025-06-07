@@ -24,9 +24,9 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
         breed: rabbit.breed || "",
         color: rabbit.color || "",
         weight: rabbit.weight?.toString() || "",
-        birthDate: rabbit.birthDate ? new Date(rabbit.birthDate).toISOString().split("T")[0] : "",
+        birth_date: rabbit.birth_date ? new Date(rabbit.birth_date).toISOString().split("T")[0] : "",
         gender: rabbit.gender || "male",
-        isPregnant: rabbit.isPregnant || false,
+        is_pregnant: rabbit.is_pregnant || false,
     });
     const [error, setError] = useState<string | null>(null);
 
@@ -49,9 +49,9 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                 breed: formData.breed,
                 color: formData.color,
                 weight: Number.parseFloat(formData.weight) || rabbit.weight,
-                birthDate: formData.birthDate || rabbit.birthDate,
+                birth_date: formData.birth_date || rabbit.birth_date,
                 gender: formData.gender as "male" | "female",
-                isPregnant: formData.isPregnant,
+                is_pregnant: formData.is_pregnant,
             };
 
             const response = await axios.put(
@@ -130,12 +130,12 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                         />
                     </div>
                     <div>
-                        <Label htmlFor="birthDate" className="text-gray-900 dark:text-gray-100">Birth Date</Label>
+                        <Label htmlFor="birth_date" className="text-gray-900 dark:text-gray-100">Birth Date</Label>
                         <Input
-                            id="birthDate"
+                            id="birth_date"
                             type="date"
-                            value={formData.birthDate}
-                            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                            value={formData.birth_date}
+                            onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                             className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
                         />
                     </div>
@@ -159,8 +159,8 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                             <label className="flex items-center gap-2">
                                 <input
                                     type="checkbox"
-                                    checked={formData.isPregnant}
-                                    onChange={(e) => setFormData({ ...formData, isPregnant: e.target.checked })}
+                                    checked={formData.is_pregnant}
+                                    onChange={(e) => setFormData({ ...formData, is_pregnant: e.target.checked })}
                                     className="rounded border-gray-300 dark:border-gray-600"
                                 />
                                 <span className="text-sm text-gray-900 dark:text-gray-100">Pregnant</span>
