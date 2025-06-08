@@ -1,27 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertTriangle, Trash2, DollarSign } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Building, Rabbit, Plus, Trash2, History, Eye, AlertTriangle, DollarSign } from "lucide-react";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import type { Rabbit as RabbitType, EarningsRecord } from "@/lib/types";
+import { useSnackbar } from "notistack";
+import type { Hutch as HutchType, Rabbit as RabbitType, Row as RowType, EarningsRecord } from "@/lib/types";
+import AddRabbitDialog from "@/components/add-rabbit-dialog";
 
+// RemoveRabbitDialog Component
 interface RemoveRabbitDialogProps {
   hutch_id: string;
   rabbit: RabbitType | undefined;
   onClose: () => void;
-  onRemovalSuccess?: () => void;
+  onRemovalSuccess?: (rabbitId: string) => void;
 }
 
 export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     reason: "",
     notes: "",
@@ -35,6 +41,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
     sold_to: "",
     sale_notes: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const reasons = [
     "Sale",
@@ -59,9 +66,12 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
     e.preventDefault();
 
     if (!rabbit || !user?.farm_id) {
-      alert("Missing rabbit or farm ID. Please try again.");
+      enqueueSnackbar("Missing rabbit or farm ID. Please try again.", { variant: "error" });
       return;
     }
+
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
       const token = localStorage.getItem("rabbit_farm_token");
@@ -87,11 +97,9 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
         }),
       };
 
-      await axios.post(`${utils.apiUrl}/rabbits/rabbit_removals/${user.farm_id}/${rabbit.rabbit_id}`, removalRecord,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.post(`${utils.apiUrl}/rabbits/rabbit_removals/${user.farm_id}/${rabbit.rabbit_id}`, removalRecord, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       // If it's a sale, create earnings record
       if (formData.reason === "Sale" && formData.saleAmount && user?.farm_id) {
@@ -117,11 +125,12 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
       }
 
       // Fetch the latest removal history for the hutch
-      const response = await axios.get(`${utils.apiUrl}/hutches/${user.farm_id}/${hutch_id}/history`, {
+      const response = await axios.get(`${utils.apiUrl}/hutches/${user.farm_id}/${hutch_id ?? removalRecord?.hutch_id}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const newRemovalRecords = response.data?.data || [];
-      localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(newRemovalRecords));
+      const newFilteredRecords = newRemovalRecords.filter((record: any) => record?.removed_at !== null);
+      localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(newFilteredRecords));
 
       // Update local storage for rabbits and hutches
       const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
@@ -134,13 +143,18 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
       );
       localStorage.setItem(`rabbit_farm_hutches_${user.farm_id}`, JSON.stringify(updatedHutches));
 
-      // Notify parent component of successful removal
-      onRemovalSuccess?.();
+      // Show success snackbar
+      enqueueSnackbar(`Rabbit ${rabbit.rabbit_id} removed successfully!`, { variant: "success" });
+
+      // Notify parent component of successful removal with rabbit ID
+      onRemovalSuccess?.(rabbit.rabbit_id || "");
 
       onClose();
     } catch (error: any) {
       console.error("Error removing rabbit:", error);
-      alert(error.response?.data?.message || "Error removing rabbit. Please try again.");
+      enqueueSnackbar(error.response?.data?.message || "Error removing rabbit. Please try again.", { variant: "error" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -170,7 +184,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
             <p><strong>Weight:</strong> {rabbit.weight}kg</p>
             <p>
               <strong>Age:</strong>{" "}
-              {Math.floor((new Date().getTime() - new Date(rabbit.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
+              {Math.floor((new Date().getTime() - new Date(rabbit.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
               months
             </p>
           </div>
@@ -389,17 +403,18 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
               variant="outline"
               onClick={onClose}
               className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="destructive"
-              disabled={!formData.reason || (isSale && !formData.saleAmount)}
+              disabled={!formData.reason || (isSale && !formData.saleAmount) || isSubmitting}
               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Remove Rabbit
+              {isSubmitting ? "Removing..." : "Remove Rabbit"}
             </Button>
           </div>
         </form>

@@ -1,27 +1,28 @@
 export interface Rabbit {
-  id: string
+  id?: string
   rabbit_id?: string
   farm_id: string
   name: string
   gender: "male" | "female"
   breed: string
   color: string
-  birthDate: string
+  birth_date: string
   weight: number
   hutch_id: string
-  parentMale?: string
-  parentFemale?: string
-  isPregnant: boolean
-  lastMatingDate?: string
-  matedWith?: string
+  parent_male?: string
+  parent_female?: string
+  is_pregnant: boolean
+  last_mating_date?: string
+  mated_with?: string
   expectedBirthDate?: string
-  totalLitters: number
-  totalKits: number
-  healthRecords: HealthRecord[]
-  feedingSchedule: FeedingSchedule
+  totalLitters?: number
+  totalKits?: number
+  healthRecords?: HealthRecord[]
+  feedingSchedule?: FeedingSchedule
   created_at?: string
+  status?: "active" | "inactive" | "sold" | "removed"
+  notes?: string
 }
-
 export interface HealthRecord {
   id: string
   type: string

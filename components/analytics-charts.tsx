@@ -45,7 +45,7 @@ export default function AnalyticsCharts() {
 
     return {
       earnings: earnings.filter((e) => new Date(e.date) >= startDate),
-      rabbits: rabbits.filter((r) => new Date(r.created_at || r.birthDate) >= startDate),
+      rabbits: rabbits.filter((r) => new Date(r.created_at || r.birth_date) >= startDate),
     }
   }
 
@@ -99,7 +99,7 @@ export default function AnalyticsCharts() {
         breedData[rabbit.breed] = { count: 0, totalKits: 0, avgWeight: 0, totalWeight: 0 }
       }
       breedData[rabbit.breed].count++
-      breedData[rabbit.breed].totalKits += rabbit.totalKits
+      breedData[rabbit.breed].totalKits += rabbit?.totalKits || 0
       breedData[rabbit.breed].totalWeight += rabbit.weight
     })
 
@@ -121,7 +121,7 @@ export default function AnalyticsCharts() {
 
     // Track births
     filteredRabbits.forEach((rabbit) => {
-      const date = new Date(rabbit.birthDate)
+      const date = new Date(rabbit.birth_date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
 
       if (!monthlyProduction[monthKey]) {
