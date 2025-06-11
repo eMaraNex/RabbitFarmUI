@@ -16,7 +16,7 @@ interface HutchLayoutProps {
   hutches: HutchType[];
   rabbits: RabbitType[];
   rows: RowType[];
-  onRabbitSelect: (rabbit_id: string) => void;
+  onRabbitSelect: (rabbit: RabbitType) => void;
 }
 
 export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect }: HutchLayoutProps) {
@@ -402,7 +402,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => onRabbitSelect(rabbit?.id || '')}
+                                        onClick={() => onRabbitSelect(rabbit)}
                                         className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
                                       >
                                         <Eye className="h-4 w-4 mr-1" />

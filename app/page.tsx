@@ -24,6 +24,7 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
+import type { Rabbit as RabbitType } from "@/lib/types";
 
 // Define the Alert type
 interface Alert {
@@ -95,14 +96,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user, rows, logout, 
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
-  const [selectedRabbit, setSelectedRabbit] = useState<string | null>(null);
+  const [selectedRabbit, setSelectedRabbit] = useState<RabbitType | null>(null);
   const [activeTab, setActiveTab] = useState<any>("overview");
   const [rabbits, setRabbits] = useState<any[]>([]);
   const [hutches, setHutches] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]); // Typed as Alert[]
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const tabsListRef = useRef<HTMLDivElement>(null);
 
   const loadFromStorage = useCallback((farmId: string) => {
@@ -559,7 +560,7 @@ const DashboardContent: React.FC = () => {
 
           <TabsContent value="hutches">
             <HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />
-            {selectedRabbit && <RabbitProfile rabbit_id={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
+            {selectedRabbit && <RabbitProfile rabbit={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
           </TabsContent>
 
           <TabsContent value="breeding">
