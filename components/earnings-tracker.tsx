@@ -76,8 +76,8 @@ export default function EarningsTracker() {
         throw new Error("No authentication token found");
       }
 
-      const response = await axios.get(`${utils.apiUrl}/earnings/${user?.farm_id} `, {
-        headers: { Authorization: `Bearer ${token} ` },
+      const response = await axios.get(`${utils.apiUrl}/earnings/${user?.farm_id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setEarnings(response.data.data || []);
@@ -88,12 +88,12 @@ export default function EarningsTracker() {
   };
 
   const loadProduction = () => {
-    const productionData = JSON.parse(localStorage.getItem(`rabbit_farm_production_${user?.farm_id} `) || "[]");
+    const productionData = JSON.parse(localStorage.getItem(`rabbit_farm_production_${user?.farm_id}`) || "[]");
     setProduction(productionData);
   };
 
   const saveProductionToStorage = (data: ProductionRecord[]) => {
-    localStorage.setItem(`rabbit_farm_production_${user?.farm_id} `, JSON.stringify(data));
+    localStorage.setItem(`rabbit_farm_production_${user?.farm_id}`, JSON.stringify(data));
   };
 
   const filterEarnings = () => {
@@ -163,7 +163,7 @@ export default function EarningsTracker() {
       };
 
       await axios.post(`${utils.apiUrl}/earnings`, newEarning, {
-        headers: { Authorization: `Bearer ${token} ` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const updatedEarnings = [...earnings, newEarning];
@@ -215,13 +215,12 @@ export default function EarningsTracker() {
           currency: currency,
           date: productionForm.date,
           buyer_name: productionForm.buyerName || "",
-          notes: `Sale of ${productionForm.quantity} ${productionForm.unit} ${productionForm.type}${productionForm.buyerName ? ` to ${productionForm.buyerName}` : ""} `,
+          notes: `Sale of ${productionForm.quantity} ${productionForm.unit} ${productionForm.type}${productionForm.buyerName ? ` to ${productionForm.buyerName}` : ""}`,
           farm_id: user.farm_id,
-          // hutch_id: productionForm.source || '',
         };
 
         await axios.post(`${utils.apiUrl}/earnings`, saleEarning, {
-          headers: { Authorization: `Bearer ${token} ` },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const updatedEarnings = [...earnings, saleEarning];
@@ -269,118 +268,101 @@ export default function EarningsTracker() {
     return types;
   };
 
-  // Calculate previous period earnings (e.g., last month)
-  const now = new Date();
   const earningsByType = getEarningsByType();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Total Earnings</CardTitle>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg text-gray-900 dark:text-gray-100">Total Earnings</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent">
+          <CardContent className="pt-0">
+            <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent">
               {formatAmount(getTotalEarnings())}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {dateFilter === "all" ? "All time" : `${dateFilter.charAt(0).toUpperCase() + dateFilter.slice(1)} period`}
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Rabbit Sales</CardTitle>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg text-gray-900 dark:text-gray-100">Rabbit Sales</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-red-600 dark:from-pink-400 dark:to-red-400 bg-clip-text text-transparent">
+          <CardContent className="pt-0">
+            <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-600 to-red-600 dark:from-pink-400 dark:to-red-400 bg-clip-text text-transparent">
               {formatAmount(earningsByType.rabbit_sale)}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {filteredEarnings.filter((e) => e.type === "rabbit_sale").length} sales
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Urine Sales</CardTitle>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg text-gray-900 dark:text-gray-100">Urine Sales</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 dark:from-yellow-400 dark:to-orange-400 bg-clip-text text-transparent">
+          <CardContent className="pt-0">
+            <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 dark:from-yellow-400 dark:to-orange-400 bg-clip-text text-transparent">
               {formatAmount(earningsByType.urine_sale)}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {production.filter((p) => p.type === "urine").reduce((sum, p) => sum + p.quantity, 0)} liters produced
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Manure Sales</CardTitle>
+        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg text-gray-900 dark:text-gray-100">Manure Sales</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent">
+          <CardContent className="pt-0">
+            <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent">
               {formatAmount(earningsByType.manure_sale)}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {production.filter((p) => p.type === "manure").reduce((sum, p) => sum + p.quantity, 0)} kg produced
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Previous Period Earnings */}
-      {/* <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Previous Month Earnings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
-            {formatAmount(previousEarnings)}
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            From {previousPeriodStart.toLocaleDateString()} to {new Date(currentPeriodStart.getTime() - 86400000).toLocaleDateString()}
-          </p>
-        </CardContent>
-      </Card> */}
-
       {/* Filters and Actions */}
       <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2">
-              <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-gray-900 dark:text-gray-100">Filters & Actions</span>
+              <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <span className="text-gray-900 dark:text-gray-100 text-base sm:text-lg">Filters & Actions</span>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
               <Dialog open={addProductionOpen} onOpenChange={setAddProductionOpen}>
                 <DialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+                    className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 w-full sm:w-auto"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Production
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    <span className="text-xs sm:text-sm">Add Production</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[90vh] overflow-y-auto">
+                <DialogContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[90vh] overflow-y-auto w-[95vw] max-w-lg">
                   <DialogHeader>
-                    <DialogTitle className="text-gray-900 dark:text-gray-100">Add Production Record</DialogTitle>
+                    <DialogTitle className="text-gray-900 dark:text-gray-100 text-sm sm:text-base">Add Production Record</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleAddProduction} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <form onSubmit={handleAddProduction} className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <Label className="text-gray-900 dark:text-gray-100">Type</Label>
+                        <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Type</Label>
                         <Select
                           value={productionForm.type}
                           onValueChange={(value: any) => setProductionForm({ ...productionForm, type: value })}
                         >
-                          <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                          <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
@@ -390,25 +372,25 @@ export default function EarningsTracker() {
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-gray-900 dark:text-gray-100">Quantity</Label>
+                        <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Quantity</Label>
                         <Input
                           type="number"
                           step="0.1"
                           value={productionForm.quantity}
                           onChange={(e) => setProductionForm({ ...productionForm, quantity: e.target.value })}
-                          className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                          className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                           required
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <Label className="text-gray-900 dark:text-gray-100">Unit</Label>
+                        <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Unit</Label>
                         <Select
                           value={productionForm.unit}
                           onValueChange={(value) => setProductionForm({ ...productionForm, unit: value })}
                         >
-                          <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                          <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
@@ -419,28 +401,28 @@ export default function EarningsTracker() {
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-gray-900 dark:text-gray-100">Date</Label>
+                        <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Date</Label>
                         <Input
                           type="date"
                           value={productionForm.date}
                           onChange={(e) => setProductionForm({ ...productionForm, date: e.target.value })}
-                          className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                          className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                           required
                         />
                       </div>
                     </div>
                     <div>
-                      <Label className="text-gray-900 dark:text-gray-100">Source (Hutch/Rabbit ID)</Label>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Source (Hutch/Rabbit ID)</Label>
                       <Input
                         value={productionForm.source}
                         onChange={(e) => setProductionForm({ ...productionForm, source: e.target.value })}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                         placeholder="e.g., Mercury-A1 or RB-001"
                       />
                     </div>
 
                     {/* Sale Option */}
-                    <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-600 pt-3 sm:pt-4">
                       <label className="flex items-center space-x-2">
                         <input
                           type="checkbox"
@@ -448,29 +430,29 @@ export default function EarningsTracker() {
                           onChange={(e) => setProductionForm({ ...productionForm, sellImmediately: e.target.checked })}
                           className="rounded border-gray-300 dark:border-gray-600"
                         />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Sell Immediately</span>
+                        <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">Sell Immediately</span>
                       </label>
                     </div>
                     {productionForm.sellImmediately && (
-                      <div className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-lg border border-green-200 dark:border-green-700 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 p-3 sm:p-4 rounded-lg border border-green-200 dark:border-green-700 space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label className="text-gray-900 dark:text-gray-100">Sale Price ({getCurrencySymbol()})</Label>
+                            <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Sale Price ({getCurrencySymbol()})</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={productionForm.salePrice}
                               onChange={(e) => setProductionForm({ ...productionForm, salePrice: e.target.value })}
-                              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                               required={productionForm.sellImmediately}
                             />
                           </div>
                           <div>
-                            <Label className="text-gray-900 dark:text-gray-100">Buyer Name</Label>
+                            <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Buyer Name</Label>
                             <Input
                               value={productionForm.buyerName}
                               onChange={(e) => setProductionForm({ ...productionForm, buyerName: e.target.value })}
-                              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                               placeholder="Optional"
                             />
                           </div>
@@ -478,26 +460,26 @@ export default function EarningsTracker() {
                       </div>
                     )}
                     <div>
-                      <Label className="text-gray-900 dark:text-gray-100">Notes</Label>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Notes</Label>
                       <Textarea
                         value={productionForm.notes}
                         onChange={(e) => setProductionForm({ ...productionForm, notes: e.target.value })}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                         rows={2}
                       />
                     </div>
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setAddProductionOpen(false)}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm"
                       >
                         Cancel
                       </Button>
                       <Button
                         type="submit"
-                        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white text-xs sm:text-sm"
                       >
                         {productionForm.sellImmediately ? "Add Production & Sale" : "Add Production"}
                       </Button>
@@ -508,18 +490,18 @@ export default function EarningsTracker() {
 
               <Dialog open={addEarningsOpen} onOpenChange={setAddEarningsOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Earnings
+                  <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white w-full sm:w-auto">
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    <span className="text-xs sm:text-sm">Add Earnings</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[90vh] overflow-y-auto">
+                <DialogContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[90vh] overflow-y-auto w-[95vw] max-w-lg">
                   <DialogHeader>
-                    <DialogTitle className="text-gray-900 dark:text-gray-100">Add Earnings Record</DialogTitle>
+                    <DialogTitle className="text-gray-900 dark:text-gray-100 text-sm sm:text-base">Add Earnings Record</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleAddEarnings} className="space-y-4">
+                  <form onSubmit={handleAddEarnings} className="space-y-3 sm:space-y-4">
                     <div>
-                      <Label className="text-gray-900 dark:text-gray-100">Type</Label>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Type</Label>
                       <Select
                         value={earningsForm.type}
                         onValueChange={(value: "rabbit_sale" | "urine_sale" | "manure_sale" | "other") =>
@@ -538,7 +520,7 @@ export default function EarningsTracker() {
                           })
                         }
                       >
-                        <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                        <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
@@ -550,34 +532,34 @@ export default function EarningsTracker() {
                       </Select>
                     </div>
                     {earningsForm.type === "rabbit_sale" && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <div>
-                          <Label className="text-gray-900 dark:text-gray-100">Rabbit ID</Label>
+                          <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Rabbit ID</Label>
                           <Input
                             value={earningsForm.rabbit_id || ""}
                             onChange={(e) => setEarningsForm({ ...earningsForm, rabbit_id: e.target.value })}
-                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                             placeholder="e.g., RB-001"
                           />
                         </div>
                         <div>
-                          <Label className="text-gray-900 dark:text-gray-100">Hutch ID</Label>
+                          <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Hutch ID</Label>
                           <Input
                             value={earningsForm.hutch_id || ""}
                             onChange={(e) => setEarningsForm({ ...earningsForm, hutch_id: e.target.value })}
-                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                             placeholder="e.g., Mercury-A1"
                           />
                         </div>
                         <div>
-                          <Label className="text-gray-900 dark:text-gray-100">Sale Type</Label>
+                          <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Sale Type</Label>
                           <Select
                             value={earningsForm.sale_type}
                             onValueChange={(value: "whole" | "meat_only" | "skin_only" | "meat_and_skin") =>
                               setEarningsForm({ ...earningsForm, sale_type: value })
                             }
                           >
-                            <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                            <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
                               <SelectValue placeholder="Select sale type" />
                             </SelectTrigger>
                             <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
@@ -589,17 +571,17 @@ export default function EarningsTracker() {
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-gray-900 dark:text-gray-100">Weight (kg)</Label>
+                          <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Weight (kg)</Label>
                           <Input
                             type="number"
                             step="0.1"
                             value={earningsForm.weight || ""}
                             onChange={(e) => setEarningsForm({ ...earningsForm, weight: e.target.value })}
-                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                             placeholder="e.g., 2.5"
                           />
                         </div>
-                        <div className="flex space-x-4">
+                        <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
                           <label className="flex items-center space-x-2">
                             <input
                               type="checkbox"
@@ -607,7 +589,7 @@ export default function EarningsTracker() {
                               onChange={(e) => setEarningsForm({ ...earningsForm, includes_urine: e.target.checked })}
                               className="rounded border-gray-300 dark:border-gray-600"
                             />
-                            <span className="text-sm text-gray-900 dark:text-gray-100">Includes Urine</span>
+                            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Includes Urine</span>
                           </label>
                           <label className="flex items-center space-x-2">
                             <input
@@ -616,62 +598,62 @@ export default function EarningsTracker() {
                               onChange={(e) => setEarningsForm({ ...earningsForm, includes_manure: e.target.checked })}
                               className="rounded border-gray-300 dark:border-gray-600"
                             />
-                            <span className="text-sm text-gray-900 dark:text-gray-100">Includes Manure</span>
+                            <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">Includes Manure</span>
                           </label>
                         </div>
                         <div>
-                          <Label className="text-gray-900 dark:text-gray-100">Buyer Name</Label>
+                          <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Buyer Name</Label>
                           <Input
                             value={earningsForm.buyer_name || ""}
                             onChange={(e) => setEarningsForm({ ...earningsForm, buyer_name: e.target.value })}
-                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                            className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                             placeholder="Optional"
                           />
                         </div>
                       </div>
                     )}
                     <div>
-                      <Label className="text-gray-900 dark:text-gray-100">Amount ({getCurrencySymbol()})</Label>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Amount ({getCurrencySymbol()})</Label>
                       <Input
                         type="number"
                         step="0.01"
                         value={earningsForm.amount}
                         onChange={(e) => setEarningsForm({ ...earningsForm, amount: e.target.value })}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label className="text-gray-900 dark:text-gray-100">Date</Label>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Date</Label>
                       <Input
                         type="date"
                         value={earningsForm.date}
                         onChange={(e) => setEarningsForm({ ...earningsForm, date: e.target.value })}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label className="text-gray-900 dark:text-gray-100">Notes</Label>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Notes</Label>
                       <Textarea
                         value={earningsForm.notes}
                         onChange={(e) => setEarningsForm({ ...earningsForm, notes: e.target.value })}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                         rows={3}
                       />
                     </div>
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setAddEarningsOpen(false)}
-                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
+                        className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm"
                       >
                         Cancel
                       </Button>
                       <Button
                         type="submit"
-                        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white text-xs sm:text-sm"
                       >
                         Add Earnings
                       </Button>
@@ -682,12 +664,12 @@ export default function EarningsTracker() {
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-4">
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
             <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
               <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                <SelectTrigger className="w-full sm:w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
@@ -701,28 +683,28 @@ export default function EarningsTracker() {
               </Select>
             </div>
             {dateFilter === "custom" && (
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <Input
                   type="date"
                   value={customDateRange.start}
                   onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value })}
-                  className="w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                  className="w-full sm:w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                 />
-                <span className="text-gray-600 dark:text-gray-400">to</span>
+                <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">to</span>
                 <Input
                   type="date"
                   value={customDateRange.end}
                   onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value })}
-                  className="w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                  className="w-full sm:w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                 />
               </div>
             )}
             <Button
               variant="outline"
-              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 w-full sm:w-auto"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Export
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              <span className="text-xs sm:text-sm">Export</span>
             </Button>
           </div>
         </CardContent>
@@ -730,64 +712,61 @@ export default function EarningsTracker() {
 
       {/* Earnings List */}
       <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-gray-900 dark:text-gray-100">Earnings Records</CardTitle>
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="text-gray-900 dark:text-gray-100 text-base sm:text-lg">Earnings Records</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-6">
+          <div className="space-y-3 sm:space-y-4">
             {filteredEarnings.length > 0 ? (
               filteredEarnings
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((earning) => (
+                .map((earning, index) => (
                   <div
-                    key={`${earning.id}-${earning.created_at}`}
-                    className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60"
+                    key={`${earning.id || index}-${earning.created_at || earning.date}`}
+                    className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60 space-y-3 lg:space-y-0"
                   >
-                    <div>
-                      <div className="flex items-center space-x-3">
+                    <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0">
                         <Badge
                           variant="outline"
-                          className={
-                            earning.type === "rabbit_sale"
+                          className={`w-fit text-xs whitespace-nowrap ${earning.type === "rabbit_sale"
                               ? "bg-pink-50 dark:bg-pink-900/30 border-pink-200 dark:border-pink-700 text-pink-800 dark:text-pink-300"
                               : earning.type === "urine_sale"
                                 ? "bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300"
                                 : earning.type === "manure_sale"
                                   ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300"
                                   : "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300"
-                          }
+                            }`}
                         >
                           {earning.type.replace("_", " ").toUpperCase()}
                         </Badge>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                        <span className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">
                           {earning.currency} {earning.amount}
                         </span>
                         {earning.rabbit_id && (
-                          <span className="text-sm text-gray-600 dark:text-gray-400">({earning.rabbit_id})</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">({earning.rabbit_id})</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {new Date(earning.date).toLocaleDateString()}
                         {earning.weight && ` • ${earning.weight} kg`}
-                        {earning.sale_type && ` • ${earning.sale_type.replace("_", " ")} `}
-                        {earning.buyer_name && ` • Buyer: ${earning.buyer_name} `}
+                        {earning.sale_type && ` • ${earning.sale_type.replace("_", " ")}`}
+                        {earning.buyer_name && ` • Buyer: ${earning.buyer_name}`}
                       </p>
                       {earning.notes && (
-                        <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{earning.notes}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1 break-words">{earning.notes}</p>
                       )}
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      </div>
+                    <div className="flex items-center justify-end lg:justify-center space-x-2 flex-shrink-0">
+                      <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
                 ))
             ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No earnings records found for the selected period.</p>
+              <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400">
+                <DollarSign className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm sm:text-base">No earnings records found for the selected period.</p>
               </div>
             )}
           </div>
