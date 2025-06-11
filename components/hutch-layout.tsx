@@ -48,7 +48,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         headers: { Authorization: `Bearer ${token}` },
       });
       const newRemovalRecords = response.data?.data || [];
-      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === hutchId);
+      const filteredRecords = newRemovalRecords.filter((record: any) => record.hutch_id === hutchId && record.removed_at !== null);
       localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(filteredRecords));
       return filteredRecords;
     } catch (error) {
