@@ -14,7 +14,7 @@ export interface Rabbit {
   is_pregnant: boolean
   last_mating_date?: string
   mated_with?: string
-  expectedBirthDate?: string
+  expected_birth_date?: string
   totalLitters?: number
   totalKits?: number
   healthRecords?: HealthRecord[]
@@ -22,6 +22,8 @@ export interface Rabbit {
   created_at?: string
   status?: "active" | "inactive" | "sold" | "removed"
   notes?: string
+  actual_birth_date?: string
+  pregnancy_start_date?: string
 }
 export interface HealthRecord {
   id: string
@@ -68,7 +70,7 @@ export interface BreedingRecord {
   doeId: string
   buckId: string
   matingDate: string
-  expectedBirthDate: string
+  expected_birth_date: string
   actualBirthDate?: string
   numberOfKits?: number
   notes?: string

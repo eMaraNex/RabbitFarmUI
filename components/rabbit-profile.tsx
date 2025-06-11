@@ -195,11 +195,11 @@ export default function RabbitProfile({ rabbit_id, onClose }: RabbitProfileProps
                     <span className="text-gray-700 dark:text-gray-300">{rabbit.mated_with}</span>
                   </div>
                 )}
-                {rabbit.expectedBirthDate && (
+                {rabbit.expected_birth_date && (
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Expected Birth:</span>
                     <span className="text-gray-700 dark:text-gray-300">
-                      {new Date(rabbit.expectedBirthDate).toLocaleDateString()}
+                      {new Date(rabbit.expected_birth_date).toLocaleDateString()}
                     </span>
                   </div>
                 )}

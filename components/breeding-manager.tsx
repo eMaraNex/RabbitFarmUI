@@ -11,16 +11,31 @@ import * as utils from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import type { Rabbit } from "@/lib/types"
 
+interface BreedingRecord {
+  id: string
+  farm_id: string
+  doe_id: string
+  buck_id: string
+  doe_name: string
+  buck_name: string
+  mating_date: string
+  is_pregnant: boolean
+  expected_birth_date?: string
+  notes?: string
+}
+
 interface BreedingManagerProps {
   rabbits: Rabbit[]
 }
 
 export default function BreedingManager({ rabbits: initialRabbits }: BreedingManagerProps) {
   const { user } = useAuth()
-  const [selectedDoe, setSelectedDoe] = useState("")
-  const [selectedBuck, setSelectedBuck] = useState("")
+  const [selectedDoe, setSelectedDoe] = useState<string>("")
+  const [selectedBuck, setSelectedBuck] = useState<string>("")
   const [rabbits, setRabbits] = useState<Rabbit[]>(initialRabbits)
-  const [isLoading, setIsLoading] = useState(false)
+  const [breedingRecords, setBreedingRecords] = useState<BreedingRecord[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoadingRecords, setIsLoadingRecords] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -29,7 +44,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
   const pregnantDoes = does.filter((r) => r.is_pregnant)
   const availableDoes = does.filter((r) => !r.is_pregnant)
 
-  const checkInbreeding = (doe: Rabbit, buck: Rabbit) => {
+  const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
     if (doe.parent_male === buck.id || doe.parent_female === buck.id) return true
     if (buck.parent_male === doe.id || buck.parent_female === doe.id) return true
     if (doe.parent_male === buck.parent_male && doe.parent_male) return true
@@ -37,7 +52,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
     return false
   }
 
-  const getBreedingCompatibility = (doeId: string, buckId: string) => {
+  const getBreedingCompatibility = (doeId: string, buckId: string): { compatible: boolean; reason: string } => {
     const doe = rabbits.find((r) => r.id === doeId)
     const buck = rabbits.find((r) => r.id === buckId)
 
@@ -54,7 +69,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
     return { compatible: true, reason: "Compatible for breeding" }
   }
 
-  const handleScheduleBreeding = async () => {
+  const handleScheduleBreeding = async (): Promise<void> => {
     if (!selectedDoe || !selectedBuck || !user?.farm_id) return
 
     setIsLoading(true)
@@ -66,15 +81,15 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
       const buck = rabbits.find((r) => r.id === selectedBuck)
       if (!doe || !buck) throw new Error("Invalid rabbit selection")
 
-      const matingDate = new Date().toISOString().split("T")[0] // Current date in YYYY-MM-DD
-      const expectedBirthDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split("T")[0] // Approx 31 days gestation
+      const matingDate = new Date().toISOString().split("T")[0]
+      const expected_birth_date = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split("T")[0]
 
       const response = await axios.post(`${utils.apiUrl}/breeds`, {
         farm_id: user.farm_id,
         doe_id: doe.rabbit_id,
         buck_id: buck.rabbit_id,
         mating_date: matingDate,
-        expected_birth_date: expectedBirthDate,
+        expected_birth_date: expected_birth_date,
         notes: `Scheduled on ${matingDate}`,
       })
 
@@ -86,30 +101,49 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
         setRabbits(
           rabbits.map((r) =>
             r.id === selectedDoe
-              ? { ...r, is_pregnant: true, last_mating_date: matingDate, expectedBirthDate, mated_with: buck.name }
+              ? { ...r, is_pregnant: true, last_mating_date: matingDate, expected_birth_date, mated_with: buck.name }
               : r
           )
         )
+        await Promise.all([fetchRabbits(), fetchBreedingRecords()])
       }
-    } catch (err) {
-      // setError(err.response?.data?.message || "Failed to schedule breeding. Please try again.")
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to schedule breeding. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const fetchRabbits = async (): Promise<void> => {
+    if (!user?.farm_id) return
+    try {
+      const response = await axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`)
+      setRabbits(response.data.data || initialRabbits)
+    } catch (err) {
+      console.error("Error fetching rabbits:", err)
+      setRabbits(initialRabbits)
+    }
+  }
+
+  const fetchBreedingRecords = async (): Promise<void> => {
+    if (!user?.farm_id) return
+    setIsLoadingRecords(true)
+    try {
+      const response = await axios.get(`${utils.apiUrl}/breeds/${user.farm_id}`)
+      setBreedingRecords(response.data.data || [])
+    } catch (err) {
+      console.error("Error fetching breeding records:", err)
+      setBreedingRecords([])
+    } finally {
+      setIsLoadingRecords(false)
+    }
+  }
+
   useEffect(() => {
     if (user?.farm_id) {
-      const fetchRabbits = async () => {
-        try {
-          const response = await axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`)
-          setRabbits(response.data.data || [])
-        } catch (err) {
-          console.error("Error fetching rabbits:", err)
-          setRabbits(initialRabbits) // Fallback to props if API fails
-        }
-      }
-      fetchRabbits()
+      Promise.all([fetchRabbits(), fetchBreedingRecords()]).catch((err) =>
+        console.error("Error fetching initial data:", err)
+      )
     }
   }, [user?.farm_id, initialRabbits])
 
@@ -240,35 +274,42 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {pregnantDoes.map((doe) => (
-              <div
-                key={doe.id}
-                className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-pink-50/80 to-pink-100/80 dark:from-pink-900/30 dark:to-pink-800/30"
-              >
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{doe.name}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Hutch {doe.hutch_id} • Mated with {doe.mated_with}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Mating Date: {doe.last_mating_date ? new Date(doe.last_mating_date).toLocaleDateString() : "N/A"}
-                  </p>
+            {pregnantDoes.length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">No pregnant does at the moment.</p>
+            ) : (
+              pregnantDoes.map((doe) => (
+                <div
+                  key={doe.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-pink-50/80 to-pink-100/80 dark:from-pink-900/30 dark:to-pink-800/30"
+                >
+                  <div>
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">{doe.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Hutch {doe.hutch_id}
+                      {/* • Mated with {doe.mated_with} */}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Mating Date: {doe.pregnancy_start_date ? new Date(doe.pregnancy_start_date).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                      {doe.expected_birth_date ? new Date(doe.expected_birth_date).toLocaleDateString() : "TBD"}
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className="bg-white/50 dark:bg-gray-800/50 border-pink-200 dark:border-pink-700 text-pink-800 dark:text-pink-300"
+                    >
+                      {doe.expected_birth_date
+                        ? `${Math.ceil(
+                          (new Date(doe.expected_birth_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                        )} days`
+                        : "TBD"}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {doe.expectedBirthDate ? new Date(doe.expectedBirthDate).toLocaleDateString() : "TBD"}
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className="bg-white/50 dark:bg-gray-800/50 border-pink-200 dark:border-pink-700 text-pink-800 dark:text-pink-300"
-                  >
-                    {doe.expectedBirthDate
-                      ? `${Math.ceil((new Date(doe.expectedBirthDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days`
-                      : "TBD"}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -279,37 +320,42 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
           <CardTitle className="text-gray-900 dark:text-gray-100">Recent Breeding History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {rabbits
-              .filter((r) => r.last_mating_date)
-              .sort((a, b) => new Date(b.last_mating_date!).getTime() - new Date(a.last_mating_date!).getTime())
-              .slice(0, 5)
-              .map((rabbit) => (
-                <div
-                  key={rabbit.id}
-                  className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {rabbit.name} × {rabbit.mated_with}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(rabbit.last_mating_date!).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={rabbit.is_pregnant ? "default" : "outline"}
-                    className={
-                      rabbit.is_pregnant
-                        ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
-                        : "bg-white/50 dark:bg-gray-800/50"
-                    }
+          {isLoadingRecords ? (
+            <p className="text-gray-600 dark:text-gray-400">Loading breeding records...</p>
+          ) : breedingRecords.length === 0 ? (
+            <p className="text-gray-600 dark:text-gray-400">No breeding records found.</p>
+          ) : (
+            <div className="space-y-3">
+              {breedingRecords
+                .sort((a, b) => new Date(b.mating_date).getTime() - new Date(a.mating_date).getTime())
+                .slice(0, 5)
+                .map((record) => (
+                  <div
+                    key={record.id}
+                    className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600"
                   >
-                    {rabbit.is_pregnant ? "Pregnant" : "Completed"}
-                  </Badge>
-                </div>
-              ))}
-          </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {record.doe_id} × {record.buck_id}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {new Date(record.mating_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={record.is_pregnant ? "default" : "outline"}
+                      className={
+                        record.is_pregnant
+                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                          : "bg-white/50 dark:bg-green-800/50"
+                      }
+                    >
+                      {record.is_pregnant ? "Pregnant" : "Completed"}
+                    </Badge>
+                  </div>
+                ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
