@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Building } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import * as utils from "@/lib/utils";
-import { useSnackbar } from "notistack";
+import FarmCreationModal from "@/components/farm-creation-modal";
 import type { Row, Hutch } from "@/lib/types";
+import { useSnackbar } from "notistack";
 
 const planetNames = [
   "Mercury",
@@ -39,7 +41,7 @@ const planetNames = [
   "Salacia",
   "Varda",
   "Gongong",
-]
+];
 
 interface AddRowDialogProps {
   onRowAdded?: () => void;
@@ -48,7 +50,9 @@ interface AddRowDialogProps {
 export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -58,6 +62,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
   const [existingRows, setExistingRows] = useState<Row[]>([]);
   const [existingHutches, setExistingHutches] = useState<Hutch[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const loadFromStorage = (farmId: string) => {
     try {
@@ -121,7 +126,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       }
     };
     fetchData();
-  }, [open, user, enqueueSnackbar]);
+  }, [open, user]);
 
   const getNextPlanetName = () => {
     const usedNames = existingRows.map((row) => row.name);
@@ -146,12 +151,40 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
     return distribution;
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    const capacity = parseInt(formData.capacity);
+    const levels = parseInt(formData.levels);
+
+    if (formData.name && existingRows.some((row) => row.name === formData.name.trim())) {
+      newErrors.name = `Row "${formData.name}" already exists.`;
+    }
+    if (isNaN(capacity) || capacity < 1) {
+      newErrors.capacity = "Capacity must be a positive number.";
+    }
+    if (isNaN(levels) || levels < 1) {
+      newErrors.levels = "Number of levels must be a positive number.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const farmId = localStorage.getItem("rabbit_farm_id");
+    if (!farmId) {
+      setIsFarmModalOpen(true);
+      return;
+    }
+
     if (!user?.farm_id) {
       enqueueSnackbar("Farm ID is missing. Please log in again.", { variant: "error" });
       return;
     }
+
+    if (!validateForm()) return;
+
     setIsSubmitting(true);
 
     try {
@@ -171,17 +204,17 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
         farm_id: user.farm_id,
         description: formData.description || `${newRowName} row with ${capacity} hutches across ${numLevels} levels`,
         capacity,
-        levels: Object.keys(distribution)
+        levels: Object.keys(distribution),
       };
 
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
 
-      const rowResponse = await axios.post(`${utils.apiUrl}/rows`, newRow, {
+      const response = await axios.post(`${utils.apiUrl}/rows`, newRow, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!rowResponse.data.success) {
-        throw new Error(rowResponse.data.message || "Failed to create row");
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to create row");
       }
 
       const newHutches: Hutch[] = [];
@@ -209,7 +242,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       //   });
       // }
 
-      const updatedRows = [...existingRows, rowResponse.data.data];
+      const updatedRows = [...existingRows, response.data.data];
       const updatedHutches = [...existingHutches, ...newHutches];
       saveToStorage(user.farm_id, { rows: updatedRows, hutches: updatedHutches });
       setExistingRows(updatedRows);
@@ -227,123 +260,155 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       }
     } catch (error: any) {
       console.error("Error creating row:", error);
-      enqueueSnackbar(error.response?.data?.message || "Error creating row. Please try again.", { variant: "error" });
+      const errorMessage = error.response?.data?.message || "Error creating row. Please try again.";
+      setErrors({ submit: errorMessage });
+      enqueueSnackbar(errorMessage, { variant: "error" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Row
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20">
-        <DialogHeader className="bg-gradient-to-r from-green-50/80 to-blue-50/80 dark:from-green-900/30 dark:to-blue-900/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-gray-200 dark:border-gray-600">
-          <DialogTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
-            <Building className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <span>Add New Row</span>
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label htmlFor="name" className="text-gray-900 dark:text-gray-100">Row Name</Label>
-            <Input
-              id="name"
-              placeholder={`Suggested: ${getNextPlanetName()}`}
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
-            />
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Leave empty to use: {getNextPlanetName()}</p>
-          </div>
-          <div>
-            <Label htmlFor="capacity" className="text-gray-900 dark:text-gray-100">Capacity</Label>
-            <Select
-              value={formData.capacity}
-              onValueChange={(value) => setFormData({ ...formData, capacity: value })}
-            >
-              <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
-                <SelectValue placeholder="Select capacity" />
-              </SelectTrigger>
-              <SelectContent>
-                {[6, 9, 12, 15, 18, 24].map((cap) => (
-                  <SelectItem key={cap} value={cap.toString()}>
-                    {cap} Hutches
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="levels" className="text-gray-900 dark:text-gray-100">Number of Levels</Label>
-            <Select
-              value={formData.levels}
-              onValueChange={(value) => setFormData({ ...formData, levels: value })}
-            >
-              <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
-                <SelectValue placeholder="Select number of levels" />
-              </SelectTrigger>
-              <SelectContent>
-                {[2, 3, 4, 5, 6].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} Levels
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="description" className="text-gray-900 dark:text-gray-100">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe this row's purpose or location..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
-              rows={3}
-            />
-          </div>
-          <div className="bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
-            <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Row Configuration</h4>
-            <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-              <li>• {formData.levels} Levels ({generateLevels(parseInt(formData.levels)).join(", ")})</li>
-              <li>• {formData.capacity} Total Hutches</li>
-              <li>• Each hutch includes water bottle and feeder</li>
-            </ul>
-          </div>
-          <div className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-lg border border-green-200 dark:border-green-700">
-            <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Current Status</h4>
-            <p className="text-sm text-green-700 dark:text-green-400">
-              Existing rows: {existingRows.length} | Total hutches: {existingHutches.length}
-            </p>
-            <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-              Next row will be: <strong>{getNextPlanetName()}</strong>
-            </p>
-          </div>
-          <div className="flex justify-end space-x-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isSubmitting}
-              className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Creating..." : "Create Row & Hutches"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Row
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              Add Row
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-medium dark:text-gray-200">
+                Row Name
+              </Label>
+              <Input
+                id="name"
+                placeholder={`Suggested: ${getNextPlanetName()}`}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 dark:text-gray-100"
+              />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Leave empty to use: {getNextPlanetName()}
+              </p>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="capacity" className="text-sm font-medium dark:text-gray-200">
+                Capacity
+              </Label>
+              <Select
+                value={formData.capacity}
+                onValueChange={(value) => setFormData({ ...formData, capacity: value })}
+              >
+                <SelectTrigger className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectValue placeholder="Select capacity" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[6, 8, 12, 15, 18, 24].map((cap) => (
+                    <SelectItem key={cap} value={cap.toString()}>
+                      {cap} Hutches
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.capacity && <p className="text-xs text-red-500">{errors.capacity}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="levels" className="text-sm font-medium dark:text-gray-200">
+                Number of Levels
+              </Label>
+              <Select
+                value={formData.levels}
+                onValueChange={(value) => setFormData({ ...formData, levels: value })}
+              >
+                <SelectTrigger className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectValue placeholder="Select number of levels" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2, 3, 4, 5, 6].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} Levels
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.levels && <p className="text-xs text-red-500">{errors.levels}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-sm font-medium dark:text-gray-200">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                placeholder="Describe this row's purpose or location..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100"
+                rows={3}
+              />
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-blue-200 dark:border-blue-800">
+              <h4 className="font-medium text-blue-800 dark:text-blue-400 mb-2">Row Configuration</h4>
+              <ul className="text-sm text-blue-700 dark:text-blue-500 space-y-1">
+                <li>· {formData.levels} Levels ({generateLevels(parseInt(formData.levels)).join(", ")})</li>
+                <li>· {formData.capacity} Total Hutches</li>
+                <li>· Each hutch includes water bottle and feeder</li>
+              </ul>
+            </div>
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border-green-200 dark:border-green-800">
+              <h4 className="font-medium text-green-800 dark:text-green-400 mb-2">Current Status</h4>
+              <p className="text-sm text-green-700 dark:text-green-500">
+                Existing rows: {existingRows.length} | Total hutches: {existingHutches.length}
+              </p>
+              <p className="text-sm text-green-700 dark:text-green-500 mt-1">
+                Next row will be: <strong>{getNextPlanetName()}</strong>
+              </p>
+            </div>
+            {errors.submit && (
+              <div className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-400 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+                {errors.submit}
+              </div>
+            )}
+            <DialogFooter className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+                className="dark:border-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+              >
+                {isSubmitting ? "Creating..." : "Create Row & Hutches"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <FarmCreationModal
+        isOpen={isFarmModalOpen}
+        onClose={() => {
+          setIsFarmModalOpen(false);
+          setOpen(true);
+        }}
+        onFarmCreated={() => {
+          setIsFarmModalOpen(false);
+          setOpen(true);
+        }}
+      />
+    </>
   );
 }

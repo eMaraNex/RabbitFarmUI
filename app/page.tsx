@@ -1,7 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef } from "react";
-import { useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import ReportsDashboard from "@/components/reports-dashboard";
 import AnalyticsCharts from "@/components/analytics-charts";
 import CurrencySelector from "@/components/currency-selector";
 import AddRowDialog from "@/components/add-row-dialog";
+import FarmBanner from "@/components/farm-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
@@ -40,34 +40,27 @@ interface SidebarProps {
   rows: any[];
   logout: () => void;
   handleRowAdded: () => void;
+  hasFarm: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user, rows, logout, handleRowAdded }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user, rows, logout, handleRowAdded, hasFarm }) => {
   return (
     <div
       className={`fixed inset-y-0 right-0 z-50 w-72 bg-gray-900 text-white transform ${isOpen ? "translate-x-0" : "translate-x-full"
-        } transition-transform duration-400 ease-in-out shadow-lg md:hidden overflow-y-auto`}
+        } transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
     >
       <div className="flex justify-between items-center p-4 border-b border-gray-700">
         <h2 className="text-lg font-bold">Menu</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="hover:bg-gray-800 rounded-full"
-        >
+        <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-gray-800 rounded-full">
           <X className="h-6 w-6" />
         </Button>
       </div>
       <div className="flex flex-col space-y-4 p-4">
         <div className="flex items-center space-x-2 text-sm bg-gray-800 rounded-lg px-4 py-3">
           <User className="h-4 w-4" />
-          <span className="truncate">{user?.name}</span>
+          <span className="truncate">{user?.name || "User"}</span>
         </div>
-        <Badge
-          variant="outline"
-          className="bg-gray-800 border-gray-600 flex items-center justify-center px-4 py-3"
-        >
+        <Badge variant="outline" className="bg-gray-800 border-gray-600 flex items-center justify-center px-4 py-3">
           <Building className="h-4 w-4 mr-2" />
           {rows.length} Rows Active
         </Badge>
@@ -104,6 +97,7 @@ const DashboardContent: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [hasFarm, setHasFarm] = useState<boolean>(!!localStorage.getItem("rabbit_farm_id"));
   const tabsListRef = useRef<HTMLDivElement>(null);
 
   const loadFromStorage = useCallback((farmId: string) => {
@@ -133,6 +127,7 @@ const DashboardContent: React.FC = () => {
   }, []);
 
   const loadData = useCallback(async () => {
+    // if (!user?.farm_id || !hasFarm) return;
     if (!user?.farm_id) return;
 
     // Check local storage first
@@ -146,15 +141,12 @@ const DashboardContent: React.FC = () => {
 
     try {
       const token = localStorage.getItem("rabbit_farm_token");
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
+      if (!token) throw new Error("No authentication token found");
 
-      // Fetch fresh data from API
       const [rowsResponse, hutchesResponse, rabbitsResponse] = await Promise.all([
-        axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
-        axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`),
-        axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`),
+        axios.get(`${utils.apiUrl}/rows/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       const newRows = rowsResponse.data.data || [];
@@ -178,9 +170,10 @@ const DashboardContent: React.FC = () => {
       }
       setDataLoaded(true);
     }
-  }, [user, loadFromStorage, saveToStorage]);
+  }, [user, hasFarm, loadFromStorage, saveToStorage]);
+
   const generateAlerts = useCallback(() => {
-    const currentDate = new Date("2025-06-03T14:51:00+03:00"); // 02:51 PM EAT, June 03, 2025
+    const currentDate = new Date();
     const alertsList: Alert[] = [];
 
     rabbits.forEach((rabbit) => {
@@ -226,7 +219,9 @@ const DashboardContent: React.FC = () => {
         const oneWeekAfterWeaning = weaningDate ? new Date(weaningDate.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
 
         if (
-          (!rabbit.pregnancy_start_date || (rabbit.pregnancy_start_date && currentDate > new Date(new Date(rabbit.pregnancy_start_date).getTime() + 42 * 24 * 60 * 60 * 1000))) &&
+          (!rabbit.pregnancy_start_date ||
+            (rabbit.pregnancy_start_date &&
+              currentDate.getTime() > new Date(rabbit.pregnancy_start_date).getTime() + 42 * 24 * 60 * 60 * 1000)) &&
           (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
         ) {
           alertsList.push({
@@ -257,7 +252,7 @@ const DashboardContent: React.FC = () => {
       return order[a.variant] - order[b.variant];
     });
 
-    setAlerts(alertsList.slice(0, 3));
+    setAlerts([...alertsList.slice(0, 3)]);
   }, [rabbits]);
 
   useEffect(() => {
@@ -297,7 +292,20 @@ const DashboardContent: React.FC = () => {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setHasFarm(!!localStorage.getItem("rabbit_farm_id"));
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const handleRowAdded = useCallback(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleFarmCreated = useCallback(() => {
+    setHasFarm(true);
     loadData();
   }, [loadData]);
 
@@ -349,7 +357,7 @@ const DashboardContent: React.FC = () => {
               </Badge>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-3 py-2 shadow-sm">
                 <User className="h-4 w-4" />
-                <span className="truncate">{user?.name}</span>
+                <span className="truncate">{user?.name || "User"}</span>
               </div>
               <CurrencySelector />
               <ThemeToggle />
@@ -358,7 +366,7 @@ const DashboardContent: React.FC = () => {
                 onClick={logout}
                 variant="outline"
                 size="sm"
-                className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 shadow-sm"
+                className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-500 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500 dark:hover:border-red-800 shadow-sm"
               >
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
@@ -367,10 +375,10 @@ const DashboardContent: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+              className="md:h-6 w-6 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
               onClick={toggleSidebar}
             >
-              <Menu className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+              <Menu className="h-6 w-6" />
             </Button>
           </div>
         </div>
@@ -382,6 +390,7 @@ const DashboardContent: React.FC = () => {
         rows={rows}
         logout={logout}
         handleRowAdded={handleRowAdded}
+        hasFarm={hasFarm}
       />
       {isSidebarOpen && (
         <div
@@ -391,6 +400,7 @@ const DashboardContent: React.FC = () => {
       )}
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
           <TabsList
             ref={tabsListRef}
