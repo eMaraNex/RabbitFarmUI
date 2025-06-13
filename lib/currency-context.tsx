@@ -32,7 +32,7 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
 }
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState<Currency>("USD")
+  const [currency, setCurrencyState] = useState<Currency>("KES")
 
   useEffect(() => {
     // Load saved currency preference
