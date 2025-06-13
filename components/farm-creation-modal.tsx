@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
-import { MapPin, Building, Ruler, Globe, Clock } from "lucide-react";
+import { MapPin, Building, Ruler, Globe, Clock, Locate } from "lucide-react";
 
 interface FarmCreationModalProps {
     isOpen: boolean;
@@ -32,6 +32,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
         timezone: "UTC",
     });
     const [isLoading, setIsLoading] = useState(false);
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const validateForm = () => {
@@ -48,6 +49,33 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
+    };
+
+    const handleGetCurrentLocation = async () => {
+        setIsFetchingLocation(true);
+        try {
+            const { latitude, longitude } = await utils.getCurrentLocation();
+            setFormData((prev) => ({
+                ...prev,
+                latitude: latitude.toString(),
+                longitude: longitude.toString(),
+            }));
+            toast({
+                title: "Location Fetched",
+                description: "Current location coordinates have been filled.",
+                className: "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
+            });
+        } catch (error: any) {
+            const errorMessage = error.message || "Failed to fetch current location. Please ensure location services are enabled.";
+            setErrors((prev) => ({ ...prev, location: errorMessage }));
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setIsFetchingLocation(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -139,39 +167,56 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="latitude" className="text-sm font-medium dark:text-gray-200 flex items-center">
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <Label className="text-sm font-medium dark:text-gray-200 flex items-center">
                                 <Globe className="h-4 w-4 mr-2 text-purple-500" />
-                                Latitude
+                                Coordinates
                             </Label>
-                            <Input
-                                id="latitude"
-                                type="number"
-                                step="any"
-                                value={formData.latitude}
-                                onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                                placeholder="e.g., 40.7128"
-                                className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
-                            />
-                            {errors.latitude && <p className="text-xs text-red-500">{errors.latitude}</p>}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleGetCurrentLocation}
+                                disabled={isFetchingLocation}
+                                className="flex items-center dark:border-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                <Locate className="h-4 w-4 mr-2" />
+                                {isFetchingLocation ? "Fetching..." : "Use Current Location"}
+                            </Button>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="longitude" className="text-sm font-medium dark:text-gray-200 flex items-center">
-                                <Globe className="h-4 w-4 mr-2 text-purple-500" />
-                                Longitude
-                            </Label>
-                            <Input
-                                id="longitude"
-                                type="number"
-                                step="any"
-                                value={formData.longitude}
-                                onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                                placeholder="e.g., -74.0060"
-                                className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
-                            />
-                            {errors.longitude && <p className="text-xs text-red-500">{errors.longitude}</p>}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="latitude" className="text-sm font-medium dark:text-gray-200">
+                                    Latitude
+                                </Label>
+                                <Input
+                                    id="latitude"
+                                    type="number"
+                                    step="any"
+                                    value={formData.latitude}
+                                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                                    placeholder="e.g., 40.7128"
+                                    className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
+                                />
+                                {errors.latitude && <p className="text-xs text-red-500">{errors.latitude}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="longitude" className="text-sm font-medium dark:text-gray-200">
+                                    Longitude
+                                </Label>
+                                <Input
+                                    id="longitude"
+                                    type="number"
+                                    step="any"
+                                    value={formData.longitude}
+                                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                                    placeholder="e.g., -74.0060"
+                                    className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
+                                />
+                                {errors.longitude && <p className="text-xs text-red-500">{errors.longitude}</p>}
+                            </div>
                         </div>
+                        {errors.location && <p className="text-xs text-red-500">{errors.location}</p>}
                     </div>
 
                     <div className="space-y-2">
