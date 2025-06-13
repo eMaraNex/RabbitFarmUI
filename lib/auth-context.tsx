@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone,
       });
 
-      if (response.status === 200) {
+      if (response.status === 201) {
         router.push("/");
         return { message: "Registration successful" };
       } else {

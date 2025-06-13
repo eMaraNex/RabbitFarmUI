@@ -405,7 +405,7 @@ const DashboardContent: React.FC = () => {
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
-        {hasFarm && (
+        {hasFarm ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
             <TabsList
               ref={tabsListRef}
@@ -545,10 +545,10 @@ const DashboardContent: React.FC = () => {
                       <div
                         key={index}
                         className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
-                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                            : alert.variant === "secondary"
-                              ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
-                              : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
+                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                          : alert.variant === "secondary"
+                            ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
+                            : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
                           }`}
                       >
                         <div>
@@ -602,6 +602,21 @@ const DashboardContent: React.FC = () => {
               <AnalyticsCharts />
             </TabsContent>
           </Tabs>
+        ) : (
+          <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 shadow-xl max-w-2xl mx-auto">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl font-bold text-center dark:text-white flex items-center justify-center space-x-2">
+                <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
+                <span>Welcome to Karagani Rabbit Farming</span>
+              </CardTitle>
+              <p className="text-gray-600 dark:text-gray-300 text-center">No farm created yet</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                Get started by creating your farm to manage your rabbits, hutches, and more.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </main>
     </div>
