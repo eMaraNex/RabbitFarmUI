@@ -60,7 +60,6 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
             if (!token) throw new Error("No authentication token found");
 
             const payload = {
-                id: user?.id ?? "",
                 name: formData.name,
                 location: formData.location || undefined,
                 latitude: formData.latitude ? Number(formData.latitude) : undefined,

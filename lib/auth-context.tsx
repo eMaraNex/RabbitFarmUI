@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import * as utils from "./utils";
 
 interface User {
+  id?: string;
   email: string;
   name: string;
   farm_id?: string;
@@ -16,6 +17,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string, name: string, phone: string) => Promise<{ message: string }>;
   logout: () => Promise<boolean>;
   forgotPassword: (email: string) => Promise<{ message: string }>;
   resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<{ message: string }>;
@@ -145,19 +147,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const register = async (email: string, password: string, name: string, phone: string): Promise<{ message: string }> => {
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${utils.apiUrl}/auth/register`, {
+        email,
+        password,
+        name,
+        phone,
+      });
+
+      if (response.status === 200) {
+        router.push("/");
+        return { message: "Registration successful" };
+      } else {
+        throw new Error("Failed to register");
+      }
+    } catch (error: any) {
+      console.error("Register error:", error);
+      throw new Error(error.response?.data?.message || "Failed to register");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async (): Promise<boolean> => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem("rabbit_farm_token");
-      if (token) {
-        await axios.post(`${utils.apiUrl}/auth/logout`, { token });
+      // Clear cookies
+      const clearCookies = () => {
+        const cookies = document.cookie.split("; ");
+        for (const cookie of cookies) {
+          const [name] = cookie.split("=");
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        }
+      };
+      clearCookies();
+
+      // Preserve rabbit_farm_theme and clear other localStorage items
+      const theme = localStorage.getItem("rabbit_farm_theme");
+      localStorage.clear();
+      if (theme) {
+        localStorage.setItem("rabbit_farm_theme", theme);
       }
+
+      // Clear user state and auth header
       setUser(null);
-      localStorage.removeItem("rabbit_farm_token");
-      localStorage.removeItem("rabbit_farm_user");
-      localStorage.removeItem("rabbit_farm_id");
-      setAuthHeader(null); // Clear Axios headers
+      setAuthHeader(null);
       router.push("/");
       return true;
     } catch (error) {
@@ -213,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, forgotPassword, resetPassword, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, forgotPassword, resetPassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

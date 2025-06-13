@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useAuth } from "@/lib/auth-context"
-import LoginPage from "./login-page"
+import LoginPage from "../../app/login/page"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
