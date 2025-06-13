@@ -277,7 +277,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
             Add New Row
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 rounded-lg">
+        <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 rounded-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
               Add Row
@@ -377,7 +377,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
                 {errors.submit}
               </div>
             )}
-            <DialogFooter className="flex justify-end space-x-2">
+            <DialogFooter className="flex justify-end gap-2 sm:gap-0 space-x-2">
               <Button
                 type="button"
                 variant="outline"

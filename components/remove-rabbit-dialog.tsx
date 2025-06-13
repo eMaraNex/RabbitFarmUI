@@ -184,7 +184,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
             <p><strong>Weight:</strong> {rabbit.weight}kg</p>
             <p>
               <strong>Age:</strong>{" "}
-              {Math.floor((new Date().getTime() - new Date(rabbit.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
+              {Math.floor((new Date().getTime() - new Date(rabbit.birth_date ?? new Date()).getTime()) / (1000 * 60 * 60 * 24 * 30))}{' '}
               months
             </p>
           </div>
@@ -397,7 +397,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end gap-2 sm:gap-0 space-x-3">
             <Button
               type="button"
               variant="outline"

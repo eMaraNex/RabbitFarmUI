@@ -303,7 +303,7 @@ export default function AddHutchDialog() {
               />
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end gap-2 sm:gap-0 space-x-3">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>

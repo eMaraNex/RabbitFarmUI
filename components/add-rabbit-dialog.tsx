@@ -125,7 +125,7 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[80vh] overflow-y-auto shadow-2xl">
         <DialogHeader className="bg-gradient-to-r from-green-50/80 to-blue-50/80 dark:from-green-900/30 dark:to-blue-900/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-gray-200 dark:border-gray-600">
           <DialogTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <RabbitIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -266,7 +266,7 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
             </ul>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end gap-2 sm:gap-0 space-x-3">
             <Button
               type="button"
               variant="outline"
