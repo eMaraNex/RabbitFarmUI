@@ -385,11 +385,11 @@ const DashboardContent: React.FC = () => {
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
-              <Badge variant="outline" className="bg-white/60 dark:bg-gray-700/60 shadow-sm">
+              <Badge variant="outline" className="bg-white/60 dark:bg-gray-700/60 shadow-sm px-4 py-3.5 min-w-[140px] justify-center rounded-lg">
                 <Building className="h-3 w-3 mr-1" />
                 {rows.length} Rows Active
               </Badge>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-3 py-2 shadow-sm">
+              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-4 py-3 shadow-sm min-w-[140px]">
                 <User className="h-4 w-4" />
                 <span className="truncate">{user?.name || "User"}</span>
               </div>
@@ -409,7 +409,7 @@ const DashboardContent: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="md:h-6 w-6 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+              className="md:h-6 w-6 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full md:hidden"
               onClick={toggleSidebar}
             >
               <Menu className="h-6 w-6" />

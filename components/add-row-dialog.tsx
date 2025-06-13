@@ -272,7 +272,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white">
+          <Button className="w-full md:w-auto bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white">
             <Plus className="h-4 w-4 mr-2" />
             Add New Row
           </Button>
