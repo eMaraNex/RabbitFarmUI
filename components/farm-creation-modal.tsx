@@ -131,7 +131,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
 
     return (
         <Dialog open={isOpen} onOpenChange={() => onClose()}>
-            <DialogContent className="sm:max-w-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
+            <DialogContent className="sm:max-w-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                         Create Your Farm
@@ -269,7 +269,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
                         </div>
                     )}
 
-                    <DialogFooter className="flex justify-between">
+                    <DialogFooter className="flex justify-between gap-2 sm:gap-0">
                         <Button
                             type="button"
                             variant="outline"
