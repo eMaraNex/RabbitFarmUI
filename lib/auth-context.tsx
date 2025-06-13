@@ -14,13 +14,19 @@ interface User {
   role_id?: string;
 }
 
+interface AuthResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, name: string, phone: string) => Promise<{ message: string }>;
-  logout: () => Promise<boolean>;
-  forgotPassword: (email: string) => Promise<{ message: string }>;
-  resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<{ message: string }>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  register: (email: string, password: string, name: string, phone: string) => Promise<AuthResponse>;
+  logout: () => Promise<AuthResponse>;
+  forgotPassword: (email: string) => Promise<AuthResponse>;
+  resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<AuthResponse>;
   isLoading: boolean;
 }
 
@@ -37,11 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const base64Url = token.split(".")[1];
       const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const payload = JSON.parse(atob(base64));
-      const expiry = payload.exp * 1000; // Convert to milliseconds
+      const expiry = payload.exp * 1000;
       return Date.now() >= expiry;
     } catch (error) {
       console.error("Error decoding token:", error);
-      return true; // Treat invalid tokens as expired
+      return true;
     }
   };
 
@@ -52,6 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       delete axios.defaults.headers.common["Authorization"];
     }
+  };
+
+  // Standardize error message extraction
+  const getErrorMessage = (error: any): string => {
+    if (axios.isAxiosError(error)) {
+      return error.response?.data?.message || error.message || "An unexpected error occurred";
+    }
+    return error.message || "An unexpected error occurred";
   };
 
   useEffect(() => {
@@ -109,15 +123,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, [router]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<AuthResponse> => {
     setIsLoading(true);
-
     try {
-      const response = await axios.post(`${utils.apiUrl}/auth/login`, {
-        email,
-        password,
-      });
-
+      const response = await axios.post(`${utils.apiUrl}/auth/login`, { email, password });
       if (response.status === 200) {
         const { user, token } = response?.data?.data ?? {};
         const userData: User = {
@@ -132,49 +141,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("rabbit_farm_user", JSON.stringify(userData));
         localStorage.setItem("rabbit_farm_id", JSON.stringify(userData.farm_id));
         setUser(userData);
-        setAuthHeader(token); // Set token in Axios headers
+        setAuthHeader(token);
 
         router.push("/");
-        return true;
-      } else {
-        return false;
+        return { success: true, message: "Login successful", data: { user: userData, token } };
       }
+      return { success: false, message: "Invalid email or password" };
     } catch (error) {
-      console.error("Login error:", error);
-      return false;
+      return { success: false, message: getErrorMessage(error) };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (email: string, password: string, name: string, phone: string): Promise<{ message: string }> => {
+  const register = async (email: string, password: string, name: string, phone: string): Promise<AuthResponse> => {
     setIsLoading(true);
-
     try {
-      const response = await axios.post(`${utils.apiUrl}/auth/register`, {
-        email,
-        password,
-        name,
-        phone,
-      });
-
+      const response = await axios.post(`${utils.apiUrl}/auth/register`, { email, password, name, phone });
       if (response.status === 201) {
-        router.push("/");
-        return { message: "Registration successful" };
-      } else {
-        throw new Error("Failed to register");
+        router.push("/login");
+        return { success: true, message: "Registration successful. Please log in." };
       }
-    } catch (error: any) {
-      console.error("Register error:", error);
-      throw new Error(error.response?.data?.message || "Failed to register");
+      return { success: false, message: "Failed to register" };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = async (): Promise<boolean> => {
+  const logout = async (): Promise<AuthResponse> => {
     setIsLoading(true);
-
     try {
       // Clear cookies
       const clearCookies = () => {
@@ -197,54 +194,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAuthHeader(null);
       router.push("/");
-      return true;
+      return { success: true, message: "Logout successful" };
     } catch (error) {
-      console.error("Logout error:", error);
-      return false;
+      return { success: false, message: getErrorMessage(error) };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const forgotPassword = async (email: string): Promise<{ message: string }> => {
+  const forgotPassword = async (email: string): Promise<AuthResponse> => {
     setIsLoading(true);
-
     try {
-      const response = await axios.post(`${utils.apiUrl}/auth/forgot-password`, {
-        email,
-      });
-
+      const response = await axios.post(`${utils.apiUrl}/auth/forgot-password`, { email });
       if (response.status === 200) {
-        return response.data; // Expect { message: "Password reset email sent" }
-      } else {
-        throw new Error("Failed to send password reset email");
+        return { success: true, message: response.data.message || "Password reset email sent" };
       }
-    } catch (error: any) {
-      console.error("Forgot password error:", error);
-      throw new Error(error.response?.data?.message || "Failed to send password reset email");
+      return { success: false, message: "Failed to send password reset email" };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetPassword = async (params: { token: string; currentPassword: string; newPassword: string }): Promise<{ message: string }> => {
+  const resetPassword = async (params: { token: string; currentPassword: string; newPassword: string }): Promise<AuthResponse> => {
     setIsLoading(true);
-
     try {
       const response = await axios.post(`${utils.apiUrl}/auth/reset-password`, {
         token: params.token,
         currentPassword: params.currentPassword,
         newPassword: params.newPassword,
       });
-
       if (response.status === 200) {
-        return response.data; // Expect { message: "Password reset successfully" }
-      } else {
-        throw new Error("Failed to reset password");
+        return { success: true, message: response.data.message || "Password reset successfully" };
       }
-    } catch (error: any) {
-      console.error("Reset password error:", error);
-      throw new Error(error.response?.data?.message || "Failed to reset password");
+      return { success: false, message: "Failed to reset password" };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
     } finally {
       setIsLoading(false);
     }

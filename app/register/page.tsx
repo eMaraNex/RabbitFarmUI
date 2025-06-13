@@ -13,68 +13,49 @@ import { useAuth } from "../../lib/auth-context";
 import ThemeToggle from "../../components/theme-toggle";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSnackbar } from "notistack";
 
 export default function RegisterPage() {
     const { register, forgotPassword } = useAuth();
+    const { enqueueSnackbar } = useSnackbar();
     const router = useRouter();
     const [formData, setFormData] = useState({ email: "", password: "", name: "", phone: "" });
     const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
     const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
-    const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
-    const [forgotPasswordError, setForgotPasswordError] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setError("");
-        setSuccess("");
-
-        try {
-            const response = await register(formData.email, formData.password, formData.name, formData.phone);
-            setSuccess(response.message);
+        const response = await register(formData.email, formData.password, formData.name, formData.phone);
+        enqueueSnackbar(response.message, { variant: response.success ? "success" : "error" });
+        if (response.success) {
             setTimeout(() => router.push("/login"), 2000);
-        } catch (err: any) {
-            setError(err.message || "Registration failed. Please try again.");
-        } finally {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     };
 
     const handleGoogleRegister = async () => {
         setIsLoading(true);
-        setError("");
-        setSuccess("");
-
-        try {
-            const response = await register("admin@org.com", "admin@2025", "Admin User", "");
-            setSuccess(response.message);
+        const response = await register("admin@org.com", "admin@2025", "Admin User", "");
+        enqueueSnackbar(response.message, { variant: response.success ? "success" : "error" });
+        if (response.success) {
             setTimeout(() => router.push("/login"), 2000);
-        } catch (err: any) {
-            setError("Google registration failed. Please try again.");
-        } finally {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     };
 
     const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setForgotPasswordError("");
-        setForgotPasswordMessage("");
-
-        try {
-            const response = await forgotPassword(forgotPasswordEmail);
-            setForgotPasswordMessage(response.message);
+        const response = await forgotPassword(forgotPasswordEmail);
+        enqueueSnackbar(response.message, { variant: response.success ? "success" : "error" });
+        if (response.success) {
             setForgotPasswordEmail("");
-        } catch (err: any) {
-            setForgotPasswordError(err.message || "Failed to send reset email. Please try again.");
-        } finally {
-            setIsLoading(false);
+            setIsForgotPasswordOpen(false);
         }
+        setIsLoading(false);
     };
 
     return (
@@ -206,16 +187,7 @@ export default function RegisterPage() {
                                     Login
                                 </Link>
                             </div>
-                            {error && (
-                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                                    {error}
-                                </div>
-                            )}
-                            {success && (
-                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
-                                    {success}
-                                </div>
-                            )}
+
                             <Button
                                 type="submit"
                                 disabled={isLoading}
@@ -248,16 +220,7 @@ export default function RegisterPage() {
                                     />
                                 </div>
                             </div>
-                            {forgotPasswordError && (
-                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                                    {forgotPasswordError}
-                                </div>
-                            )}
-                            {forgotPasswordMessage && (
-                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
-                                    {forgotPasswordMessage}
-                                </div>
-                            )}
+
                             <DialogFooter>
                                 <Button
                                     type="button"

@@ -12,64 +12,42 @@ import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import ThemeToggle from "../../components/theme-toggle";
 import Link from "next/link";
+import { useSnackbar } from "notistack";
 
 export default function LoginPage() {
     const { login, forgotPassword } = useAuth();
+    const { enqueueSnackbar } = useSnackbar();
     const [formData, setFormData] = useState({ email: "", password: "" });
     const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
     const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
-    const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
-    const [forgotPasswordError, setForgotPasswordError] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setError("");
-
-        try {
-            const success = await login(formData.email, formData.password);
-            if (!success) {
-                setError("Invalid email or password");
-            }
-        } catch (err) {
-            setError("Login failed. Please try again.");
-        } finally {
-            setIsLoading(false);
-        }
+        const response = await login(formData.email, formData.password);
+        enqueueSnackbar(response.message, { variant: response.success ? "success" : "error" });
+        setIsLoading(false);
     };
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);
-        try {
-            const success = await login("admin@org.com", "admin@2025");
-            if (!success) {
-                setError("Google login failed");
-            }
-        } catch (err) {
-            setError("Google login failed. Please try again.");
-        } finally {
-            setIsLoading(false);
-        }
+        const response = await login("admin@org.com", "admin@2025");
+        enqueueSnackbar(response.message, { variant: response.success ? "success" : "error" });
+        setIsLoading(false);
     };
 
     const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setForgotPasswordError("");
-        setForgotPasswordMessage("");
-
-        try {
-            const response = await forgotPassword(forgotPasswordEmail);
-            setForgotPasswordMessage(response.message);
+        const response = await forgotPassword(forgotPasswordEmail);
+        enqueueSnackbar(response.message, { variant: response.success ? "success" : "error" });
+        if (response.success) {
             setForgotPasswordEmail("");
-        } catch (err: any) {
-            setForgotPasswordError(err.message || "Failed to send reset email. Please try again.");
-        } finally {
-            setIsLoading(false);
+            setIsForgotPasswordOpen(false);
         }
+        setIsLoading(false);
     };
 
     return (
@@ -169,19 +147,10 @@ export default function LoginPage() {
                                 >
                                     Forgot Password?
                                 </button>
-                                <Link
-                                    href="/register"
-                                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                                >
+                                <Link href="/register" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                     Create Account
                                 </Link>
                             </div>
-
-                            {error && (
-                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                                    {error}
-                                </div>
-                            )}
 
                             <Button
                                 type="submit"
@@ -215,18 +184,6 @@ export default function LoginPage() {
                                     />
                                 </div>
                             </div>
-
-                            {forgotPasswordError && (
-                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                                    {forgotPasswordError}
-                                </div>
-                            )}
-
-                            {forgotPasswordMessage && (
-                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
-                                    {forgotPasswordMessage}
-                                </div>
-                            )}
 
                             <DialogFooter>
                                 <Button
