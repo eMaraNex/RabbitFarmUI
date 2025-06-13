@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X } from "lucide-react";
+import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X, Plus } from "lucide-react";
 import HutchLayout from "@/components/hutch-layout";
 import RabbitProfile from "@/components/rabbit-profile";
 import BreedingManager from "@/components/breeding-manager";
@@ -43,41 +43,71 @@ interface SidebarProps {
   hasFarm: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user, rows, logout, handleRowAdded, hasFarm }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  onClose,
+  user,
+  rows,
+  logout,
+  handleRowAdded,
+  hasFarm
+}) => {
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-50 w-72 bg-gray-900 text-white transform ${isOpen ? "translate-x-0" : "translate-x-full"
+      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${isOpen ? "translate-x-0" : "translate-x-full"
         } transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
     >
-      <div className="flex justify-between items-center p-4 border-b border-gray-700">
-        <h2 className="text-lg font-bold">Menu</h2>
-        <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-gray-800 rounded-full">
-          <X className="h-6 w-6" />
+      {/* Header */}
+      <div className="flex justify-between items-center px-4 py-3 border-b border-border">
+        <h2 className="text-lg font-medium">Menu</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="rounded-full h-8 w-8 hover:bg-muted"
+        >
+          <X className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex flex-col space-y-4 p-4">
-        <div className="flex items-center space-x-2 text-sm bg-gray-800 rounded-lg px-4 py-3">
-          <User className="h-4 w-4" />
-          <span className="truncate">{user?.name || "User"}</span>
+
+      {/* Content */}
+      <div className="flex flex-col px-4 py-4 space-y-4">
+        {/* User info */}
+        <div className="w-full bg-muted rounded-lg px-4 py-3">
+          <div className="flex items-center space-x-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{user?.name || "User"}</span>
+          </div>
         </div>
-        <Badge variant="outline" className="bg-gray-800 border-gray-600 flex items-center justify-center px-4 py-3">
-          <Building className="h-4 w-4 mr-2" />
-          {rows.length} Rows Active
-        </Badge>
-        <div className="py-1">
+
+        {/* Rows count */}
+        <div className="w-full bg-muted rounded-lg px-4 py-3">
+          <div className="flex items-center space-x-2">
+            <Building className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">{rows.length} Rows Active</span>
+          </div>
+        </div>
+
+        {/* Currency selector - Modified to take full width */}
+        <div className="w-full">
           <CurrencySelector />
         </div>
-        <div className="py-1">
+
+        {/* Theme toggle */}
+        <div className="w-full flex">
           <ThemeToggle />
         </div>
-        <div className="py-1">
+
+        {/* Add row button */}
+        <div className="w-full">
           <AddRowDialog onRowAdded={handleRowAdded} />
         </div>
+
+        {/* Logout button */}
         <Button
           onClick={logout}
           variant="outline"
-          size="sm"
-          className="bg-gray-800 border-gray-600 hover:bg-red-900/50 hover:border-red-600 hover:text-red-300 flex items-center justify-center px-4 py-3"
+          className="w-full"
         >
           <LogOut className="h-4 w-4 mr-2" />
           Logout

@@ -1,7 +1,7 @@
 "use client"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DollarSign } from "lucide-react"
+import { DollarSign } from 'lucide-react'
 import { useCurrency } from "@/lib/currency-context"
 
 export default function CurrencySelector() {
@@ -15,13 +15,13 @@ export default function CurrencySelector() {
   ]
 
   return (
-    <div className="flex items-center space-x-2">
-      <DollarSign className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+    <div className="flex items-center w-full">
+      <DollarSign className="h-4 w-4 text-muted-foreground mr-2" />
       <Select value={currency} onValueChange={(value: any) => setCurrency(value)}>
-        <SelectTrigger className="w-32 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+        <SelectTrigger className="w-full bg-muted border-border">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+        <SelectContent>
           {currencies.map((curr) => (
             <SelectItem key={curr.value} value={curr.value}>
               <div className="flex items-center space-x-2">
