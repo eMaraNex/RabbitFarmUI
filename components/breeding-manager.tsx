@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Heart, Plus, AlertTriangle } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import axios from "axios"
 import * as utils from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
@@ -28,8 +29,22 @@ interface BreedingManagerProps {
   rabbits: Rabbit[]
 }
 
+interface CompatibilityResult {
+  compatible: boolean
+  reason: string
+}
+
+const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
+  if (doe.parent_male === buck.id || doe.parent_female === buck.id) return true
+  if (buck.parent_male === doe.id || buck.parent_female === doe.id) return true
+  if (doe.parent_male === buck.parent_male && doe.parent_male) return true
+  if (doe.parent_female === buck.parent_female && doe.parent_female) return true
+  return false
+}
+
 export default function BreedingManager({ rabbits: initialRabbits }: BreedingManagerProps) {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [selectedDoe, setSelectedDoe] = useState<string>("")
   const [selectedBuck, setSelectedBuck] = useState<string>("")
   const [rabbits, setRabbits] = useState<Rabbit[]>(initialRabbits)
@@ -39,24 +54,34 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  // List all does and bucks, regardless of maturity
   const does = rabbits.filter((r) => r.gender === "female")
   const bucks = rabbits.filter((r) => r.gender === "male")
-  const pregnantDoes = does.filter((r) => r.is_pregnant)
+  // Count mature available does and bucks for stats
+  // const availableDoes = does.filter((r) => !r.is_pregnant )
+  // const pregnantDoes = does.filter((r) => r.is_pregnant && utils.isRabbitMature(r).isMature)
+  // const availableBucks = bucks.filter((r) => utils.isRabbitMature(r).isMature)
   const availableDoes = does.filter((r) => !r.is_pregnant)
+  const pregnantDoes = does.filter((r) => r.is_pregnant)
+  const availableBucks = bucks
 
-  const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
-    if (doe.parent_male === buck.id || doe.parent_female === buck.id) return true
-    if (buck.parent_male === doe.id || buck.parent_female === doe.id) return true
-    if (doe.parent_male === buck.parent_male && doe.parent_male) return true
-    if (doe.parent_female === buck.parent_female && doe.parent_female) return true
-    return false
-  }
-
-  const getBreedingCompatibility = (doeId: string, buckId: string): { compatible: boolean; reason: string } => {
+  const getBreedingCompatibility = (doeId: string, buckId: string): CompatibilityResult => {
     const doe = rabbits.find((r) => r.id === doeId)
     const buck = rabbits.find((r) => r.id === buckId)
 
-    if (!doe || !buck) return { compatible: false, reason: "Invalid selection" }
+    if (!doe || !buck) {
+      return { compatible: false, reason: "Invalid selection" }
+    }
+
+    const doeMaturity = utils.isRabbitMature(doe)
+    if (!doeMaturity.isMature) {
+      return { compatible: false, reason: `Doe ${doe.name} (${doe.hutch_id}): ${doeMaturity.reason}` }
+    }
+
+    const buckMaturity = utils.isRabbitMature(buck)
+    if (!buckMaturity.isMature) {
+      return { compatible: false, reason: `Buck ${buck.name} (${buck.hutch_id}): ${buckMaturity.reason}` }
+    }
 
     if (checkInbreeding(doe, buck)) {
       return { compatible: false, reason: "Potential inbreeding detected" }
@@ -72,6 +97,16 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
   const handleScheduleBreeding = async (): Promise<void> => {
     if (!selectedDoe || !selectedBuck || !user?.farm_id) return
 
+    const compatibility = getBreedingCompatibility(selectedDoe, selectedBuck)
+    if (!compatibility.compatible) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Schedule Breeding",
+        description: compatibility.reason,
+      })
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     setSuccess(null)
@@ -82,7 +117,11 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
       if (!doe || !buck) throw new Error("Invalid rabbit selection")
 
       const matingDate = new Date().toISOString().split("T")[0]
-      const expected_birth_date = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split("T")[0]
+      const expected_birth_date = new Date(
+        new Date().getTime() + utils.adjustTimeForTesting(utils.PREGNANCY_DURATION_DAYS)
+      )
+        .toISOString()
+        .split("T")[0]
 
       const response = await axios.post(`${utils.apiUrl}/breeds/${user.farm_id}`, {
         farm_id: user.farm_id,
@@ -95,6 +134,10 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
 
       if (response.status === 201) {
         setSuccess("Breeding scheduled successfully!")
+        toast({
+          title: "Success",
+          description: "Breeding scheduled successfully!",
+        })
         setSelectedDoe("")
         setSelectedBuck("")
         // Update local rabbit state to reflect pregnancy (simplified)
@@ -108,7 +151,13 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
         await Promise.all([fetchRabbits(), fetchBreedingRecords()])
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to schedule breeding. Please try again.")
+      const errorMessage = err.response?.data?.message || "Failed to schedule breeding. Please try again."
+      setError(errorMessage)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -180,7 +229,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-              {bucks.length}
+              {availableBucks.length}
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Available for breeding</p>
           </CardContent>
@@ -204,9 +253,9 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
                   <SelectValue placeholder="Choose a doe" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                  {availableDoes.map((doe) => (
+                  {does.map((doe) => (
                     <SelectItem key={doe.id} value={doe.id || ''}>
-                      {doe.name} ({doe.hutch_id}) - {doe.breed}
+                      {doe.name} ({doe.hutch_id}) - {doe.breed} {utils.isRabbitMature(doe).isMature ? '' : '(Too Young)'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -222,7 +271,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {bucks.map((buck) => (
                     <SelectItem key={buck.id} value={buck.id || ''}>
-                      {buck.name} ({buck.hutch_id}) - {buck.breed}
+                      {buck.name} ({buck.hutch_id}) - {buck.breed} {utils.isRabbitMature(buck).isMature ? '' : '(Too Young)'}
                     </SelectItem>
                   ))}
                 </SelectContent>

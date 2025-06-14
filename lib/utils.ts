@@ -118,3 +118,40 @@ export const getAddressFromCoordinates = async (latitude: number, longitude: num
     throw new Error("Failed to fetch address from coordinates.");
   }
 };
+
+// Breeding and age-related constants
+export const MIN_BREEDING_AGE_MONTHS = 4; // Minimum age for breeding in months
+export const PREGNANCY_DURATION_DAYS = 31; // Average rabbit pregnancy duration
+export const NESTING_BOX_START_DAYS = 26; // When to add nesting box (days after mating)
+export const NESTING_BOX_END_DAYS = 30; // End of nesting box addition period
+export const WEANING_PERIOD_DAYS = 42; // Weaning period after birth
+export const POST_WEANING_BREEDING_DELAY_DAYS = 7; // Days after weaning before doe can breed again
+export const BIRTH_EXPECTED_WINDOW_DAYS = { before: 7, after: 2 }; // Birth expected alert window (7 days before, 2 days after)
+
+// For testing: Multiplier to compress time (e.g., 1 day = 1 minute for testing)
+export const TIME_COMPRESSION_FACTOR = process.env.NODE_ENV === "test" ? 1440 : 1; // 1440 minutes = 1 day
+
+// Helper function to adjust time for testing
+export const adjustTimeForTesting = (days: number): number => {
+  return days * TIME_COMPRESSION_FACTOR * 24 * 60 * 60 * 1000; // Convert days to milliseconds, adjusted by factor
+};
+
+// Calculate age in months
+export const calculateAgeInMonths = (birthDate: string | undefined): number => {
+  if (!birthDate) return 0;
+  const birth = new Date(birthDate);
+  const now = new Date();
+  const diff = now.getTime() - birth.getTime();
+  return diff / (1000 * 60 * 60 * 24 * 30.42); // Approximate months
+};
+
+// Check if rabbit is mature for breeding
+export const isRabbitMature = (rabbit: { birth_date?: string }): { isMature: boolean; reason: string } => {
+  if (!rabbit.birth_date) {
+    return { isMature: false, reason: "Birth date not available" };
+  }
+  const ageInMonths = calculateAgeInMonths(rabbit.birth_date);
+  return ageInMonths >= MIN_BREEDING_AGE_MONTHS
+    ? { isMature: true, reason: "Rabbit is mature" }
+    : { isMature: false, reason: `Rabbit is too young (${Math.round(ageInMonths)} months)` };
+};

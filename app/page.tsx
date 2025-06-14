@@ -212,10 +212,15 @@ const DashboardContent: React.FC = () => {
 
     rabbits.forEach((rabbit) => {
       // Pregnancy Noticed Alert (from pregnancy_start_date to day 25)
+      const maturity = utils.isRabbitMature(rabbit);
+      if (!maturity.isMature && rabbit.gender === "female") return; // Skip immature does for breeding alerts
+
       if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
         const pregnancyStart = new Date(rabbit.pregnancy_start_date);
-        const daysSincePregnancy = Math.ceil((currentDate.getTime() - pregnancyStart.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysSincePregnancy >= 0 && daysSincePregnancy < 26) { // Day 0 to day 25
+        const daysSincePregnancy = Math.ceil(
+          (currentDate.getTime() - pregnancyStart.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (daysSincePregnancy >= 0 && daysSincePregnancy < utils.NESTING_BOX_START_DAYS) {
           alertsList.push({
             type: "Pregnancy Noticed",
             message: `${rabbit.name} (${rabbit.hutch_id}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
@@ -224,10 +229,10 @@ const DashboardContent: React.FC = () => {
         }
 
         // Nesting Box Needed Alert (26 days after pregnancy_start_date to day 30)
-        if (daysSincePregnancy >= 26 && daysSincePregnancy < 31) { // Day 26 to day 30
+        if (daysSincePregnancy >= utils.NESTING_BOX_START_DAYS && daysSincePregnancy < utils.NESTING_BOX_END_DAYS) {
           alertsList.push({
             type: "Nesting Box Needed",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Add nesting box, 26 days since mating on ${pregnancyStart.toLocaleDateString()}`,
+            message: `${rabbit.name} (${rabbit.hutch_id}) - Add nesting box, ${daysSincePregnancy} days since mating on ${pregnancyStart.toLocaleDateString()}`,
             variant: "secondary",
           });
         }
@@ -236,7 +241,10 @@ const DashboardContent: React.FC = () => {
         if (rabbit.expected_birth_date) {
           const expectedDate = new Date(rabbit.expected_birth_date);
           const daysDiff = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysDiff <= 7 && daysDiff >= -2) {
+          if (
+            daysDiff <= utils.BIRTH_EXPECTED_WINDOW_DAYS.before &&
+            daysDiff >= -utils.BIRTH_EXPECTED_WINDOW_DAYS.after
+          ) {
             alertsList.push({
               type: "Birth Expected",
               message: `${rabbit.name} (${rabbit.hutch_id}) - Expected to give birth in ${daysDiff > 0 ? `${daysDiff} days` : "overdue by " + Math.abs(daysDiff) + " days"}`,
@@ -247,15 +255,21 @@ const DashboardContent: React.FC = () => {
       }
 
       // Ready for Servicing Alert
-      if (rabbit.gender === "female" && !rabbit.is_pregnant) {
+      if (rabbit.gender === "female" && !rabbit.is_pregnant && maturity.isMature) {
         const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
-        const weaningDate = lastBirth ? new Date(lastBirth.getTime() + 42 * 24 * 60 * 60 * 1000) : null;
-        const oneWeekAfterWeaning = weaningDate ? new Date(weaningDate.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+        const weaningDate = lastBirth
+          ? new Date(lastBirth.getTime() + utils.adjustTimeForTesting(utils.WEANING_PERIOD_DAYS))
+          : null;
+        const oneWeekAfterWeaning = weaningDate
+          ? new Date(weaningDate.getTime() + utils.adjustTimeForTesting(utils.POST_WEANING_BREEDING_DELAY_DAYS))
+          : null;
 
         if (
           (!rabbit.pregnancy_start_date ||
             (rabbit.pregnancy_start_date &&
-              currentDate.getTime() > new Date(rabbit.pregnancy_start_date).getTime() + 42 * 24 * 60 * 60 * 1000)) &&
+              currentDate.getTime() >
+              new Date(rabbit.pregnancy_start_date).getTime() +
+              utils.adjustTimeForTesting(utils.PREGNANCY_DURATION_DAYS + utils.WEANING_PERIOD_DAYS))) &&
           (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
         ) {
           alertsList.push({
@@ -350,9 +364,13 @@ const DashboardContent: React.FC = () => {
   const totalRabbits = rabbits.length;
   const does = rabbits.filter((r) => r.gender === "female").length;
   const bucks = rabbits.filter((r) => r.gender === "male").length;
-  const pregnantDoes = rabbits.filter((r) => r.is_pregnant).length;
+  const pregnantDoes = rabbits.filter((r) => r.is_pregnant && utils.isRabbitMature(r).isMature).length;
   const upcomingBirths = rabbits.filter(
-    (r) => r.expected_birth_date && new Date(r.expected_birth_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    (r) =>
+      r.expected_birth_date &&
+      utils.isRabbitMature(r).isMature &&
+      new Date(r.expected_birth_date) <=
+      new Date(Date.now() + utils.adjustTimeForTesting(utils.BIRTH_EXPECTED_WINDOW_DAYS.before))
   ).length;
 
   if (!dataLoaded) {
@@ -538,7 +556,7 @@ const DashboardContent: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      3
+                      {alerts.filter((a) => a.type === "Medication Due").length}
                     </div>
                     <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">Medication due</p>
                   </CardContent>
