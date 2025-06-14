@@ -28,6 +28,9 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
         birth_date: rabbit.birth_date ? new Date(rabbit.birth_date).toISOString().split("T")[0] : "",
         gender: rabbit.gender || "male",
         is_pregnant: rabbit.is_pregnant || false,
+        hutch_id: rabbit.hutch_id || "",
+        pregnancy_start_date: rabbit.pregnancy_start_date ? new Date(rabbit.pregnancy_start_date).toISOString().split("T")[0] : "",
+        expected_birth_date: rabbit.expected_birth_date ? new Date(rabbit.expected_birth_date).toISOString().split("T")[0] : "",
     });
     const [error, setError] = useState<string | null>(null);
 
@@ -79,27 +82,27 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
 
         try {
             const token = localStorage.getItem("rabbit_farm_token");
-            if (!token) {
-                throw new Error("No authentication token found");
-            }
+            if (!token) throw new Error("No authentication token found");
 
             const updatedRabbit = {
-                // ...rabbit,
                 name: isPregnantAndServed ? rabbit.name : formData.name,
                 breed: isPregnantAndServed ? rabbit.breed : formData.breed,
                 color: isPregnantAndServed ? rabbit.color : formData.color,
-                weight: Number.parseFloat(formData.weight) || rabbit.weight,
-                birth_date: isPregnantAndServed ? rabbit.birth_date : formData.birth_date || rabbit.birth_date,
+                weight: Number.parseFloat(formData.weight) || null,
+                birth_date: isPregnantAndServed ? rabbit.birth_date : formData.birth_date || null,
                 gender: isPregnantAndServed ? rabbit.gender : formData.gender as "male" | "female",
                 is_pregnant: formData.is_pregnant,
+                hutch_id: formData.hutch_id || null,
+                pregnancy_start_date: formData.is_pregnant ? formData.pregnancy_start_date || null : null,
+                expected_birth_date: formData.is_pregnant ? formData.expected_birth_date || null : null,
+                status: "active",
+                notes: rabbit.notes || null,
             };
 
             const response = await axios.put(
-                `${utils.apiUrl}/rabbits/${user.farm_id}/${rabbit.id}`,
+                `${utils.apiUrl}/rabbits/${user.farm_id}/${rabbit.rabbit_id}`,
                 updatedRabbit,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (response.data.success) {
