@@ -162,7 +162,7 @@ export default function EarningsTracker() {
         farm_id: user.farm_id,
       };
 
-      await axios.post(`${utils.apiUrl}/earnings`, newEarning, {
+      await axios.post(`${utils.apiUrl}/earnings/${user.farm_id}`, newEarning, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -219,7 +219,7 @@ export default function EarningsTracker() {
           farm_id: user.farm_id,
         };
 
-        await axios.post(`${utils.apiUrl}/earnings`, saleEarning, {
+        await axios.post(`${utils.apiUrl}/earnings/${user.farm_id}`, saleEarning, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -730,12 +730,12 @@ export default function EarningsTracker() {
                         <Badge
                           variant="outline"
                           className={`w-fit text-xs whitespace-nowrap ${earning.type === "rabbit_sale"
-                              ? "bg-pink-50 dark:bg-pink-900/30 border-pink-200 dark:border-pink-700 text-pink-800 dark:text-pink-300"
-                              : earning.type === "urine_sale"
-                                ? "bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300"
-                                : earning.type === "manure_sale"
-                                  ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300"
-                                  : "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300"
+                            ? "bg-pink-50 dark:bg-pink-900/30 border-pink-200 dark:border-pink-700 text-pink-800 dark:text-pink-300"
+                            : earning.type === "urine_sale"
+                              ? "bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300"
+                              : earning.type === "manure_sale"
+                                ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300"
+                                : "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300"
                             }`}
                         >
                           {earning.type.replace("_", " ").toUpperCase()}

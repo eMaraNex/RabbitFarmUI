@@ -210,7 +210,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
 
-      const response = await axios.post(`${utils.apiUrl}/rows`, newRow, {
+      const response = await axios.post(`${utils.apiUrl}/rows/${user.farm_id}`, newRow, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.data.success) {

@@ -102,7 +102,7 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
     };
 
     try {
-      const response = await axios.post(`${utils.apiUrl}/rabbits`, newRabbit, {
+      const response = await axios.post(`${utils.apiUrl}/rabbits/${user.farm_id}`, newRabbit, {
         headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
       });
       if (response.data.success) {

@@ -119,7 +119,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
           hutch_id,
         };
 
-        await axios.post(`${utils.apiUrl}/earnings`, earningsRecord, {
+        await axios.post(`${utils.apiUrl}/earnings/${user.farm_id}`, earningsRecord, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }

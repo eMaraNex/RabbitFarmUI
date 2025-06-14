@@ -1,3 +1,4 @@
+import axios from "axios";
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -105,4 +106,15 @@ export const getCurrentLocation = (): Promise<{ latitude: number; longitude: num
       }
     );
   });
+};
+
+export const getAddressFromCoordinates = async (latitude: number, longitude: number): Promise<string> => {
+  try {
+    const response = await axios.get(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+    );
+    return response.data.display_name || "Address not found";
+  } catch (error) {
+    throw new Error("Failed to fetch address from coordinates.");
+  }
 };

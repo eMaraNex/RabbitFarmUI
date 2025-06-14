@@ -84,7 +84,7 @@ export default function BreedingManager({ rabbits: initialRabbits }: BreedingMan
       const matingDate = new Date().toISOString().split("T")[0]
       const expected_birth_date = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split("T")[0]
 
-      const response = await axios.post(`${utils.apiUrl}/breeds`, {
+      const response = await axios.post(`${utils.apiUrl}/breeds/${user.farm_id}`, {
         farm_id: user.farm_id,
         doe_id: doe.rabbit_id,
         buck_id: buck.rabbit_id,

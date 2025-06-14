@@ -132,7 +132,7 @@ export default function AddHutchDialog() {
     }
 
     try {
-      const response = await axios.post(`${utils.apiUrl}/hutches`, newHutch)
+      const response = await axios.post(`${utils.apiUrl}/hutches/${user.farm_id}`, newHutch)
       if (response.data.success) {
         // Update local storage
         const updatedHutches = [...hutches, response.data.data]
