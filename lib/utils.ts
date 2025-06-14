@@ -7,13 +7,28 @@ export function cn(...inputs: ClassValue[]) {
 
 // Generate sequential rabbit IDs
 export function generateRabbitId(): string {
-  const existingIds = JSON.parse(localStorage.getItem("rabbit_farm_rabbits") || "[]")
-  const maxId = existingIds.reduce((max: number, rabbit: any) => {
-    const idNum = Number.parseInt(rabbit.rabbit_id?.replace("RB-", "") || "0")
-    return Math.max(max, idNum)
-  }, 0)
+  let maxId = 0;
 
-  return `RB-${String(maxId + 1).padStart(3, "0")}`
+  // Iterate through all localStorage keys
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    // Check for keys matching the rabbit farm pattern
+    if (key?.startsWith("rabbit_farm_rabbits_")) {
+      try {
+        const rabbits = JSON.parse(localStorage.getItem(key) || "[]");
+        // Find the max ID from this set of rabbits
+        const localMaxId = rabbits.reduce((max: number, rabbit: any) => {
+          const idNum = Number.parseInt(rabbit.rabbit_id?.replace("RB-", "") || "0");
+          return Math.max(max, idNum);
+        }, 0);
+        maxId = Math.max(maxId, localMaxId);
+      } catch (error) {
+        console.error(`Error parsing rabbits from ${key}:`, error);
+      }
+    }
+  }
+
+  return `RB-${String(maxId + 1).padStart(3, "0")}`;
 }
 
 // Generate rabbit names for large scale operations
