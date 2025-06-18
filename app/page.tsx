@@ -48,15 +48,64 @@ interface SidebarProps {
 interface OverdueBirthBannerProps {
   rabbit: RabbitType;
   onDismiss: () => void;
-  onAddKits: () => void;
+  onAddKits: (rabbit: RabbitType, buckId: string, doeName?: string, buckName?: string) => void;
 }
 
 const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({ rabbit, onDismiss, onAddKits }) => {
   const [isDismissed, setIsDismissed] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [breedingData, setBreedingData] = useState<{
+    buckId: string;
+    doeName?: string;
+    buckName?: string;
+  } | null>(null);
 
-  if (isDismissed) return null;
+  useEffect(() => {
+    const fetchBreedingData = async () => {
+      if (!user?.farm_id || !rabbit.rabbit_id) return;
+      try {
+        const response = await axios.get(
+          `${utils.apiUrl}/breeds/${user.farm_id}?doe_id=${rabbit.rabbit_id}`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
+          },
+        );
+        const records = response.data.data || [];
+        if (records.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "No Breeding Record",
+            description: "No breeding record found for this doe.",
+          });
+          return;
+        }
+        const latestRecord = records.sort(
+          (a: any, b: any) => new Date(b.mating_date).getTime() - new Date(a.mating_date).getTime(),
+        )[0];
+        setBreedingData({
+          buckId: latestRecord.buck_id,
+          doeName: rabbit.name || latestRecord.doe_id,
+          buckName: latestRecord.buck_name || latestRecord.buck_id,
+        });
+      } catch (error) {
+        console.error("Error fetching breeding record:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch breeding record.",
+        });
+      }
+    };
+    fetchBreedingData();
+  }, [user, rabbit, toast]);
 
-  const daysToBirth = Math.ceil((new Date(rabbit.expected_birth_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  if (isDismissed || !breedingData) return null;
+
+  const daysToBirth = Math.ceil(
+    (new Date(rabbit.expected_birth_date!).getTime() - new Date().getTime()) /
+    (1000 * 60 * 60 * 24),
+  );
 
   return (
     <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 p-4 rounded-xl shadow-md mb-6 flex items-center justify-between animate-fade-in">
@@ -64,10 +113,10 @@ const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({ rabbit, onDismi
         <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
         <div>
           <p className="text-sm font-medium text-red-800 dark:text-red-200">
-            Overdue Birth for {rabbit.name || 'Unknown Rabbit'}
+            Overdue Birth for {rabbit.name || "Unknown Rabbit"}
           </p>
           <p className="text-xs text-red-700 dark:text-red-300">
-            Expected birth was {Math.abs(daysToBirth)} day{Math.abs(daysToBirth) !== 1 ? 's' : ''} ago. Add kits or update status.
+            Expected birth was {Math.abs(daysToBirth)} day{Math.abs(daysToBirth) !== 1 ? "s" : ""} ago. Add kits or update status.
           </p>
         </div>
       </div>
@@ -85,7 +134,7 @@ const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({ rabbit, onDismi
         </Button>
         <Button
           size="sm"
-          onClick={onAddKits}
+          onClick={() => onAddKits(rabbit, breedingData.buckId, breedingData.doeName, breedingData.buckName)}
           className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
         >
           Add Kits
@@ -162,9 +211,11 @@ const DashboardContent: React.FC = () => {
   const [breedingRefreshTrigger, setBreedingRefreshTrigger] = useState<number>(0);
   const [showAddKitDialog, setShowAddKitDialog] = useState<boolean>(false);
   const [selectedRabbitForKit, setSelectedRabbitForKit] = useState<RabbitType | null>(null);
+  const [buckIdForKit, setBuckIdForKit] = useState<string>("");
+  const [buckNameForKit, setBuckNameForKit] = useState<string | undefined>(undefined);
   const [overdueRabbits, setOverdueRabbits] = useState<RabbitType[]>([]);
   const tabsListRef = useRef<HTMLDivElement>(null);
-  const notifiedRabbitsRef = useRef<Set<string>>(new Set()); // Track rabbits already notified
+  const notifiedRabbitsRef = useRef<Set<string>>(new Set());
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -470,6 +521,8 @@ const DashboardContent: React.FC = () => {
     if (selectedRabbitForKit?.rabbit_id) {
       notifiedRabbitsRef.current.delete(selectedRabbitForKit.rabbit_id);
     }
+    setBuckIdForKit("");
+    setBuckNameForKit(undefined);
   }, [loadData, selectedRabbitForKit]);
 
   const toggleSidebar = () => {
@@ -484,8 +537,7 @@ const DashboardContent: React.FC = () => {
     (r) =>
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
-      new Date(r.expected_birth_date).getTime() <=
-      new Date().getTime() + 7 * 24 * 60 * 60 * 1000
+      new Date(r.expected_birth_date).getTime() <= new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
   ).length;
 
   if (!dataLoaded) {
@@ -560,6 +612,10 @@ const DashboardContent: React.FC = () => {
       {showAddKitDialog && selectedRabbitForKit && (
         <AddKitDialog
           rabbit={selectedRabbitForKit}
+          doeId={selectedRabbitForKit.rabbit_id ?? ''}
+          buckId={buckIdForKit}
+          doeName={selectedRabbitForKit.name}
+          buckName={buckNameForKit}
           onClose={() => setShowAddKitDialog(false)}
           onKitAdded={handleKitAdded}
         />
@@ -576,8 +632,10 @@ const DashboardContent: React.FC = () => {
                 setOverdueRabbits(overdueRabbits.filter((r) => r.rabbit_id !== rabbit.rabbit_id));
               }
             }}
-            onAddKits={() => {
+            onAddKits={(rabbit, buckId, doeName, buckName) => {
               setSelectedRabbitForKit(rabbit);
+              setBuckIdForKit(buckId);
+              setBuckNameForKit(buckName);
               setShowAddKitDialog(true);
             }}
           />
@@ -599,7 +657,6 @@ const DashboardContent: React.FC = () => {
               <TabsTrigger value="analytics" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Analytics</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
-              {/* Stats Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Rabbit } from "lucide-react";
+import { Rabbit, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
 import axios from "axios";
@@ -21,11 +21,14 @@ interface KitFormData {
     color: string;
     status: "alive" | "dead" | "";
     notes: string;
-    actual_birth_date?: string;
 }
 
 interface AddKitDialogProps {
     rabbit: RabbitType;
+    doeId: string;
+    buckId: string;
+    doeName?: string;
+    buckName?: string;
     onClose: () => void;
     onKitAdded: () => void;
 }
@@ -36,140 +39,191 @@ const colors = [
     "White with black spots", "Black and white spotted",
 ];
 
-export default function AddKitDialog({ rabbit, onClose, onKitAdded }: AddKitDialogProps) {
+export default function AddKitDialog({ rabbit, doeId, buckId, doeName, buckName, onClose, onKitAdded }: AddKitDialogProps) {
     const { user } = useAuth();
     const { toast } = useToast();
-    const [formData, setFormData] = useState<KitFormData>({
-        kit_number: `Kit-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`,
-        birth_weight: "",
-        gender: "",
-        color: "",
-        status: "",
-        notes: "",
-        actual_birth_date: new Date().toISOString().split("T")[0],
-    });
-    const [breedingRecordId, setBreedingRecordId] = useState<string | null>(null);
-    const [parentBuck, setParentBuck] = useState<{ rabbit_id: string; name?: string } | null>(null);
-    const [parentDoe, setParentDoe] = useState<{ rabbit_id: string; name?: string } | null>(null);
+    const [actualBirthDate, setActualBirthDate] = useState<string>(new Date().toISOString().split("T")[0]);
+    const [kits, setKits] = useState<KitFormData[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [nextKitNumber, setNextKitNumber] = useState<number>(1);
 
+    // Fetch existing kits to determine next kit_number
     useEffect(() => {
-        const fetchBreedingData = async () => {
-            if (!user?.farm_id || !rabbit.rabbit_id) return;
-            setIsLoading(true);
+        if (!user?.farm_id) return;
+        const fetchKits = async () => {
             try {
-                const response = await axios.get(`${utils.apiUrl}/breeds/${user.farm_id}?doe_id=${rabbit.rabbit_id}`, {
+                const response = await axios.get(`${utils.apiUrl}/kits/${user.farm_id}`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
                 });
-                const records = response.data.data || [];
-                if (records.length === 0) {
-                    toast({
-                        variant: "destructive",
-                        title: "No breeding record found",
-                        description: "No breeding record found for this doe.",
-                    });
-                    return;
-                }
-
-                const latestRecord = records.sort((a: any, b: any) => new Date(b.mating_date).getTime() - new Date(a.mating_date).getTime())[0];
-                setBreedingRecordId(latestRecord.id);
-                setParentBuck({ rabbit_id: latestRecord.buck_id, name: latestRecord.buck_name || latestRecord.buck_id });
-                setParentDoe({ rabbit_id: latestRecord.doe_id, name: rabbit.name || latestRecord.doe_id });
-
-                if (latestRecord.actual_birth_date) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        actual_birth_date: latestRecord.actual_birth_date.split("T")[0] || new Date().toISOString().split("T")[0],
-                    }));
-                }
+                const existingKits = response.data.data || [];
+                const maxNumber = existingKits.reduce((max: number, kit: any) => {
+                    const num = parseInt(kit.kit_number.replace("RB-", ""));
+                    return isNaN(num) ? max : Math.max(max, num);
+                }, 0);
+                setNextKitNumber(maxNumber + 1);
             } catch (error) {
-                console.error("Error fetching breeding record:", error);
+                console.error("Error fetching kits:", error);
                 toast({
                     variant: "destructive",
                     title: "Error",
-                    description: "Failed to fetch breeding record.",
+                    description: "Failed to fetch existing kits.",
                 });
-            } finally {
-                setIsLoading(false);
             }
         };
+        fetchKits();
+    }, [user, toast]);
 
-        fetchBreedingData();
-    }, [user, rabbit, toast]);
+    // Add a new kit with autogenerated kit_number
+    const addKit = () => {
+        setKits((prev) => [
+            ...prev,
+            {
+                kit_number: `RB-${nextKitNumber.toString().padStart(3, "0")}`,
+                birth_weight: "",
+                gender: "",
+                color: "",
+                status: "alive",
+                notes: "",
+            },
+        ]);
+        setNextKitNumber((prev) => prev + 1);
+    };
+
+    // Remove a kit by index
+    const removeKit = (index: number) => {
+        setKits((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    // Update a kit's field
+    const updateKit = (index: number, field: keyof KitFormData, value: string) => {
+        setKits((prev) =>
+            prev.map((kit, i) =>
+                i === index ? { ...kit, [field]: value } : kit
+            )
+        );
+    };
+
+    const validateKits = (): boolean => {
+        if (!actualBirthDate || isNaN(new Date(actualBirthDate).getTime())) {
+            toast({
+                variant: "destructive",
+                title: "Invalid data",
+                description: "A valid actual birth date is required.",
+            });
+            return false;
+        }
+        for (const kit of kits) {
+            if (!kit.kit_number || !kit.birth_weight || !kit.status) {
+                toast({
+                    variant: "destructive",
+                    title: "Invalid data",
+                    description: "Kit number, birth weight, and status are required for all kits.",
+                });
+                return false;
+            }
+            const birthWeight = parseFloat(kit.birth_weight);
+            if (isNaN(birthWeight) || birthWeight <= 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Invalid birth weight",
+                    description: `Birth weight for kit ${kit.kit_number} must be a positive number.`,
+                });
+                return false;
+            }
+            if (kits.filter((k) => k.kit_number === kit.kit_number).length > 1) {
+                toast({
+                    variant: "destructive",
+                    title: "Duplicate kit number",
+                    description: `Kit number ${kit.kit_number} is duplicated.`,
+                });
+                return false;
+            }
+        }
+        return true;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user?.farm_id || !breedingRecordId || !parentBuck || !parentDoe) {
+        if (!user?.farm_id || !doeId || !buckId || kits.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Missing data",
-                description: "Missing required fields or parent information.",
+                description: "At least one kit and parent information are required.",
             });
             return;
         }
 
+        if (!validateKits()) return;
+
         setIsLoading(true);
         try {
-            // Update rabbit with actual_birth_date and is_pregnant
+            // Update rabbit with actual_birth_date, is_pregnant, total_litters, total_kits
             await axios.patch(
-                `${utils.apiUrl}/rabbits/${user.farm_id}/${rabbit.rabbit_id}`,
+                `${utils.apiUrl}/rabbits/${user.farm_id}/${doeId}`,
                 {
-                    actual_birth_date: formData.actual_birth_date,
+                    actual_birth_date: actualBirthDate,
                     is_pregnant: false,
                     total_litters: (rabbit.total_litters ?? 0) + 1,
-                    total_kits: (rabbit.total_kits ?? 0) + 1,
+                    total_kits: (rabbit.total_kits ?? 0) + kits.length,
                 },
                 { headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` } }
             );
 
-            // Create kit record
-            const kitData = {
-                breeding_record_id: breedingRecordId,
-                kit_number: parseInt(formData.kit_number.replace("Kit-", "")),
-                birth_weight: parseFloat(formData.birth_weight),
-                gender: formData.gender,
-                color: formData.color,
-                status: formData.status || "alive",
-                parent_male_id: parentBuck.rabbit_id,
-                parent_female_id: parentDoe.rabbit_id,
-                notes: formData.notes || null,
-            };
+            // Create kit records in bulk
+            const kitData = kits.map((kit) => ({
+                kit_number: kit.kit_number,
+                birth_weight: parseFloat(kit.birth_weight),
+                gender: kit.gender || null,
+                color: kit.color || null,
+                status: kit.status || null,
+                parent_male_id: buckId,
+                parent_female_id: doeId,
+                notes: kit.notes || null,
+                actual_birth_date: actualBirthDate,
+                farm_id: user.farm_id,
+            }));
 
-            const response = await axios.post(`${utils.apiUrl}/kits/${user.farm_id}`, kitData, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
-            });
+            const response = await axios.post(
+                `${utils.apiUrl}/breeds/kits/${user.farm_id}`,
+                { kits: kitData },
+                { headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` } }
+            );
 
             if (response.data.success) {
                 toast({
                     title: "Success",
-                    description: `Kit ${formData.kit_number} added successfully.`,
+                    description: `${kits.length} kit${kits.length !== 1 ? "s" : ""} added successfully.`,
                 });
                 onKitAdded();
                 onClose();
             } else {
-                throw new Error("Failed to create kit record");
+                throw new Error("Failed to create kit records");
             }
         } catch (error: any) {
-            console.error("Error creating kit:", error);
+            console.error("Error creating kits:", error);
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.response?.data?.message || "Failed to add kit record.",
+                description: error.response?.data?.message || "Failed to add kit records.",
             });
         } finally {
             setIsLoading(false);
         }
     };
 
+    // Summary of kits
+    const femaleCount = kits.filter((kit) => kit.gender === "female").length;
+    const maleCount = kits.filter((kit) => kit.gender === "male").length;
+
     return (
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent
-                className="sm:max-w-[650px] bg-white dark:bg-gray-800 bg-clip-padding backdrop-blur-sm border-gray-200 dark:border-gray-700 max-h-[500px] overflow-y-auto"
+                className="sm:max-w-[650px] bg-white dark:bg-gray-800 bg-clip-padding backdrop-blur-sm border-gray-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto"
             >
                 <DialogHeader className="bg-gradient-to-r from-green-400 to-blue-500 dark:from-green-600 dark:to-blue-600 -m-6 p-6 rounded-t-lg border-b border-gray-200 dark:border-gray-600">
                     <DialogTitle className="flex items-center space-x-2 text-white">
                         <Rabbit className="h-5 w-5 text-green-200" />
-                        <span>Add Kit for {rabbit.name}</span>
+                        <span>Add Kits for {rabbit.name}</span>
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -180,10 +234,8 @@ export default function AddKitDialog({ rabbit, onClose, onKitAdded }: AddKitDial
                         <Input
                             id="actual_birth_date"
                             type="date"
-                            value={formData.actual_birth_date}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                setFormData((prev) => ({ ...prev, actual_birth_date: e.target.value }))
-                            }
+                            value={actualBirthDate}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActualBirthDate(e.target.value)}
                             className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                             required
                         />
@@ -196,7 +248,7 @@ export default function AddKitDialog({ rabbit, onClose, onKitAdded }: AddKitDial
                             <Input
                                 id="parent_male_id"
                                 type="text"
-                                value={parentBuck ? `${parentBuck.name || parentBuck.rabbit_id || 'Unknown'}` : 'Loading...'}
+                                value={buckName || buckId || "Unknown"}
                                 className="mt-1 bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 opacity-75 cursor-not-allowed"
                                 disabled
                             />
@@ -208,132 +260,156 @@ export default function AddKitDialog({ rabbit, onClose, onKitAdded }: AddKitDial
                             <Input
                                 id="parent_female_id"
                                 type="text"
-                                value={parentDoe ? `${parentDoe.name || parentDoe.rabbit_id || 'Unknown'}` : 'Loading...'}
+                                value={doeName || doeId || "Unknown"}
                                 className="mt-1 bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 opacity-75 cursor-not-allowed"
                                 disabled
                             />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="kit_number" className="text-gray-900 dark:text-gray-100">
-                                Kit Number
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <Label className="text-gray-900 dark:text-gray-100 font-medium">
+                                Kits ({kits.length} total: {femaleCount} female{maleCount !== 1 ? "s" : ""}, {maleCount} male{maleCount !== 1 ? "s" : ""})
                             </Label>
-                            <Input
-                                id="kit_number"
-                                value={formData.kit_number}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    setFormData((prev) => ({ ...prev, kit_number: e.target.value }))
-                                }
-                                className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="birth_weight" className="text-gray-900 dark:text-gray-100">
-                                Birth Weight (kg)
-                            </Label>
-                            <Input
-                                id="birth_weight"
-                                type="number"
-                                step="0.01"
-                                value={formData.birth_weight}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    setFormData((prev) => ({ ...prev, birth_weight: e.target.value }))
-                                }
-                                className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="gender" className="text-gray-900 dark:text-gray-100">
-                                Gender
-                            </Label>
-                            <Select
-                                value={formData.gender}
-                                onValueChange={(value) =>
-                                    setFormData((prev) => ({ ...prev, gender: value as "male" | "female" }))
-                                }
+                            <Button
+                                type="button"
+                                onClick={addKit}
+                                variant="outline"
+                                className="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50"
                             >
-                                <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
-                                    <SelectValue placeholder="Select gender" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                                    <SelectItem value="male">Male</SelectItem>
-                                    <SelectItem value="female">Female</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                Add Kit
+                            </Button>
                         </div>
-                        <div>
-                            <Label htmlFor="color" className="text-gray-900 dark:text-gray-100">
-                                Color
-                            </Label>
-                            <Select
-                                value={formData.color}
-                                onValueChange={(value) => setFormData((prev) => ({ ...prev, color: value }))}
+                        {kits.length > 0 && (
+                            <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center font-medium text-sm text-gray-900 dark:text-gray-100">
+                                <span>Kit Number</span>
+                                <span>Gender</span>
+                                <span>Color</span>
+                                <span>Status</span>
+                                <span>Birth Weight (kg)</span>
+                                <span>Notes</span>
+                                <span></span>
+                            </div>
+                        )}
+                        {kits.map((kit, index) => (
+                            <div
+                                key={kit.kit_number}
+                                className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center"
                             >
-                                <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
-                                    <SelectValue placeholder="Select color" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                                    {colors.map((color) => (
-                                        <SelectItem key={color} value={color}>
-                                            {color}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div>
-                        <Label htmlFor="status" className="text-gray-900 dark:text-gray-100">
-                            Status
-                        </Label>
-                        <Select
-                            value={formData.status}
-                            onValueChange={(value) =>
-                                setFormData((prev) => ({ ...prev, status: value as "alive" | "dead" }))
-                            }
-                        >
-                            <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
-                                <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                                <SelectItem value="alive">Alive</SelectItem>
-                                <SelectItem value="dead">Dead</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Label htmlFor="notes" className="text-gray-900 dark:text-gray-100">
-                            Notes (Optional)
-                        </Label>
-                        <Textarea
-                            id="notes"
-                            value={formData.notes}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                            }
-                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                        />
+                                <div>
+                                    <Label htmlFor={`kit_number_${index}`} className="sr-only">
+                                        Kit Number
+                                    </Label>
+                                    <Input
+                                        id={`kit_number_${index}`}
+                                        value={kit.kit_number}
+                                        onChange={(e) => updateKit(index, "kit_number", e.target.value)}
+                                        className="text-sm px-2 py-1 h-8 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                                        style={{ width: "80px" }}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor={`gender_${index}`} className="sr-only">
+                                        Gender
+                                    </Label>
+                                    <Select
+                                        value={kit.gender}
+                                        onValueChange={(value) => updateKit(index, "gender", value)}
+                                    >
+                                        <SelectTrigger className="text-sm px-2 py-1 h-8 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                                            <SelectValue placeholder="Gender" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                                            <SelectItem value="male">Male</SelectItem>
+                                            <SelectItem value="female">Female</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor={`color_${index}`} className="sr-only">
+                                        Color
+                                    </Label>
+                                    <Select
+                                        value={kit.color}
+                                        onValueChange={(value) => updateKit(index, "color", value)}
+                                    >
+                                        <SelectTrigger className="text-sm px-2 py-1 h-8 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                                            <SelectValue placeholder="Color" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                                            {colors.map((color) => (
+                                                <SelectItem key={color} value={color}>
+                                                    {color}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor={`status_${index}`} className="sr-only">
+                                        Status
+                                    </Label>
+                                    <Select
+                                        value={kit.status}
+                                        onValueChange={(value) => updateKit(index, "status", value)}
+                                    >
+                                        <SelectTrigger className="text-sm px-2 py-1 h-8 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                                            <SelectItem value="alive">Alive</SelectItem>
+                                            <SelectItem value="dead">Dead</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor={`birth_weight_${index}`} className="sr-only">
+                                        Birth Weight
+                                    </Label>
+                                    <Input
+                                        id={`birth_weight_${index}`}
+                                        type="number"
+                                        step="0.01"
+                                        value={kit.birth_weight}
+                                        onChange={(e) => updateKit(index, "birth_weight", e.target.value)}
+                                        className="text-sm px-2 py-1 h-8 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                                        style={{ width: "60px" }}
+                                        required
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeKit(index)}
+                                    className="text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 h-8 w-8 p-0"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        {kits.length === 0 && (
+                            <p className="text-gray-600 dark:text-gray-400 text-sm text-center">
+                                No kits added. Click "Add Kit" to start.
+                            </p>
+                        )}
                     </div>
                     <div className="flex justify-end gap-2">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={onClose}
-                            className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100"
+                            className="bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || kits.length === 0}
                             className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
                         >
-                            {isLoading ? "Adding..." : "Add Kit"}
+                            {isLoading ? "Submitting..." : `Add ${kits.length} Kit${kits.length !== 1 ? "s" : ""}`}
                         </Button>
                     </div>
                 </form>
