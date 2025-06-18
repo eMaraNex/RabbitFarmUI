@@ -127,14 +127,7 @@ export const NESTING_BOX_END_DAYS = 30; // End of nesting box addition period
 export const WEANING_PERIOD_DAYS = 42; // Weaning period after birth
 export const POST_WEANING_BREEDING_DELAY_DAYS = 7; // Days after weaning before doe can breed again
 export const BIRTH_EXPECTED_WINDOW_DAYS = { before: 7, after: 2 }; // Birth expected alert window (7 days before, 2 days after)
-
-// For testing: Multiplier to compress time (e.g., 1 day = 1 minute for testing)
-export const TIME_COMPRESSION_FACTOR = process.env.NODE_ENV === "test" ? 1440 : 1; // 1440 minutes = 1 day
-
-// Helper function to adjust time for testing
-export const adjustTimeForTesting = (days: number): number => {
-  return days * TIME_COMPRESSION_FACTOR * 24 * 60 * 60 * 1000; // Convert days to milliseconds, adjusted by factor
-};
+export const FOSTERING_DAYS_AFTER_BIRTH = 20;
 
 // Calculate age in months
 export const calculateAgeInMonths = (birthDate: string | undefined): number => {

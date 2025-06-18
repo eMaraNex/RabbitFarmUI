@@ -54,18 +54,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${isOpen ? "translate-x-0" : "translate-x-full"
-        } transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
+      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${isOpen ? "translate-x-0" : "translate-x-full"} transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
     >
-      {/* Header */}
       <div className="flex justify-between items-center px-4 py-3 border-b border-border">
         <h2 className="text-lg font-medium">Menu</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="rounded-full h-8 w-8 hover:bg-muted"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-8 w-8 hover:bg-muted">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -87,30 +80,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-sm">{rows.length} Rows Active</span>
           </div>
         </div>
-
         {/* Currency selector - Modified to take full width */}
-        <div className="w-full">
-          <CurrencySelector />
-        </div>
-
+        <div className="w-full"><CurrencySelector /></div>
         {/* Theme toggle */}
-        <div className="w-full flex">
-          <ThemeToggle />
-        </div>
-
+        <div className="w-full flex"><ThemeToggle /></div>
         {/* Add row button */}
-        <div className="w-full">
-          <AddRowDialog onRowAdded={handleRowAdded} />
-        </div>
-
+        <div className="w-full"><AddRowDialog onRowAdded={handleRowAdded} /></div>
         {/* Logout button */}
-        <Button
-          onClick={logout}
-          variant="outline"
-          className="w-full"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
+        <Button onClick={logout} variant="outline" className="w-full">
+          <LogOut className="h-4 w-4 mr-2" />Logout
         </Button>
       </div>
     </div>
@@ -120,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
   const [selectedRabbit, setSelectedRabbit] = useState<RabbitType | null>(null);
-  const [activeTab, setActiveTab] = useState<any>("overview");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [rabbits, setRabbits] = useState<any[]>([]);
   const [hutches, setHutches] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
@@ -128,6 +106,7 @@ const DashboardContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [hasFarm, setHasFarm] = useState<boolean>(!!user?.farm_id || !!localStorage.getItem("rabbit_farm_id"));
+  const [breedingRefreshTrigger, setBreedingRefreshTrigger] = useState<number>(0);
   const tabsListRef = useRef<HTMLDivElement>(null);
 
   const loadFromStorage = useCallback((farmId: string) => {
@@ -181,11 +160,15 @@ const DashboardContent: React.FC = () => {
         axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-
+      let newRabbits = rabbitsResponse.data.data || [];
+      newRabbits = newRabbits.map((r: any) => ({
+        ...r,
+        expected_birth_date: r.is_pregnant && r.pregnancy_start_date
+          ? new Date(new Date(r.pregnancy_start_date).getTime() + (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000).toISOString()
+          : r.expected_birth_date,
+      }));
       const newRows = rowsResponse.data.data || [];
       const newHutches = hutchesResponse.data.data || [];
-      const newRabbits = rabbitsResponse.data.data || [];
-
       // Update state
       setRows(newRows);
       setHutches(newHutches);
@@ -206,6 +189,14 @@ const DashboardContent: React.FC = () => {
     }
   }, [user, loadFromStorage, saveToStorage]);
 
+  const handleRabbitsUpdate = useCallback((updatedRabbits: any[]) => {
+    setRabbits(updatedRabbits);
+    if (user?.farm_id) {
+      saveToStorage(user.farm_id, { rows, hutches, rabbits: updatedRabbits });
+    }
+    setBreedingRefreshTrigger((prev) => prev + 1);
+  }, [user, rows, hutches, saveToStorage]);
+
   const generateAlerts = useCallback(() => {
     const currentDate = new Date();
     const alertsList: Alert[] = [];
@@ -213,74 +204,110 @@ const DashboardContent: React.FC = () => {
     rabbits.forEach((rabbit) => {
       // Pregnancy Noticed Alert (from pregnancy_start_date to day 25)
       const maturity = utils.isRabbitMature(rabbit);
-      if (!maturity.isMature && rabbit.gender === "female") return; // Skip immature does for breeding alerts
+      if (!maturity.isMature && rabbit.gender === "female") {
+        return;
+      }
 
       if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
-        const pregnancyStart = new Date(rabbit.pregnancy_start_date);
-        const daysSincePregnancy = Math.ceil(
-          (currentDate.getTime() - pregnancyStart.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (daysSincePregnancy >= 0 && daysSincePregnancy < utils.NESTING_BOX_START_DAYS) {
+        let pregnancyStart;
+        try {
+          pregnancyStart = new Date(rabbit.pregnancy_start_date);
+          if (isNaN(pregnancyStart.getTime())) {
+            console.error(`Invalid pregnancy_start_date for ${rabbit.name}:`, rabbit.pregnancy_start_date);
+            pregnancyStart = currentDate;
+          }
+        } catch (e) {
+          console.error(`Error parsing pregnancy_start_date for ${rabbit.name}:`, e);
+          pregnancyStart = currentDate;
+        }
+        const timeDiff = currentDate.getTime() - pregnancyStart.getTime();
+        const daysSincePregnancy = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+        if (daysSincePregnancy >= 0 && daysSincePregnancy < (utils.NESTING_BOX_START_DAYS || 25)) {
           alertsList.push({
             type: "Pregnancy Noticed",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
+            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
             variant: "secondary",
           });
         }
-
-        // Nesting Box Needed Alert (26 days after pregnancy_start_date to day 30)
-        if (daysSincePregnancy >= utils.NESTING_BOX_START_DAYS && daysSincePregnancy < utils.NESTING_BOX_END_DAYS) {
+        if (daysSincePregnancy >= (utils.NESTING_BOX_START_DAYS || 25) && daysSincePregnancy < (utils.NESTING_BOX_END_DAYS || 28)) {
           alertsList.push({
             type: "Nesting Box Needed",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Add nesting box, ${daysSincePregnancy} days since mating on ${pregnancyStart.toLocaleDateString()}`,
+            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Add nesting box, ${daysSincePregnancy} days since mating`,
             variant: "secondary",
           });
         }
-
-        // Birth Expected Alert (within 7 days before or 2 days after expected_birth_date)
-        if (rabbit.expected_birth_date) {
-          const expectedDate = new Date(rabbit.expected_birth_date);
-          const daysDiff = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (
-            daysDiff <= utils.BIRTH_EXPECTED_WINDOW_DAYS.before &&
-            daysDiff >= -utils.BIRTH_EXPECTED_WINDOW_DAYS.after
-          ) {
+        if (rabbit.expected_birth_date && !rabbit.actual_birth_date) {
+          let expectedDate;
+          try {
+            expectedDate = new Date(rabbit.expected_birth_date);
+            if (isNaN(expectedDate.getTime())) throw new Error("Invalid expected_birth_date");
+          } catch (e) {
+            console.error(`Invalid expected_birth_date for ${rabbit.name}:`, rabbit.expected_birth_date);
+            expectedDate = new Date(currentDate.getTime() + (utils.PREGNANCY_DURATION_DAYS || 30) * 24 * 60 * 60 * 1000);
+          }
+          const daysToBirth = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSincePregnancy >= 28 && daysSincePregnancy <= 31) {
             alertsList.push({
               type: "Birth Expected",
-              message: `${rabbit.name} (${rabbit.hutch_id}) - Expected to give birth in ${daysDiff > 0 ? `${daysDiff} days` : "overdue by " + Math.abs(daysDiff) + " days"}`,
-              variant: daysDiff <= 0 ? "destructive" : "secondary",
+              message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Expected to give birth ${daysToBirth === 0 ? "today" : daysToBirth > 0 ? `in ${daysToBirth} days` : `overdue by ${Math.abs(daysToBirth)} days`}`,
+              variant: daysToBirth <= 0 ? "destructive" : "secondary",
             });
           }
         }
       }
 
+      if (rabbit.actual_birth_date) {
+        let birthDate;
+        try {
+          birthDate = new Date(rabbit.actual_birth_date);
+          if (isNaN(birthDate.getTime())) throw new Error("Invalid actual_birth_date");
+        } catch (e) {
+          console.error(`Invalid actual_birth_date for ${rabbit.name}:`, rabbit.actual_birth_date);
+          birthDate = currentDate;
+        }
+        const timeDiff = currentDate.getTime() - birthDate.getTime();
+        const daysSinceBirth = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+        if (daysSinceBirth === (utils.FOSTERING_DAYS_AFTER_BIRTH || 20)) {
+          alertsList.push({
+            type: "Fostering Needed",
+            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Consider fostering kits to other does`,
+            variant: "secondary",
+          });
+        }
+        if (daysSinceBirth === (utils.WEANING_PERIOD_DAYS || 42)) {
+          alertsList.push({
+            type: "Weaning and Nesting Box Removal",
+            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Wean kits and move to new hutches, remove nesting box`,
+            variant: "secondary",
+          });
+        }
+      }
       // Ready for Servicing Alert
       if (rabbit.gender === "female" && !rabbit.is_pregnant && maturity.isMature) {
         const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
         const weaningDate = lastBirth
-          ? new Date(lastBirth.getTime() + utils.adjustTimeForTesting(utils.WEANING_PERIOD_DAYS))
+          ? new Date(lastBirth.getTime() + (utils.WEANING_PERIOD_DAYS || 42) * 24 * 60 * 60 * 1000)
           : null;
         const oneWeekAfterWeaning = weaningDate
-          ? new Date(weaningDate.getTime() + utils.adjustTimeForTesting(utils.POST_WEANING_BREEDING_DELAY_DAYS))
+          ? new Date(weaningDate.getTime() + (utils.POST_WEANING_BREEDING_DELAY_DAYS || 7) * 24 * 60 * 60 * 1000)
           : null;
-
         if (
           (!rabbit.pregnancy_start_date ||
             (rabbit.pregnancy_start_date &&
-              currentDate.getTime() >
-              new Date(rabbit.pregnancy_start_date).getTime() +
-              utils.adjustTimeForTesting(utils.PREGNANCY_DURATION_DAYS + utils.WEANING_PERIOD_DAYS))) &&
+              currentDate.getTime() > new Date(rabbit.pregnancy_start_date).getTime() + ((utils.PREGNANCY_DURATION_DAYS || 30) + (utils.WEANING_PERIOD_DAYS || 42)) * 24 * 60 * 60 * 1000)) &&
           (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
         ) {
           alertsList.push({
             type: "Breeding Ready",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Ready for next breeding cycle`,
+            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Ready for next breeding cycle`,
             variant: "outline",
           });
         }
       }
 
-      // Medication Due Alert (Simulated)
+      // Medication Due Alert (Simulated)      
       if (rabbit.next_due) {
         const nextDueDate = new Date(rabbit.next_due);
         const daysDiff = Math.ceil((nextDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -299,9 +326,8 @@ const DashboardContent: React.FC = () => {
       const order = { destructive: 0, secondary: 1, outline: 2 } as const;
       return order[a.variant] - order[b.variant];
     });
-
-    setAlerts([...alertsList.slice(0, 3)]);
-  }, [rabbits]);
+    setAlerts([...alertsList.slice(0, 15)]); // Force re-render
+  }, [rabbits, utils]);
 
   useEffect(() => {
     loadData();
@@ -310,8 +336,11 @@ const DashboardContent: React.FC = () => {
   useEffect(() => {
     if (dataLoaded) {
       generateAlerts();
+      // Optional: Refresh alerts every minute to catch daily changes
+      const interval = setInterval(generateAlerts, 60 * 1000); // Every 60 seconds
+      return () => clearInterval(interval);
     }
-  }, [dataLoaded, generateAlerts]);
+  }, [dataLoaded, generateAlerts, breedingRefreshTrigger]);
 
   useEffect(() => {
     if (tabsListRef.current) {
@@ -333,10 +362,7 @@ const DashboardContent: React.FC = () => {
         "analytics",
       ].indexOf(activeTab);
       const tabWidth = 70;
-      tabsListRef.current.scrollTo({
-        left: tabIndex * tabWidth,
-        behavior: "smooth",
-      });
+      tabsListRef.current.scrollTo({ left: tabIndex * tabWidth, behavior: "smooth" });
     }
   }, [activeTab]);
 
@@ -369,8 +395,8 @@ const DashboardContent: React.FC = () => {
     (r) =>
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
-      new Date(r.expected_birth_date) <=
-      new Date(Date.now() + utils.adjustTimeForTesting(utils.BIRTH_EXPECTED_WINDOW_DAYS.before))
+      new Date(r.expected_birth_date).getTime() <=
+      new Date().getTime() + 7 * 24 * 60 * 60 * 1000
   ).length;
 
   if (!dataLoaded) {
@@ -404,24 +430,19 @@ const DashboardContent: React.FC = () => {
             </div>
             <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
               <Badge variant="outline" className="bg-white/60 dark:bg-gray-700/60 shadow-sm px-4 py-3.5 min-w-[140px] justify-center rounded-lg">
-                <Building className="h-3 w-3 mr-1" />
-                {rows.length} Rows Active
+                <Building className="h-3 w-3 mr-1" />{rows.length} Rows Active
               </Badge>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-4 py-3 shadow-sm min-w-[140px]">
-                <User className="h-4 w-4" />
-                <span className="truncate">{user?.name || "User"}</span>
+                <User className="h-4 w-4" /><span className="truncate">{user?.name || "User"}</span>
               </div>
-              <CurrencySelector />
-              <ThemeToggle />
-              <AddRowDialog onRowAdded={handleRowAdded} />
+              <CurrencySelector /><ThemeToggle /><AddRowDialog onRowAdded={handleRowAdded} />
               <Button
                 onClick={logout}
                 variant="outline"
                 size="sm"
                 className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-500 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500 dark:hover:border-red-800 shadow-sm"
               >
-                <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Logout</span>
+                <LogOut className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
             <Button
@@ -445,12 +466,8 @@ const DashboardContent: React.FC = () => {
         hasFarm={hasFarm}
       />
       {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={toggleSidebar}
-        ></div>
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={toggleSidebar}></div>
       )}
-
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
         {hasFarm ? (
@@ -460,56 +477,15 @@ const DashboardContent: React.FC = () => {
               key={activeTab}
               className="inline-flex justify-start w-full md:grid md:grid-cols-8 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
             >
-              <TabsTrigger
-                value="overview"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="hutches"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Hutches
-              </TabsTrigger>
-              <TabsTrigger
-                value="breeding"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Breeding
-              </TabsTrigger>
-              <TabsTrigger
-                value="health"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Health
-              </TabsTrigger>
-              <TabsTrigger
-                value="feeding"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Feeding
-              </TabsTrigger>
-              <TabsTrigger
-                value="earnings"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Earnings
-              </TabsTrigger>
-              <TabsTrigger
-                value="reports"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Reports
-              </TabsTrigger>
-              <TabsTrigger
-                value="analytics"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Analytics
-              </TabsTrigger>
+              <TabsTrigger value="overview" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Overview</TabsTrigger>
+              <TabsTrigger value="hutches" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Hutches</TabsTrigger>
+              <TabsTrigger value="breeding" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Breeding</TabsTrigger>
+              <TabsTrigger value="health" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Health</TabsTrigger>
+              <TabsTrigger value="feeding" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Feeding</TabsTrigger>
+              <TabsTrigger value="earnings" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Earnings</TabsTrigger>
+              <TabsTrigger value="reports" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Reports</TabsTrigger>
+              <TabsTrigger value="analytics" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Analytics</TabsTrigger>
             </TabsList>
-
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
               {/* Stats Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
@@ -521,15 +497,10 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      {totalRabbits}
-                    </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      {does} does, {bucks} bucks
-                    </p>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{totalRabbits}</div>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">{does} does, {bucks} bucks</p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Pregnant Does</CardTitle>
@@ -538,15 +509,10 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">
-                      {pregnantDoes}
-                    </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      {upcomingBirths} due this week
-                    </p>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">{pregnantDoes}</div>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">{upcomingBirths} due this week</p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Health Alerts</CardTitle>
@@ -555,13 +521,10 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      {alerts.filter((a) => a.type === "Medication Due").length}
-                    </div>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{alerts.filter((a) => a.type === "Medication Due").length}</div>
                     <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">Medication due</p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Active Rows</CardTitle>
@@ -570,16 +533,11 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-                      {rows.length}
-                    </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      {hutches.length} total hutches
-                    </p>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">{rows.length}</div>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">{hutches.length} total hutches</p>
                   </CardContent>
                 </Card>
               </div>
-
               <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 text-sm sm:text-base dark:text-gray-200">
@@ -601,12 +559,10 @@ const DashboardContent: React.FC = () => {
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
-                            {alert.type === "Medication Due" ? (
+                            {alert.type === "Medication Due" || (alert.type === "Birth Expected" && alert.variant === "destructive") ? (
                               <span className="text-red-800 dark:text-red-300">{alert.type}</span>
-                            ) : alert.type === "Birth Expected" ? (
-                              <span className="text-amber-800 dark:text-amber-300">{alert.type}</span>
                             ) : (
-                              <span className="text-blue-800 dark:text-blue-300">{alert.type}</span>
+                              <span className="text-amber-800 dark:text-amber-300">{alert.type}</span>
                             )}
                           </p>
                           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{alert.message}</p>
@@ -616,53 +572,31 @@ const DashboardContent: React.FC = () => {
                         </Badge>
                       </div>
                     ))}
+                    {alerts.length === 0 && (
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">No alerts at this time.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="hutches">
-              <HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />
-              {selectedRabbit && <RabbitProfile rabbit={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
-            </TabsContent>
-
-            <TabsContent value="breeding">
-              <BreedingManager rabbits={rabbits} />
-            </TabsContent>
-
-            <TabsContent value="health">
-              <HealthTracker rabbits={rabbits} />
-            </TabsContent>
-
-            <TabsContent value="feeding">
-              <FeedingSchedule rabbits={rabbits} />
-            </TabsContent>
-
-            <TabsContent value="earnings">
-              <EarningsTracker />
-            </TabsContent>
-
-            <TabsContent value="reports">
-              <ReportsDashboard />
-            </TabsContent>
-
-            <TabsContent value="analytics">
-              <AnalyticsCharts />
-            </TabsContent>
+            <TabsContent value="hutches"><HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />{selectedRabbit && <RabbitProfile rabbit={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}</TabsContent>
+            <TabsContent value="breeding"><BreedingManager rabbits={rabbits} onRabbitsUpdate={handleRabbitsUpdate} /></TabsContent>
+            <TabsContent value="health"><HealthTracker rabbits={rabbits} /></TabsContent>
+            <TabsContent value="feeding"><FeedingSchedule rabbits={rabbits} /></TabsContent>
+            <TabsContent value="earnings"><EarningsTracker /></TabsContent>
+            <TabsContent value="reports"><ReportsDashboard /></TabsContent>
+            <TabsContent value="analytics"><AnalyticsCharts /></TabsContent>
           </Tabs>
         ) : (
           <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 shadow-xl max-w-2xl mx-auto">
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl font-bold text-center dark:text-white flex items-center justify-center space-x-2">
-                <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
-                <span>Welcome to Karagani Rabbit Farming</span>
+                <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" /><span>Welcome to Karagani Rabbit Farming</span>
               </CardTitle>
               <p className="text-gray-600 dark:text-gray-300 text-center">No farm created yet</p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                Get started by creating your farm to manage your rabbits, hutches, and more.
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">Get started by creating your farm to manage your rabbits, hutches, and more.</p>
             </CardContent>
           </Card>
         )}
