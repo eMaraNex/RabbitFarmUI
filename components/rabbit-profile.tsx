@@ -239,11 +239,11 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
                   )}
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Total Litters:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{rabbitData.totalLitters || 0}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{rabbitData.total_litters || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Total Kits:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{rabbitData.totalKits || 0}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{rabbitData.total_kits || 0}</span>
                   </div>
                   {rabbitData.parent_male && (
                     <div className="flex justify-between">

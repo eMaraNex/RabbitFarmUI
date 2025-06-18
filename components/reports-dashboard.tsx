@@ -73,14 +73,14 @@ export default function ReportsDashboard() {
       .filter((r) => r.gender === "male")
       .map((buck) => {
         const offspring = safeRabbits.filter((r) => r.parent_male === buck.rabbit_id);
-        const totalKits = offspring.reduce((sum, r) => sum + (r.totalKits || 0), 0);
+        const total_kits = offspring.reduce((sum, r) => sum + (r.total_kits || 0), 0);
         return {
           ...buck,
           totalOffspring: offspring.length,
-          totalKits: totalKits,
+          total_kits: total_kits,
         };
       })
-      .sort((a, b) => b.totalKits - a.totalKits);
+      .sort((a, b) => b.total_kits - a.total_kits);
 
     return buckPerformance[0] || null;
   };
@@ -89,7 +89,7 @@ export default function ReportsDashboard() {
     const safeRabbits = rabbits || [];
     const doesPerformance = safeRabbits
       .filter((r) => r.gender === "female")
-      .sort((a, b) => (b.totalKits || 0) - (a.totalKits || 0));
+      .sort((a, b) => (b.total_kits || 0) - (a.total_kits || 0));
     return doesPerformance[0] || null;
   };
 
@@ -133,13 +133,13 @@ export default function ReportsDashboard() {
 
   const getAverageKitsPerLitter = () => {
     const safeRabbits = rabbits || [];
-    const doesWithLitters = safeRabbits.filter((r) => r.gender === "female" && (r.totalLitters || 0) > 0);
+    const doesWithLitters = safeRabbits.filter((r) => r.gender === "female" && (r.total_litters || 0) > 0);
     if (doesWithLitters.length === 0) return 0;
 
-    const totalKits = doesWithLitters.reduce((sum, r) => sum + (r.totalKits || 0), 0) || 0;
-    const totalLitters = doesWithLitters.reduce((sum, r) => sum + (r.totalLitters || 0), 0) || 0;
+    const total_kits = doesWithLitters.reduce((sum, r) => sum + (r.total_kits || 0), 0) || 0;
+    const total_litters = doesWithLitters.reduce((sum, r) => sum + (r.total_litters || 0), 0) || 0;
 
-    return totalLitters > 0 ? totalKits / totalLitters : 0;
+    return total_litters > 0 ? total_kits / total_litters : 0;
   };
 
   const getProductivityByBreed = () => {
@@ -150,16 +150,16 @@ export default function ReportsDashboard() {
         if (!acc[breed]) {
           acc[breed] = {
             count: 0,
-            totalKits: 0,
-            totalLitters: 0,
+            total_kits: 0,
+            total_litters: 0,
             avgWeight: 0,
             totalWeight: 0,
           };
         }
 
         acc[breed].count++;
-        acc[breed].totalKits += rabbit.totalKits || 0;
-        acc[breed].totalLitters += rabbit.totalLitters || 0;
+        acc[breed].total_kits += rabbit.total_kits || 0;
+        acc[breed].total_litters += rabbit.total_litters || 0;
         acc[breed].totalWeight += rabbit.weight || 0;
 
         return acc;
@@ -169,7 +169,7 @@ export default function ReportsDashboard() {
 
     Object.keys(breedStats).forEach((breed) => {
       breedStats[breed].avgWeight = breedStats[breed].count > 0 ? breedStats[breed].totalWeight / breedStats[breed].count : 0;
-      breedStats[breed].avgKitsPerRabbit = breedStats[breed].count > 0 ? breedStats[breed].totalKits / breedStats[breed].count : 0;
+      breedStats[breed].avgKitsPerRabbit = breedStats[breed].count > 0 ? breedStats[breed].total_kits / breedStats[breed].count : 0;
     });
 
     return Object.entries(breedStats)
@@ -313,7 +313,7 @@ export default function ReportsDashboard() {
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Total Kits Sired:</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{topBuck.totalKits}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topBuck.total_kits}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Weight:</p>
@@ -352,11 +352,11 @@ export default function ReportsDashboard() {
                   </div>
                   {/* <div>
                     <p className="text-gray-600 dark:text-gray-400">Total Kits:</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.totalKits}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.total_kits}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Total Litters:</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.totalLitters}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{topDoe.total_litters}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400">Status:</p>
@@ -415,7 +415,7 @@ export default function ReportsDashboard() {
                     <p className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">
                       {breed.avgKitsPerRabbit.toFixed(1)} kits/rabbit
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{breed.totalKits} total kits</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{breed.total_kits} total kits</p>
                   </div>
                 </div>
               </div>

@@ -15,8 +15,8 @@ export interface Rabbit {
   last_mating_date?: string;
   mated_with?: string;
   expected_birth_date?: string;
-  totalLitters?: number;
-  totalKits?: number;
+  total_litters?: number;
+  total_kits?: number;
   healthRecords?: HealthRecord[];
   feedingSchedule?: FeedingSchedule;
   created_at?: string;

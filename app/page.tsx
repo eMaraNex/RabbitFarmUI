@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X, Plus } from "lucide-react";
+import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X } from "lucide-react";
 import HutchLayout from "@/components/hutch-layout";
 import RabbitProfile from "@/components/rabbit-profile";
 import BreedingManager from "@/components/breeding-manager";
@@ -19,6 +19,8 @@ import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
+import AddKitDialog from "@/components/add-kit-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
@@ -42,6 +44,56 @@ interface SidebarProps {
   handleRowAdded: () => void;
   hasFarm: boolean;
 }
+
+interface OverdueBirthBannerProps {
+  rabbit: RabbitType;
+  onDismiss: () => void;
+  onAddKits: () => void;
+}
+
+const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({ rabbit, onDismiss, onAddKits }) => {
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  if (isDismissed) return null;
+
+  const daysToBirth = Math.ceil((new Date(rabbit.expected_birth_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+  return (
+    <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 p-4 rounded-xl shadow-md mb-6 flex items-center justify-between animate-fade-in">
+      <div className="flex items-center space-x-3">
+        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+        <div>
+          <p className="text-sm font-medium text-red-800 dark:text-red-200">
+            Overdue Birth for {rabbit.name || 'Unknown Rabbit'}
+          </p>
+          <p className="text-xs text-red-700 dark:text-red-300">
+            Expected birth was {Math.abs(daysToBirth)} day{Math.abs(daysToBirth) !== 1 ? 's' : ''} ago. Add kits or update status.
+          </p>
+        </div>
+      </div>
+      <div className="flex space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setIsDismissed(true);
+            onDismiss();
+          }}
+          className="border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30"
+        >
+          Dismiss
+        </Button>
+        <Button
+          size="sm"
+          onClick={onAddKits}
+          className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
+        >
+          Add Kits
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
@@ -97,6 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const [selectedRabbit, setSelectedRabbit] = useState<RabbitType | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [rabbits, setRabbits] = useState<any[]>([]);
@@ -107,7 +160,11 @@ const DashboardContent: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [hasFarm, setHasFarm] = useState<boolean>(!!user?.farm_id || !!localStorage.getItem("rabbit_farm_id"));
   const [breedingRefreshTrigger, setBreedingRefreshTrigger] = useState<number>(0);
+  const [showAddKitDialog, setShowAddKitDialog] = useState<boolean>(false);
+  const [selectedRabbitForKit, setSelectedRabbitForKit] = useState<RabbitType | null>(null);
+  const [overdueRabbits, setOverdueRabbits] = useState<RabbitType[]>([]);
   const tabsListRef = useRef<HTMLDivElement>(null);
+  const notifiedRabbitsRef = useRef<Set<string>>(new Set()); // Track rabbits already notified
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -200,14 +257,17 @@ const DashboardContent: React.FC = () => {
   const generateAlerts = useCallback(() => {
     const currentDate = new Date();
     const alertsList: Alert[] = [];
+    const overdueRabbitsList: RabbitType[] = [];
 
     rabbits.forEach((rabbit) => {
-      // Pregnancy Noticed Alert (from pregnancy_start_date to day 25)
+      // Skip immature female rabbits for pregnancy-related alerts
       const maturity = utils.isRabbitMature(rabbit);
       if (!maturity.isMature && rabbit.gender === "female") {
         return;
       }
 
+      // --- Pregnancy Noticed Alert ---
+      // Notifies when a doe is confirmed pregnant (from pregnancy_start_date to day 25)
       if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
         let pregnancyStart;
         try {
@@ -230,6 +290,9 @@ const DashboardContent: React.FC = () => {
             variant: "secondary",
           });
         }
+
+        // --- Nesting Box Needed Alert ---
+        // Reminds to add a nesting box when pregnancy reaches days 25-28
         if (daysSincePregnancy >= (utils.NESTING_BOX_START_DAYS || 25) && daysSincePregnancy < (utils.NESTING_BOX_END_DAYS || 28)) {
           alertsList.push({
             type: "Nesting Box Needed",
@@ -237,6 +300,9 @@ const DashboardContent: React.FC = () => {
             variant: "secondary",
           });
         }
+
+        // --- Birth Expected Alert ---
+        // Alerts when birth is expected (days 28-31) or overdue
         if (rabbit.expected_birth_date && !rabbit.actual_birth_date) {
           let expectedDate;
           try {
@@ -254,9 +320,17 @@ const DashboardContent: React.FC = () => {
               variant: daysToBirth <= 0 ? "destructive" : "secondary",
             });
           }
+
+          // --- Overdue Birth Toast Notification ---
+          // Shows a toast when expected birth date is exceeded (overdue)
+          if (daysToBirth < 0 && !notifiedRabbitsRef.current.has(rabbit.rabbit_id)) {
+            overdueRabbitsList.push(rabbit);
+          }
         }
       }
 
+      // --- Fostering Needed Alert ---
+      // Suggests fostering kits 20 days after birth
       if (rabbit.actual_birth_date) {
         let birthDate;
         try {
@@ -276,6 +350,9 @@ const DashboardContent: React.FC = () => {
             variant: "secondary",
           });
         }
+
+        // --- Weaning and Nesting Box Removal Alert ---
+        // Reminds to wean kits and remove nesting box 42 days after birth
         if (daysSinceBirth === (utils.WEANING_PERIOD_DAYS || 42)) {
           alertsList.push({
             type: "Weaning and Nesting Box Removal",
@@ -284,7 +361,9 @@ const DashboardContent: React.FC = () => {
           });
         }
       }
-      // Ready for Servicing Alert
+
+      // --- Breeding Ready Alert ---
+      // Notifies when a mature doe is ready for the next breeding cycle
       if (rabbit.gender === "female" && !rabbit.is_pregnant && maturity.isMature) {
         const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
         const weaningDate = lastBirth
@@ -307,7 +386,8 @@ const DashboardContent: React.FC = () => {
         }
       }
 
-      // Medication Due Alert (Simulated)      
+      // --- Medication Due Alert ---
+      // Notifies when a rabbit's vaccination is overdue
       if (rabbit.next_due) {
         const nextDueDate = new Date(rabbit.next_due);
         const daysDiff = Math.ceil((nextDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -327,7 +407,8 @@ const DashboardContent: React.FC = () => {
       return order[a.variant] - order[b.variant];
     });
     setAlerts([...alertsList.slice(0, 15)]); // Force re-render
-  }, [rabbits, utils]);
+    setOverdueRabbits(overdueRabbitsList);
+  }, [rabbits, utils, toast]);
 
   useEffect(() => {
     loadData();
@@ -336,7 +417,7 @@ const DashboardContent: React.FC = () => {
   useEffect(() => {
     if (dataLoaded) {
       generateAlerts();
-      // Optional: Refresh alerts every minute to catch daily changes
+      // Refresh alerts every minute to catch daily changes
       const interval = setInterval(generateAlerts, 60 * 1000); // Every 60 seconds
       return () => clearInterval(interval);
     }
@@ -382,6 +463,14 @@ const DashboardContent: React.FC = () => {
     setHasFarm(true);
     loadData();
   }, [loadData]);
+
+  const handleKitAdded = useCallback(() => {
+    loadData();
+    setShowAddKitDialog(false);
+    if (selectedRabbitForKit?.rabbit_id) {
+      notifiedRabbitsRef.current.delete(selectedRabbitForKit.rabbit_id);
+    }
+  }, [loadData, selectedRabbitForKit]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -468,8 +557,31 @@ const DashboardContent: React.FC = () => {
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={toggleSidebar}></div>
       )}
+      {showAddKitDialog && selectedRabbitForKit && (
+        <AddKitDialog
+          rabbit={selectedRabbitForKit}
+          onClose={() => setShowAddKitDialog(false)}
+          onKitAdded={handleKitAdded}
+        />
+      )}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
+        {hasFarm && overdueRabbits.map((rabbit) => (
+          <OverdueBirthBanner
+            key={rabbit.rabbit_id}
+            rabbit={rabbit}
+            onDismiss={() => {
+              if (rabbit.rabbit_id) {
+                notifiedRabbitsRef.current.add(rabbit.rabbit_id);
+                setOverdueRabbits(overdueRabbits.filter((r) => r.rabbit_id !== rabbit.rabbit_id));
+              }
+            }}
+            onAddKits={() => {
+              setSelectedRabbitForKit(rabbit);
+              setShowAddKitDialog(true);
+            }}
+          />
+        ))}
         {hasFarm ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
             <TabsList
