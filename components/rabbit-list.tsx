@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
     Pencil,
     Trash2,
@@ -19,41 +19,45 @@ import {
     Baby,
     Calendar,
     TrendingUp,
-} from "lucide-react"
-import type { Rabbit as RabbitType } from "@/lib/types"
-import EditRabbitDialog from "@/components/edit-rabbit-dialog"
-import AddKitDialog from "@/components/add-kit-dialog"
-import { motion, AnimatePresence } from "framer-motion"
-import axios from "axios"
-import { useToast } from "@/components/ui/use-toast"
-import * as utils from "@/lib/utils"
+} from "lucide-react";
+import type { Rabbit as RabbitType } from "@/lib/types";
+import EditRabbitDialog from "@/components/edit-rabbit-dialog";
+import AddKitDialog from "@/components/add-kit-dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
+import { useToast } from "@/components/ui/use-toast";
+import * as utils from "@/lib/utils";
 
 interface RabbitListProps {
-    farmId: string
+    farmId: string;
 }
 
 const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
-    const [rabbits, setRabbits] = useState<RabbitType[]>([])
-    const [selectedRabbits, setSelectedRabbits] = useState<string[]>([])
-    const [editingRabbit, setEditingRabbit] = useState<RabbitType | null>(null)
-    const [addKitRabbit, setAddKitRabbit] = useState<RabbitType | null>(null)
-    const [loading, setLoading] = useState<boolean>(true)
-    const [error, setError] = useState<string | null>(null)
-    const [page, setPage] = useState<number>(1)
-    const [totalPages, setTotalPages] = useState<number>(1)
-    const [sortField, setSortField] = useState<string>("created_at")
-    const [sortOrder, setSortOrder] = useState<string>("desc")
-    const [searchTerm, setSearchTerm] = useState<string>("")
-    const { toast } = useToast()
-    const itemsPerPage = 10
+    const [rabbits, setRabbits] = useState<RabbitType[]>([]);
+    const [selectedRabbits, setSelectedRabbits] = useState<string[]>([]);
+    const [editingRabbit, setEditingRabbit] = useState<RabbitType | null>(null);
+    const [addKitRabbit, setAddKitRabbit] = useState<RabbitType | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState<number>(1);
+    const [totalPages, setTotalPages] = useState<number>(1);
+    const [sortField, setSortField] = useState<string>("created_at");
+    const [sortOrder, setSortOrder] = useState<string>("desc");
+    const [searchTerm, setSearchTerm] = useState<string>("");
+    const { toast } = useToast();
+    const itemsPerPage = 10;
 
     useEffect(() => {
         const fetchRabbits = async () => {
-            setLoading(true)
-            setError(null)
+            setLoading(true);
+            setError(null);
             try {
-                const token = localStorage.getItem("rabbit_farm_token")
-                if (!token) throw new Error("No authentication token found")
+                // Only access localStorage on the client
+                let token: string | null = null;
+                if (typeof window !== "undefined") {
+                    token = localStorage.getItem("rabbit_farm_token");
+                }
+                if (!token) throw new Error("No authentication token found");
 
                 const response = await axios.post(
                     `${utils.apiUrl}/rabbits/${farmId}/details`,
@@ -63,79 +67,79 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                         sortField,
                         sortOrder,
                     },
-                    { headers: { Authorization: `Bearer ${token}` } },
-                )
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
 
-                const { data, total } = response.data
-                setRabbits(data || [])
-                setTotalPages(Math.ceil(total / itemsPerPage))
+                const { data, total } = response.data;
+                setRabbits(data || []);
+                setTotalPages(Math.ceil(total / itemsPerPage));
             } catch (err) {
-                console.error("Error fetching rabbits:", err)
-                setError("Failed to load rabbit data.")
+                console.error("Error fetching rabbits:", err);
+                setError("Failed to load rabbit data.");
                 toast({
                     variant: "destructive",
                     title: "Error",
                     description: "Failed to load rabbit data.",
-                })
+                });
             } finally {
-                setLoading(false)
+                setLoading(false);
             }
-        }
+        };
 
         if (farmId) {
             fetchRabbits()
         }
-    }, [farmId, page, sortField, sortOrder])
+    }, [farmId, page, sortField, sortOrder]);
 
     const handleCheckboxChange = (rabbitId: string) => {
         setSelectedRabbits((prev) => (prev.includes(rabbitId) ? prev.filter((id) => id !== rabbitId) : [...prev, rabbitId]))
     }
 
     const handleEdit = (rabbit: RabbitType) => {
-        setEditingRabbit(rabbit)
-    }
+        setEditingRabbit(rabbit);
+    };
 
     const handleAddKit = (rabbit: RabbitType) => {
-        setAddKitRabbit(rabbit)
-    }
+        setAddKitRabbit(rabbit);
+    };
 
     const handleDelete = (rabbitId: string) => {
-        console.log(`Delete rabbit ${rabbitId} (not implemented)`)
-    }
+        console.log(`Delete rabbit ${rabbitId} (not implemented)`);
+    };
 
     const handleSort = (field: string) => {
         if (sortField === field) {
-            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         } else {
-            setSortField(field)
-            setSortOrder("asc")
+            setSortField(field);
+            setSortOrder("asc");
         }
-        setPage(1)
-    }
+        setPage(1);
+    };
 
     const getSortIcon = (field: string) => {
-        if (sortField !== field) return null
+        if (sortField !== field) return null;
         return sortOrder === "asc" ? (
             <ChevronUp className="h-4 w-4 text-blue-500" />
         ) : (
             <ChevronDown className="h-4 w-4 text-blue-500" />
-        )
-    }
+        );
+    };
 
     const filteredRabbits = rabbits.filter(
         (rabbit) =>
             rabbit.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             rabbit.breed?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            rabbit.rabbit_id?.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
+            rabbit.rabbit_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const totalKits = rabbits.reduce(
         (sum, rabbit) =>
             sum + (rabbit?.birth_history?.reduce((kitSum: any, history: any) => kitSum + (history.number_of_kits || 0), 0) || 0),
-        0,
-    )
+        0
+    );
 
-    const pregnantCount = rabbits.filter((rabbit) => rabbit.is_pregnant).length
+    const pregnantCount = rabbits.filter((rabbit) => rabbit.is_pregnant).length;
 
     if (loading) {
         return (
@@ -155,7 +159,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                     </div>
                 </motion.div>
             </div>
-        )
+        );
     }
 
     if (error) {
@@ -182,7 +186,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                     </Button>
                 </div>
             </motion.div>
-        )
+        );
     }
 
     return (
@@ -487,16 +491,16 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                             </Button>
                             <div className="flex items-center gap-1">
                                 {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                                    let pageNum
+                                    let pageNum;
                                     if (totalPages <= 7) {
-                                        pageNum = i + 1
+                                        pageNum = i + 1;
                                     } else {
                                         if (page <= 4) {
-                                            pageNum = i + 1
+                                            pageNum = i + 1;
                                         } else if (page >= totalPages - 3) {
-                                            pageNum = totalPages - 6 + i
+                                            pageNum = totalPages - 6 + i;
                                         } else {
-                                            pageNum = page - 3 + i
+                                            pageNum = page - 3 + i;
                                         }
                                     }
 
@@ -513,7 +517,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                                         >
                                             {pageNum}
                                         </Button>
-                                    )
+                                    );
                                 })}
                             </div>
                             <Button
@@ -536,23 +540,26 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                     rabbit={editingRabbit}
                     onClose={() => setEditingRabbit(null)}
                     onUpdate={() => {
-                        setEditingRabbit(null)
+                        setEditingRabbit(null);
                         const fetchRabbits = async () => {
                             try {
-                                const token = localStorage.getItem("rabbit_farm_token")
+                                let token: string | null = null;
+                                if (typeof window !== "undefined") {
+                                    token = localStorage.getItem("rabbit_farm_token");
+                                }
                                 const response = await axios.post(
                                     `${utils.apiUrl}/rabbits/${farmId}/details`,
                                     { page, limit: itemsPerPage, sortField, sortOrder },
-                                    { headers: { Authorization: `Bearer ${token}` } },
-                                )
-                                const { data, total } = response.data
-                                setRabbits(data)
-                                setTotalPages(Math.ceil(total / itemsPerPage))
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                );
+                                const { data, total } = response.data;
+                                setRabbits(data);
+                                setTotalPages(Math.ceil(total / itemsPerPage));
                             } catch (err) {
-                                console.error("Error re-fetching rabbits:", err)
+                                console.error("Error re-fetching rabbits:", err);
                             }
-                        }
-                        fetchRabbits()
+                        };
+                        fetchRabbits();
                     }}
                 />
             )}
@@ -564,28 +571,31 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                     doeName={addKitRabbit.name}
                     onClose={() => setAddKitRabbit(null)}
                     onKitAdded={() => {
-                        setAddKitRabbit(null)
+                        setAddKitRabbit(null);
                         const fetchRabbits = async () => {
                             try {
-                                const token = localStorage.getItem("rabbit_farm_token")
+                                let token: string | null = null;
+                                if (typeof window !== "undefined") {
+                                    token = localStorage.getItem("rabbit_farm_token");
+                                }
                                 const response = await axios.post(
                                     `${utils.apiUrl}/rabbits/${farmId}/details`,
                                     { page, limit: itemsPerPage, sortField, sortOrder },
-                                    { headers: { Authorization: `Bearer ${token}` } },
-                                )
-                                const { data, total } = response.data
-                                setRabbits(data)
-                                setTotalPages(Math.ceil(total / itemsPerPage))
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                );
+                                const { data, total } = response.data;
+                                setRabbits(data);
+                                setTotalPages(Math.ceil(total / itemsPerPage));
                             } catch (err) {
-                                console.error("Error re-fetching rabbits:", err)
+                                console.error("Error re-fetching rabbits:", err);
                             }
-                        }
-                        fetchRabbits()
+                        };
+                        fetchRabbits();
                     }}
                 />
             )}
         </motion.div>
-    )
-}
+    );
+};
 
-export default RabbitList
+export default RabbitList;
