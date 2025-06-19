@@ -36,10 +36,10 @@ interface CompatibilityResult {
 }
 
 const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
-  if (doe.parent_male === buck.id || doe.parent_female === buck.id) return true;
-  if (buck.parent_male === doe.id || buck.parent_female === doe.id) return true;
-  if (doe.parent_male === buck.parent_male && doe.parent_male) return true;
-  if (doe.parent_female === buck.parent_female && doe.parent_female) return true;
+  if (doe.parent_male_id === buck.id || doe.parent_female_id === buck.id) return true;
+  if (buck.parent_male_id === doe.id || buck.parent_female_id === doe.id) return true;
+  if (doe.parent_male_id === buck.parent_male_id && doe.parent_male_id) return true;
+  if (doe.parent_female_id === buck.parent_female_id && doe.parent_female_id) return true;
   return false;
 };
 

@@ -245,16 +245,16 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
                     <span className="font-medium text-gray-900 dark:text-gray-100">Total Kits:</span>
                     <span className="text-gray-700 dark:text-gray-300">{rabbitData.total_kits || 0}</span>
                   </div>
-                  {rabbitData.parent_male && (
+                  {rabbitData.parent_male_id && (
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-900 dark:text-gray-100">Father:</span>
-                      <span className="text-gray-700 dark:text-gray-300">{rabbitData.parent_male}</span>
+                      <span className="text-gray-700 dark:text-gray-300">{rabbitData.parent_male_id}</span>
                     </div>
                   )}
-                  {rabbitData.parent_female && (
+                  {rabbitData.parent_female_id && (
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-900 dark:text-gray-100">Mother:</span>
-                      <span className="text-gray-700 dark:text-gray-300">{rabbitData.parent_female}</span>
+                      <span className="text-gray-700 dark:text-gray-300">{rabbitData.parent_female_id}</span>
                     </div>
                   )}
                 </CardContent>

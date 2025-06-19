@@ -9,8 +9,8 @@ export interface Rabbit {
   birth_date?: string;
   weight: number;
   hutch_id: string;
-  parent_male?: string;
-  parent_female?: string;
+  parent_male_id?: string;
+  parent_female_id?: string;
   is_pregnant: boolean;
   last_mating_date?: string;
   mated_with?: string;

@@ -72,7 +72,7 @@ export default function ReportsDashboard() {
     const buckPerformance = safeRabbits
       .filter((r) => r.gender === "male")
       .map((buck) => {
-        const offspring = safeRabbits.filter((r) => r.parent_male === buck.rabbit_id);
+        const offspring = safeRabbits.filter((r) => r.parent_male_id === buck.rabbit_id);
         const total_kits = offspring.reduce((sum, r) => sum + (r.total_kits || 0), 0);
         return {
           ...buck,
