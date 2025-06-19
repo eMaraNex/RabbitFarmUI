@@ -1,6 +1,7 @@
 import axios from "axios";
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Rabbit, Alert } from "@/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -147,4 +148,165 @@ export const isRabbitMature = (rabbit: { birth_date?: string }): { isMature: boo
   return ageInMonths >= MIN_BREEDING_AGE_MONTHS
     ? { isMature: true, reason: "Rabbit is mature" }
     : { isMature: false, reason: `Rabbit is too young (${Math.round(ageInMonths)} months)` };
+};
+
+export const generateAlerts = (
+  rabbits: Rabbit[],
+  setAlerts: (alerts: Alert[]) => void,
+  setOverdueRabbits: (rabbits: Rabbit[]) => void,
+  notifiedRabbitsRef: React.MutableRefObject<Set<string>>,
+): void => {
+  const currentDate = new Date();
+  const alertsList: Alert[] = [];
+  const overdueRabbitsList: Rabbit[] = [];
+
+  rabbits.forEach((rabbit) => {
+    // Skip immature female rabbits for pregnancy-related alerts
+    const maturity = isRabbitMature(rabbit);
+    if (!maturity.isMature && rabbit.gender === "female") {
+      return;
+    }
+
+    // --- Pregnancy Noticed Alert ---
+    // Notifies when a doe is confirmed pregnant (from pregnancy_start_date to day 25)
+    if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
+      let pregnancyStart;
+      try {
+        pregnancyStart = new Date(rabbit.pregnancy_start_date);
+        if (isNaN(pregnancyStart.getTime())) {
+          console.error(`Invalid pregnancy_start_date for ${rabbit.name}:`, rabbit.pregnancy_start_date);
+          pregnancyStart = currentDate;
+        }
+      } catch (e) {
+        console.error(`Error parsing pregnancy_start_date for ${rabbit.name}:`, e);
+        pregnancyStart = currentDate;
+      }
+      const timeDiff = currentDate.getTime() - pregnancyStart.getTime();
+      const daysSincePregnancy = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+      if (daysSincePregnancy >= 0 && daysSincePregnancy < (NESTING_BOX_START_DAYS || 25)) {
+        alertsList.push({
+          type: "Pregnancy Noticed",
+          message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
+          variant: "secondary",
+        });
+      }
+
+      // --- Nesting Box Needed Alert ---
+      // Reminds to add a nesting box when pregnancy reaches days 25-28
+      if (daysSincePregnancy >= (NESTING_BOX_START_DAYS || 25) && daysSincePregnancy < (NESTING_BOX_END_DAYS || 28)) {
+        alertsList.push({
+          type: "Nesting Box Needed",
+          message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Add nesting box, ${daysSincePregnancy} days since mating`,
+          variant: "secondary",
+        });
+      }
+
+      // --- Birth Expected Alert ---
+      // Alerts when birth is expected (days 28-31) or overdue
+      if (rabbit.expected_birth_date && !rabbit.actual_birth_date) {
+        let expectedDate;
+        try {
+          expectedDate = new Date(rabbit.expected_birth_date);
+          if (isNaN(expectedDate.getTime())) throw new Error("Invalid expected_birth_date");
+        } catch (e) {
+          console.error(`Invalid expected_birth_date for ${rabbit.name}:`, rabbit.expected_birth_date);
+          expectedDate = new Date(currentDate.getTime() + (PREGNANCY_DURATION_DAYS || 30) * 24 * 60 * 60 * 1000);
+        }
+        const daysToBirth = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSincePregnancy >= 28 && daysSincePregnancy <= 31) {
+          alertsList.push({
+            type: "Birth Expected",
+            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Expected to give birth ${daysToBirth === 0 ? "today" : daysToBirth > 0 ? `in ${daysToBirth} days` : `overdue by ${Math.abs(daysToBirth)} days`}`,
+            variant: daysToBirth <= 0 ? "destructive" : "secondary",
+          });
+        }
+
+        // --- Overdue Birth Toast Notification ---
+        // Shows a toast when expected birth date is exceeded (overdue)
+        if (daysToBirth < 0 && !notifiedRabbitsRef.current.has(rabbit.rabbit_id ?? '')) {
+          overdueRabbitsList.push(rabbit);
+        }
+      }
+    }
+
+    // --- Fostering Needed Alert ---
+    // Suggests fostering kits 20 days after birth
+    if (rabbit.actual_birth_date) {
+      let birthDate;
+      try {
+        birthDate = new Date(rabbit.actual_birth_date);
+        if (isNaN(birthDate.getTime())) throw new Error("Invalid actual_birth_date");
+      } catch (e) {
+        console.error(`Invalid actual_birth_date for ${rabbit.name}:`, rabbit.actual_birth_date);
+        birthDate = currentDate;
+      }
+      const timeDiff = currentDate.getTime() - birthDate.getTime();
+      const daysSinceBirth = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+      if (daysSinceBirth === (FOSTERING_DAYS_AFTER_BIRTH || 20)) {
+        alertsList.push({
+          type: "Fostering Needed",
+          message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Consider fostering kits to other does`,
+          variant: "secondary",
+        });
+      }
+
+      // --- Weaning and Nesting Box Removal Alert ---
+      // Reminds to wean kits and remove nesting box 42 days after birth
+      if (daysSinceBirth === (WEANING_PERIOD_DAYS || 42)) {
+        alertsList.push({
+          type: "Weaning and Nesting Box Removal",
+          message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Wean kits and move to new hutches, remove nesting box`,
+          variant: "secondary",
+        });
+      }
+    }
+
+    // --- Breeding Ready Alert ---
+    // Notifies when a mature doe is ready for the next breeding cycle
+    if (rabbit.gender === "female" && !rabbit.is_pregnant && maturity.isMature) {
+      const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
+      const weaningDate = lastBirth
+        ? new Date(lastBirth.getTime() + (WEANING_PERIOD_DAYS || 42) * 24 * 60 * 60 * 1000)
+        : null;
+      const oneWeekAfterWeaning = weaningDate
+        ? new Date(weaningDate.getTime() + (POST_WEANING_BREEDING_DELAY_DAYS || 7) * 24 * 60 * 60 * 1000)
+        : null;
+      if (
+        (!rabbit.pregnancy_start_date ||
+          (rabbit.pregnancy_start_date &&
+            currentDate.getTime() > new Date(rabbit.pregnancy_start_date).getTime() + ((PREGNANCY_DURATION_DAYS || 30) + (WEANING_PERIOD_DAYS || 42)) * 24 * 60 * 60 * 1000)) &&
+        (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
+      ) {
+        alertsList.push({
+          type: "Breeding Ready",
+          message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Ready for next breeding cycle`,
+          variant: "outline",
+        });
+      }
+    }
+
+    // --- Medication Due Alert ---
+    // Notifies when a rabbit's vaccination is overdue
+    // if (rabbit.next_due) {
+    //   const nextDueDate = new Date(rabbit.next_due);
+    //   const daysDiff = Math.ceil((nextDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+    //   if (daysDiff <= 0) {
+    //     alertsList.push({
+    //       type: "Medication Due",
+    //       message: `${rabbit.name} (${rabbit.hutch_id}) - Vaccination overdue by ${Math.abs(daysDiff)} days`,
+    //       variant: "destructive",
+    //     });
+    //   }
+    // }
+  });
+
+  // Sort alerts by urgency (overdue > upcoming > ready)
+  alertsList.sort((a, b) => {
+    const order = { destructive: 0, secondary: 1, outline: 2 } as const;
+    return order[a.variant] - order[b.variant];
+  });
+  setAlerts([...alertsList.slice(0, 15)]); // Force re-render
+  setOverdueRabbits(overdueRabbitsList);
 };

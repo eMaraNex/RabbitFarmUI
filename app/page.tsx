@@ -27,7 +27,8 @@ import { CurrencyProvider } from "@/lib/currency-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import type { Rabbit as RabbitType } from "@/lib/types";
-
+import { useRouter } from "next/navigation";
+import Header from "@/components/header";
 // Define the Alert type
 interface Alert {
   type: string;
@@ -201,7 +202,7 @@ const DashboardContent: React.FC = () => {
   const { toast } = useToast();
   const [selectedRabbit, setSelectedRabbit] = useState<RabbitType | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
-  const [rabbits, setRabbits] = useState<any[]>([]);
+  const [rabbits, setRabbits] = useState<RabbitType[]>([]);
   const [hutches, setHutches] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
@@ -216,6 +217,7 @@ const DashboardContent: React.FC = () => {
   const [overdueRabbits, setOverdueRabbits] = useState<RabbitType[]>([]);
   const tabsListRef = useRef<HTMLDivElement>(null);
   const notifiedRabbitsRef = useRef<Set<string>>(new Set());
+  const router = useRouter();
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -295,9 +297,9 @@ const DashboardContent: React.FC = () => {
       }
       setDataLoaded(true);
     }
-  }, [user, loadFromStorage, saveToStorage]);
+  }, [user, loadFromStorage, saveToStorage, toast]);
 
-  const handleRabbitsUpdate = useCallback((updatedRabbits: any[]) => {
+  const handleRabbitsUpdate = useCallback((updatedRabbits: RabbitType[]) => {
     setRabbits(updatedRabbits);
     if (user?.farm_id) {
       saveToStorage(user.farm_id, { rows, hutches, rabbits: updatedRabbits });
@@ -305,174 +307,19 @@ const DashboardContent: React.FC = () => {
     setBreedingRefreshTrigger((prev) => prev + 1);
   }, [user, rows, hutches, saveToStorage]);
 
-  const generateAlerts = useCallback(() => {
-    const currentDate = new Date();
-    const alertsList: Alert[] = [];
-    const overdueRabbitsList: RabbitType[] = [];
-
-    rabbits.forEach((rabbit) => {
-      // Skip immature female rabbits for pregnancy-related alerts
-      const maturity = utils.isRabbitMature(rabbit);
-      if (!maturity.isMature && rabbit.gender === "female") {
-        return;
-      }
-
-      // --- Pregnancy Noticed Alert ---
-      // Notifies when a doe is confirmed pregnant (from pregnancy_start_date to day 25)
-      if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
-        let pregnancyStart;
-        try {
-          pregnancyStart = new Date(rabbit.pregnancy_start_date);
-          if (isNaN(pregnancyStart.getTime())) {
-            console.error(`Invalid pregnancy_start_date for ${rabbit.name}:`, rabbit.pregnancy_start_date);
-            pregnancyStart = currentDate;
-          }
-        } catch (e) {
-          console.error(`Error parsing pregnancy_start_date for ${rabbit.name}:`, e);
-          pregnancyStart = currentDate;
-        }
-        const timeDiff = currentDate.getTime() - pregnancyStart.getTime();
-        const daysSincePregnancy = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-
-        if (daysSincePregnancy >= 0 && daysSincePregnancy < (utils.NESTING_BOX_START_DAYS || 25)) {
-          alertsList.push({
-            type: "Pregnancy Noticed",
-            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
-            variant: "secondary",
-          });
-        }
-
-        // --- Nesting Box Needed Alert ---
-        // Reminds to add a nesting box when pregnancy reaches days 25-28
-        if (daysSincePregnancy >= (utils.NESTING_BOX_START_DAYS || 25) && daysSincePregnancy < (utils.NESTING_BOX_END_DAYS || 28)) {
-          alertsList.push({
-            type: "Nesting Box Needed",
-            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Add nesting box, ${daysSincePregnancy} days since mating`,
-            variant: "secondary",
-          });
-        }
-
-        // --- Birth Expected Alert ---
-        // Alerts when birth is expected (days 28-31) or overdue
-        if (rabbit.expected_birth_date && !rabbit.actual_birth_date) {
-          let expectedDate;
-          try {
-            expectedDate = new Date(rabbit.expected_birth_date);
-            if (isNaN(expectedDate.getTime())) throw new Error("Invalid expected_birth_date");
-          } catch (e) {
-            console.error(`Invalid expected_birth_date for ${rabbit.name}:`, rabbit.expected_birth_date);
-            expectedDate = new Date(currentDate.getTime() + (utils.PREGNANCY_DURATION_DAYS || 30) * 24 * 60 * 60 * 1000);
-          }
-          const daysToBirth = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysSincePregnancy >= 28 && daysSincePregnancy <= 31) {
-            alertsList.push({
-              type: "Birth Expected",
-              message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Expected to give birth ${daysToBirth === 0 ? "today" : daysToBirth > 0 ? `in ${daysToBirth} days` : `overdue by ${Math.abs(daysToBirth)} days`}`,
-              variant: daysToBirth <= 0 ? "destructive" : "secondary",
-            });
-          }
-
-          // --- Overdue Birth Toast Notification ---
-          // Shows a toast when expected birth date is exceeded (overdue)
-          if (daysToBirth < 0 && !notifiedRabbitsRef.current.has(rabbit.rabbit_id)) {
-            overdueRabbitsList.push(rabbit);
-          }
-        }
-      }
-
-      // --- Fostering Needed Alert ---
-      // Suggests fostering kits 20 days after birth
-      if (rabbit.actual_birth_date) {
-        let birthDate;
-        try {
-          birthDate = new Date(rabbit.actual_birth_date);
-          if (isNaN(birthDate.getTime())) throw new Error("Invalid actual_birth_date");
-        } catch (e) {
-          console.error(`Invalid actual_birth_date for ${rabbit.name}:`, rabbit.actual_birth_date);
-          birthDate = currentDate;
-        }
-        const timeDiff = currentDate.getTime() - birthDate.getTime();
-        const daysSinceBirth = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-
-        if (daysSinceBirth === (utils.FOSTERING_DAYS_AFTER_BIRTH || 20)) {
-          alertsList.push({
-            type: "Fostering Needed",
-            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Consider fostering kits to other does`,
-            variant: "secondary",
-          });
-        }
-
-        // --- Weaning and Nesting Box Removal Alert ---
-        // Reminds to wean kits and remove nesting box 42 days after birth
-        if (daysSinceBirth === (utils.WEANING_PERIOD_DAYS || 42)) {
-          alertsList.push({
-            type: "Weaning and Nesting Box Removal",
-            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Wean kits and move to new hutches, remove nesting box`,
-            variant: "secondary",
-          });
-        }
-      }
-
-      // --- Breeding Ready Alert ---
-      // Notifies when a mature doe is ready for the next breeding cycle
-      if (rabbit.gender === "female" && !rabbit.is_pregnant && maturity.isMature) {
-        const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
-        const weaningDate = lastBirth
-          ? new Date(lastBirth.getTime() + (utils.WEANING_PERIOD_DAYS || 42) * 24 * 60 * 60 * 1000)
-          : null;
-        const oneWeekAfterWeaning = weaningDate
-          ? new Date(weaningDate.getTime() + (utils.POST_WEANING_BREEDING_DELAY_DAYS || 7) * 24 * 60 * 60 * 1000)
-          : null;
-        if (
-          (!rabbit.pregnancy_start_date ||
-            (rabbit.pregnancy_start_date &&
-              currentDate.getTime() > new Date(rabbit.pregnancy_start_date).getTime() + ((utils.PREGNANCY_DURATION_DAYS || 30) + (utils.WEANING_PERIOD_DAYS || 42)) * 24 * 60 * 60 * 1000)) &&
-          (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
-        ) {
-          alertsList.push({
-            type: "Breeding Ready",
-            message: `${rabbit.name} (${rabbit.hutch_id || 'N/A'}) - Ready for next breeding cycle`,
-            variant: "outline",
-          });
-        }
-      }
-
-      // --- Medication Due Alert ---
-      // Notifies when a rabbit's vaccination is overdue
-      if (rabbit.next_due) {
-        const nextDueDate = new Date(rabbit.next_due);
-        const daysDiff = Math.ceil((nextDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff <= 0) {
-          alertsList.push({
-            type: "Medication Due",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Vaccination overdue by ${Math.abs(daysDiff)} days`,
-            variant: "destructive",
-          });
-        }
-      }
-    });
-
-    // Sort alerts by urgency (overdue > upcoming > ready)
-    alertsList.sort((a, b) => {
-      const order = { destructive: 0, secondary: 1, outline: 2 } as const;
-      return order[a.variant] - order[b.variant];
-    });
-    setAlerts([...alertsList.slice(0, 15)]); // Force re-render
-    setOverdueRabbits(overdueRabbitsList);
-  }, [rabbits, utils, toast]);
-
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   useEffect(() => {
     if (dataLoaded) {
-      generateAlerts();
-      // Refresh alerts every minute to catch daily changes
-      const interval = setInterval(generateAlerts, 60 * 1000); // Every 60 seconds
+      utils.generateAlerts(rabbits, setAlerts, setOverdueRabbits, notifiedRabbitsRef);
+      const interval = setInterval(() => {
+        utils.generateAlerts(rabbits, setAlerts, setOverdueRabbits, notifiedRabbitsRef);
+      }, 60 * 1000);
       return () => clearInterval(interval);
     }
-  }, [dataLoaded, generateAlerts, breedingRefreshTrigger]);
+  }, [dataLoaded, rabbits, breedingRefreshTrigger]);
 
   useEffect(() => {
     if (tabsListRef.current) {
@@ -553,50 +400,7 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-gray-700/20 sticky top-0 z-40">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
-                <Rabbit className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                  Karagani Rabbit Farming
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 hidden sm:block">
-                  Professional Rabbit Management System
-                </p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
-              <Badge variant="outline" className="bg-white/60 dark:bg-gray-700/60 shadow-sm px-4 py-3.5 min-w-[140px] justify-center rounded-lg">
-                <Building className="h-3 w-3 mr-1" />{rows.length} Rows Active
-              </Badge>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-4 py-3 shadow-sm min-w-[140px]">
-                <User className="h-4 w-4" /><span className="truncate">{user?.name || "User"}</span>
-              </div>
-              <CurrencySelector /><ThemeToggle /><AddRowDialog onRowAdded={handleRowAdded} />
-              <Button
-                onClick={logout}
-                variant="outline"
-                size="sm"
-                className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-500 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500 dark:hover:border-red-800 shadow-sm"
-              >
-                <LogOut className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Logout</span>
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:h-6 w-6 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full md:hidden"
-              onClick={toggleSidebar}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header user={user} rows={rows} logout={logout} toggleSidebar={toggleSidebar} handleRowAdded={handleRowAdded} CurrencySelector={CurrencySelector} ThemeToggle={ThemeToggle} AddRowDialog={AddRowDialog} />
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={toggleSidebar}
@@ -658,7 +462,10 @@ const DashboardContent: React.FC = () => {
             </TabsList>
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-                <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
+                <Card
+                  className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  onClick={() => router.push("/rabbits")}
+                >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Total Rabbits</CardTitle>
                     <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">

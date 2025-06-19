@@ -24,6 +24,7 @@ export interface Rabbit {
   notes?: string;
   actual_birth_date?: string;
   pregnancy_start_date?: string;
+  birth_history?: any[]
 }
 
 export interface HealthRecord {
@@ -117,4 +118,10 @@ export interface ProductionRecord {
   source?: string;
   notes?: string;
   created_at?: string;
+}
+
+export interface Alert {
+  type: string;
+  message: string;
+  variant: "destructive" | "secondary" | "outline";
 }
