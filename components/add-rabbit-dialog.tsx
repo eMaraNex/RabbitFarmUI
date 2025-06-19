@@ -30,8 +30,8 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
     birth_date: "",
     weight: "",
     pair: "",
-    parent_male: "",
-    parent_female: "",
+    parent_male_id: "",
+    parent_female_id: "",
   });
 
   const breeds = [
@@ -95,14 +95,14 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
       birth_date: formData.birth_date,
       weight: Number.parseFloat(formData.weight) || 0,
       hutch_id: hutch_id,
-      parent_male: formData.parent_male || undefined,
-      parent_female: formData.parent_female || undefined,
+      parent_male_id: formData.parent_male_id || undefined,
+      parent_female_id: formData.parent_female_id || undefined,
       is_pregnant: false,
       status: "active"
     };
 
     try {
-      const response = await axios.post(`${utils.apiUrl}/rabbits`, newRabbit, {
+      const response = await axios.post(`${utils.apiUrl}/rabbits/${user.farm_id}`, newRabbit, {
         headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
       });
       if (response.data.success) {
@@ -231,26 +231,26 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="parent_male" className="text-gray-900 dark:text-gray-100">
+              <Label htmlFor="parent_male_id" className="text-gray-900 dark:text-gray-100">
                 Father ID (Optional)
               </Label>
               <Input
-                id="parent_male"
+                id="parent_male_id"
                 placeholder="e.g., RB-001"
-                value={formData.parent_male}
-                onChange={(e) => setFormData({ ...formData, parent_male: e.target.value })}
+                value={formData.parent_male_id}
+                onChange={(e) => setFormData({ ...formData, parent_male_id: e.target.value })}
                 className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
               />
             </div>
             <div>
-              <Label htmlFor="parent_female" className="text-gray-900 dark:text-gray-100">
+              <Label htmlFor="parent_female_id" className="text-gray-900 dark:text-gray-100">
                 Mother ID (Optional)
               </Label>
               <Input
-                id="parent_female"
+                id="parent_female_id"
                 placeholder="e.g., RB-002"
-                value={formData.parent_female}
-                onChange={(e) => setFormData({ ...formData, parent_female: e.target.value })}
+                value={formData.parent_female_id}
+                onChange={(e) => setFormData({ ...formData, parent_female_id: e.target.value })}
                 className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
               />
             </div>

@@ -55,18 +55,20 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
         setIsFetchingLocation(true);
         try {
             const { latitude, longitude } = await utils.getCurrentLocation();
+            let address = await utils.getAddressFromCoordinates(latitude, longitude);
             setFormData((prev) => ({
                 ...prev,
                 latitude: latitude.toString(),
                 longitude: longitude.toString(),
+                location: address,
             }));
             toast({
                 title: "Location Fetched",
-                description: "Current location coordinates have been filled.",
+                description: "Current coordinates and address have been filled. You can edit the address manually.",
                 className: "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
             });
         } catch (error: any) {
-            const errorMessage = error.message || "Failed to fetch current location. Please ensure location services are enabled.";
+            const errorMessage = error.message || "Failed to fetch current location or address. Please ensure location services are enabled.";
             setErrors((prev) => ({ ...prev, location: errorMessage }));
             toast({
                 title: "Error",

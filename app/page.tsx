@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X, Plus } from "lucide-react";
+import { Rabbit, Heart, Pill, AlertTriangle, Building, LogOut, User, Menu, X } from "lucide-react";
 import HutchLayout from "@/components/hutch-layout";
 import RabbitProfile from "@/components/rabbit-profile";
 import BreedingManager from "@/components/breeding-manager";
@@ -19,13 +19,16 @@ import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
+import AddKitDialog from "@/components/add-kit-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import type { Rabbit as RabbitType } from "@/lib/types";
-
+import { useRouter } from "next/navigation";
+import Header from "@/components/header";
 // Define the Alert type
 interface Alert {
   type: string;
@@ -43,6 +46,105 @@ interface SidebarProps {
   hasFarm: boolean;
 }
 
+interface OverdueBirthBannerProps {
+  rabbit: RabbitType;
+  onDismiss: () => void;
+  onAddKits: (rabbit: RabbitType, buckId: string, doeName?: string, buckName?: string) => void;
+}
+
+const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({ rabbit, onDismiss, onAddKits }) => {
+  const [isDismissed, setIsDismissed] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [breedingData, setBreedingData] = useState<{
+    buckId: string;
+    doeName?: string;
+    buckName?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchBreedingData = async () => {
+      if (!user?.farm_id || !rabbit.rabbit_id) return;
+      try {
+        const response = await axios.get(
+          `${utils.apiUrl}/breeds/${user.farm_id}?doe_id=${rabbit.rabbit_id}`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
+          },
+        );
+        const records = response.data.data || [];
+        if (records.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "No Breeding Record",
+            description: "No breeding record found for this doe.",
+          });
+          return;
+        }
+        const latestRecord = records.sort(
+          (a: any, b: any) => new Date(b.mating_date).getTime() - new Date(a.mating_date).getTime(),
+        )[0];
+        setBreedingData({
+          buckId: latestRecord.buck_id,
+          doeName: rabbit.name || latestRecord.doe_id,
+          buckName: latestRecord.buck_name || latestRecord.buck_id,
+        });
+      } catch (error) {
+        console.error("Error fetching breeding record:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch breeding record.",
+        });
+      }
+    };
+    fetchBreedingData();
+  }, [user, rabbit, toast]);
+
+  if (isDismissed || !breedingData) return null;
+
+  const daysToBirth = Math.ceil(
+    (new Date(rabbit.expected_birth_date!).getTime() - new Date().getTime()) /
+    (1000 * 60 * 60 * 24),
+  );
+
+  return (
+    <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 p-4 rounded-xl shadow-md mb-6 flex items-center justify-between animate-fade-in">
+      <div className="flex items-center space-x-3">
+        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+        <div>
+          <p className="text-sm font-medium text-red-800 dark:text-red-200">
+            Overdue Birth for {rabbit.name || "Unknown Rabbit"}
+          </p>
+          <p className="text-xs text-red-700 dark:text-red-300">
+            Expected birth was {Math.abs(daysToBirth)} day{Math.abs(daysToBirth) !== 1 ? "s" : ""} ago. Add kits or update status.
+          </p>
+        </div>
+      </div>
+      <div className="flex space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setIsDismissed(true);
+            onDismiss();
+          }}
+          className="border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30"
+        >
+          Dismiss
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => onAddKits(rabbit, breedingData.buckId, breedingData.doeName, breedingData.buckName)}
+          className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
+        >
+          Add Kits
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
@@ -54,18 +156,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${isOpen ? "translate-x-0" : "translate-x-full"
-        } transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
+      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${isOpen ? "translate-x-0" : "translate-x-full"} transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
     >
-      {/* Header */}
       <div className="flex justify-between items-center px-4 py-3 border-b border-border">
         <h2 className="text-lg font-medium">Menu</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="rounded-full h-8 w-8 hover:bg-muted"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-8 w-8 hover:bg-muted">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -87,30 +182,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-sm">{rows.length} Rows Active</span>
           </div>
         </div>
-
         {/* Currency selector - Modified to take full width */}
-        <div className="w-full">
-          <CurrencySelector />
-        </div>
-
+        <div className="w-full"><CurrencySelector /></div>
         {/* Theme toggle */}
-        <div className="w-full flex">
-          <ThemeToggle />
-        </div>
-
+        <div className="w-full flex"><ThemeToggle /></div>
         {/* Add row button */}
-        <div className="w-full">
-          <AddRowDialog onRowAdded={handleRowAdded} />
-        </div>
-
+        <div className="w-full"><AddRowDialog onRowAdded={handleRowAdded} /></div>
         {/* Logout button */}
-        <Button
-          onClick={logout}
-          variant="outline"
-          className="w-full"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
+        <Button onClick={logout} variant="outline" className="w-full">
+          <LogOut className="h-4 w-4 mr-2" />Logout
         </Button>
       </div>
     </div>
@@ -119,16 +199,25 @@ const Sidebar: React.FC<SidebarProps> = ({
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const [selectedRabbit, setSelectedRabbit] = useState<RabbitType | null>(null);
-  const [activeTab, setActiveTab] = useState<any>("overview");
-  const [rabbits, setRabbits] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("overview");
+  const [rabbits, setRabbits] = useState<RabbitType[]>([]);
   const [hutches, setHutches] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [hasFarm, setHasFarm] = useState<boolean>(!!user?.farm_id || !!localStorage.getItem("rabbit_farm_id"));
+  const [breedingRefreshTrigger, setBreedingRefreshTrigger] = useState<number>(0);
+  const [showAddKitDialog, setShowAddKitDialog] = useState<boolean>(false);
+  const [selectedRabbitForKit, setSelectedRabbitForKit] = useState<RabbitType | null>(null);
+  const [buckIdForKit, setBuckIdForKit] = useState<string>("");
+  const [buckNameForKit, setBuckNameForKit] = useState<string | undefined>(undefined);
+  const [overdueRabbits, setOverdueRabbits] = useState<RabbitType[]>([]);
   const tabsListRef = useRef<HTMLDivElement>(null);
+  const notifiedRabbitsRef = useRef<Set<string>>(new Set());
+  const router = useRouter();
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -181,11 +270,15 @@ const DashboardContent: React.FC = () => {
         axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-
+      let newRabbits = rabbitsResponse.data.data || [];
+      newRabbits = newRabbits.map((r: any) => ({
+        ...r,
+        expected_birth_date: r.is_pregnant && r.pregnancy_start_date
+          ? new Date(new Date(r.pregnancy_start_date).getTime() + (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000).toISOString()
+          : r.expected_birth_date,
+      }));
       const newRows = rowsResponse.data.data || [];
       const newHutches = hutchesResponse.data.data || [];
-      const newRabbits = rabbitsResponse.data.data || [];
-
       // Update state
       setRows(newRows);
       setHutches(newHutches);
@@ -204,90 +297,15 @@ const DashboardContent: React.FC = () => {
       }
       setDataLoaded(true);
     }
-  }, [user, loadFromStorage, saveToStorage]);
+  }, [user, loadFromStorage, saveToStorage, toast]);
 
-  const generateAlerts = useCallback(() => {
-    const currentDate = new Date();
-    const alertsList: Alert[] = [];
-
-    rabbits.forEach((rabbit) => {
-      // Pregnancy Noticed Alert (from pregnancy_start_date to day 25)
-      if (rabbit.is_pregnant && rabbit.pregnancy_start_date) {
-        const pregnancyStart = new Date(rabbit.pregnancy_start_date);
-        const daysSincePregnancy = Math.ceil((currentDate.getTime() - pregnancyStart.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysSincePregnancy >= 0 && daysSincePregnancy < 26) { // Day 0 to day 25
-          alertsList.push({
-            type: "Pregnancy Noticed",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Confirmed pregnant since ${pregnancyStart.toLocaleDateString()}`,
-            variant: "secondary",
-          });
-        }
-
-        // Nesting Box Needed Alert (26 days after pregnancy_start_date to day 30)
-        if (daysSincePregnancy >= 26 && daysSincePregnancy < 31) { // Day 26 to day 30
-          alertsList.push({
-            type: "Nesting Box Needed",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Add nesting box, 26 days since mating on ${pregnancyStart.toLocaleDateString()}`,
-            variant: "secondary",
-          });
-        }
-
-        // Birth Expected Alert (within 7 days before or 2 days after expected_birth_date)
-        if (rabbit.expected_birth_date) {
-          const expectedDate = new Date(rabbit.expected_birth_date);
-          const daysDiff = Math.ceil((expectedDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysDiff <= 7 && daysDiff >= -2) {
-            alertsList.push({
-              type: "Birth Expected",
-              message: `${rabbit.name} (${rabbit.hutch_id}) - Expected to give birth in ${daysDiff > 0 ? `${daysDiff} days` : "overdue by " + Math.abs(daysDiff) + " days"}`,
-              variant: daysDiff <= 0 ? "destructive" : "secondary",
-            });
-          }
-        }
-      }
-
-      // Ready for Servicing Alert
-      if (rabbit.gender === "female" && !rabbit.is_pregnant) {
-        const lastBirth = rabbit.actual_birth_date ? new Date(rabbit.actual_birth_date) : null;
-        const weaningDate = lastBirth ? new Date(lastBirth.getTime() + 42 * 24 * 60 * 60 * 1000) : null;
-        const oneWeekAfterWeaning = weaningDate ? new Date(weaningDate.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
-
-        if (
-          (!rabbit.pregnancy_start_date ||
-            (rabbit.pregnancy_start_date &&
-              currentDate.getTime() > new Date(rabbit.pregnancy_start_date).getTime() + 42 * 24 * 60 * 60 * 1000)) &&
-          (!oneWeekAfterWeaning || currentDate > oneWeekAfterWeaning)
-        ) {
-          alertsList.push({
-            type: "Breeding Ready",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Ready for next breeding cycle`,
-            variant: "outline",
-          });
-        }
-      }
-
-      // Medication Due Alert (Simulated)
-      if (rabbit.next_due) {
-        const nextDueDate = new Date(rabbit.next_due);
-        const daysDiff = Math.ceil((nextDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff <= 0) {
-          alertsList.push({
-            type: "Medication Due",
-            message: `${rabbit.name} (${rabbit.hutch_id}) - Vaccination overdue by ${Math.abs(daysDiff)} days`,
-            variant: "destructive",
-          });
-        }
-      }
-    });
-
-    // Sort alerts by urgency (overdue > upcoming > ready)
-    alertsList.sort((a, b) => {
-      const order = { destructive: 0, secondary: 1, outline: 2 } as const;
-      return order[a.variant] - order[b.variant];
-    });
-
-    setAlerts([...alertsList.slice(0, 3)]);
-  }, [rabbits]);
+  const handleRabbitsUpdate = useCallback((updatedRabbits: RabbitType[]) => {
+    setRabbits(updatedRabbits);
+    if (user?.farm_id) {
+      saveToStorage(user.farm_id, { rows, hutches, rabbits: updatedRabbits });
+    }
+    setBreedingRefreshTrigger((prev) => prev + 1);
+  }, [user, rows, hutches, saveToStorage]);
 
   useEffect(() => {
     loadData();
@@ -295,9 +313,13 @@ const DashboardContent: React.FC = () => {
 
   useEffect(() => {
     if (dataLoaded) {
-      generateAlerts();
+      utils.generateAlerts(rabbits, setAlerts, setOverdueRabbits, notifiedRabbitsRef);
+      const interval = setInterval(() => {
+        utils.generateAlerts(rabbits, setAlerts, setOverdueRabbits, notifiedRabbitsRef);
+      }, 60 * 1000);
+      return () => clearInterval(interval);
     }
-  }, [dataLoaded, generateAlerts]);
+  }, [dataLoaded, rabbits, breedingRefreshTrigger]);
 
   useEffect(() => {
     if (tabsListRef.current) {
@@ -319,10 +341,7 @@ const DashboardContent: React.FC = () => {
         "analytics",
       ].indexOf(activeTab);
       const tabWidth = 70;
-      tabsListRef.current.scrollTo({
-        left: tabIndex * tabWidth,
-        behavior: "smooth",
-      });
+      tabsListRef.current.scrollTo({ left: tabIndex * tabWidth, behavior: "smooth" });
     }
   }, [activeTab]);
 
@@ -343,6 +362,16 @@ const DashboardContent: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  const handleKitAdded = useCallback(() => {
+    loadData();
+    setShowAddKitDialog(false);
+    if (selectedRabbitForKit?.rabbit_id) {
+      notifiedRabbitsRef.current.delete(selectedRabbitForKit.rabbit_id);
+    }
+    setBuckIdForKit("");
+    setBuckNameForKit(undefined);
+  }, [loadData, selectedRabbitForKit]);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -350,9 +379,12 @@ const DashboardContent: React.FC = () => {
   const totalRabbits = rabbits.length;
   const does = rabbits.filter((r) => r.gender === "female").length;
   const bucks = rabbits.filter((r) => r.gender === "male").length;
-  const pregnantDoes = rabbits.filter((r) => r.is_pregnant).length;
+  const pregnantDoes = rabbits.filter((r) => r.is_pregnant && utils.isRabbitMature(r).isMature).length;
   const upcomingBirths = rabbits.filter(
-    (r) => r.expected_birth_date && new Date(r.expected_birth_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    (r) =>
+      r.expected_birth_date &&
+      utils.isRabbitMature(r).isMature &&
+      new Date(r.expected_birth_date).getTime() <= new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
   ).length;
 
   if (!dataLoaded) {
@@ -368,55 +400,7 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-gray-700/20 sticky top-0 z-40">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
-                <Rabbit className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                  Karagani Rabbit Farming
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 hidden sm:block">
-                  Professional Rabbit Management System
-                </p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
-              <Badge variant="outline" className="bg-white/60 dark:bg-gray-700/60 shadow-sm px-4 py-3.5 min-w-[140px] justify-center rounded-lg">
-                <Building className="h-3 w-3 mr-1" />
-                {rows.length} Rows Active
-              </Badge>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 rounded-lg px-4 py-3 shadow-sm min-w-[140px]">
-                <User className="h-4 w-4" />
-                <span className="truncate">{user?.name || "User"}</span>
-              </div>
-              <CurrencySelector />
-              <ThemeToggle />
-              <AddRowDialog onRowAdded={handleRowAdded} />
-              <Button
-                onClick={logout}
-                variant="outline"
-                size="sm"
-                className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-500 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500 dark:hover:border-red-800 shadow-sm"
-              >
-                <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:h-6 w-6 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full md:hidden"
-              onClick={toggleSidebar}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header user={user} rows={rows} logout={logout} toggleSidebar={toggleSidebar} handleRowAdded={handleRowAdded} CurrencySelector={CurrencySelector} ThemeToggle={ThemeToggle} AddRowDialog={AddRowDialog} />
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={toggleSidebar}
@@ -427,14 +411,39 @@ const DashboardContent: React.FC = () => {
         hasFarm={hasFarm}
       />
       {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={toggleSidebar}
-        ></div>
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={toggleSidebar}></div>
       )}
-
+      {showAddKitDialog && selectedRabbitForKit && (
+        <AddKitDialog
+          rabbit={selectedRabbitForKit}
+          doeId={selectedRabbitForKit.rabbit_id ?? ''}
+          buckId={buckIdForKit}
+          doeName={selectedRabbitForKit.name}
+          buckName={buckNameForKit}
+          onClose={() => setShowAddKitDialog(false)}
+          onKitAdded={handleKitAdded}
+        />
+      )}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
+        {hasFarm && overdueRabbits.map((rabbit) => (
+          <OverdueBirthBanner
+            key={rabbit.rabbit_id}
+            rabbit={rabbit}
+            onDismiss={() => {
+              if (rabbit.rabbit_id) {
+                notifiedRabbitsRef.current.add(rabbit.rabbit_id);
+                setOverdueRabbits(overdueRabbits.filter((r) => r.rabbit_id !== rabbit.rabbit_id));
+              }
+            }}
+            onAddKits={(rabbit, buckId, doeName, buckName) => {
+              setSelectedRabbitForKit(rabbit);
+              setBuckIdForKit(buckId);
+              setBuckNameForKit(buckName);
+              setShowAddKitDialog(true);
+            }}
+          />
+        ))}
         {hasFarm ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
             <TabsList
@@ -442,60 +451,21 @@ const DashboardContent: React.FC = () => {
               key={activeTab}
               className="inline-flex justify-start w-full md:grid md:grid-cols-8 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
             >
-              <TabsTrigger
-                value="overview"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="hutches"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Hutches
-              </TabsTrigger>
-              <TabsTrigger
-                value="breeding"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Breeding
-              </TabsTrigger>
-              <TabsTrigger
-                value="health"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Health
-              </TabsTrigger>
-              <TabsTrigger
-                value="feeding"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Feeding
-              </TabsTrigger>
-              <TabsTrigger
-                value="earnings"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Earnings
-              </TabsTrigger>
-              <TabsTrigger
-                value="reports"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Reports
-              </TabsTrigger>
-              <TabsTrigger
-                value="analytics"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Analytics
-              </TabsTrigger>
+              <TabsTrigger value="overview" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Overview</TabsTrigger>
+              <TabsTrigger value="hutches" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Hutches</TabsTrigger>
+              <TabsTrigger value="breeding" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Breeding</TabsTrigger>
+              <TabsTrigger value="health" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Health</TabsTrigger>
+              <TabsTrigger value="feeding" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Feeding</TabsTrigger>
+              <TabsTrigger value="earnings" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Earnings</TabsTrigger>
+              <TabsTrigger value="reports" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Reports</TabsTrigger>
+              <TabsTrigger value="analytics" className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium">Analytics</TabsTrigger>
             </TabsList>
-
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
-              {/* Stats Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-                <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
+                <Card
+                  className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  onClick={() => router.push("/rabbits")}
+                >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Total Rabbits</CardTitle>
                     <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
@@ -503,15 +473,10 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      {totalRabbits}
-                    </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      {does} does, {bucks} bucks
-                    </p>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{totalRabbits}</div>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">{does} does, {bucks} bucks</p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Pregnant Does</CardTitle>
@@ -520,15 +485,10 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">
-                      {pregnantDoes}
-                    </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      {upcomingBirths} due this week
-                    </p>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">{pregnantDoes}</div>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">{upcomingBirths} due this week</p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Health Alerts</CardTitle>
@@ -537,13 +497,10 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      3
-                    </div>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{alerts.filter((a) => a.type === "Medication Due").length}</div>
                     <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">Medication due</p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Active Rows</CardTitle>
@@ -552,16 +509,11 @@ const DashboardContent: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-                      {rows.length}
-                    </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      {hutches.length} total hutches
-                    </p>
+                    <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">{rows.length}</div>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">{hutches.length} total hutches</p>
                   </CardContent>
                 </Card>
               </div>
-
               <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 text-sm sm:text-base dark:text-gray-200">
@@ -583,12 +535,10 @@ const DashboardContent: React.FC = () => {
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
-                            {alert.type === "Medication Due" ? (
+                            {alert.type === "Medication Due" || (alert.type === "Birth Expected" && alert.variant === "destructive") ? (
                               <span className="text-red-800 dark:text-red-300">{alert.type}</span>
-                            ) : alert.type === "Birth Expected" ? (
-                              <span className="text-amber-800 dark:text-amber-300">{alert.type}</span>
                             ) : (
-                              <span className="text-blue-800 dark:text-blue-300">{alert.type}</span>
+                              <span className="text-amber-800 dark:text-amber-300">{alert.type}</span>
                             )}
                           </p>
                           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{alert.message}</p>
@@ -598,53 +548,31 @@ const DashboardContent: React.FC = () => {
                         </Badge>
                       </div>
                     ))}
+                    {alerts.length === 0 && (
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">No alerts at this time.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="hutches">
-              <HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />
-              {selectedRabbit && <RabbitProfile rabbit={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
-            </TabsContent>
-
-            <TabsContent value="breeding">
-              <BreedingManager rabbits={rabbits} />
-            </TabsContent>
-
-            <TabsContent value="health">
-              <HealthTracker rabbits={rabbits} />
-            </TabsContent>
-
-            <TabsContent value="feeding">
-              <FeedingSchedule rabbits={rabbits} />
-            </TabsContent>
-
-            <TabsContent value="earnings">
-              <EarningsTracker />
-            </TabsContent>
-
-            <TabsContent value="reports">
-              <ReportsDashboard />
-            </TabsContent>
-
-            <TabsContent value="analytics">
-              <AnalyticsCharts />
-            </TabsContent>
+            <TabsContent value="hutches"><HutchLayout hutches={hutches} rabbits={rabbits} rows={rows} onRabbitSelect={setSelectedRabbit} />{selectedRabbit && <RabbitProfile rabbit={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}</TabsContent>
+            <TabsContent value="breeding"><BreedingManager rabbits={rabbits} onRabbitsUpdate={handleRabbitsUpdate} /></TabsContent>
+            <TabsContent value="health"><HealthTracker rabbits={rabbits} /></TabsContent>
+            <TabsContent value="feeding"><FeedingSchedule rabbits={rabbits} /></TabsContent>
+            <TabsContent value="earnings"><EarningsTracker /></TabsContent>
+            <TabsContent value="reports"><ReportsDashboard /></TabsContent>
+            <TabsContent value="analytics"><AnalyticsCharts /></TabsContent>
           </Tabs>
         ) : (
           <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 shadow-xl max-w-2xl mx-auto">
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl font-bold text-center dark:text-white flex items-center justify-center space-x-2">
-                <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
-                <span>Welcome to Karagani Rabbit Farming</span>
+                <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" /><span>Welcome to Karagani Rabbit Farming</span>
               </CardTitle>
               <p className="text-gray-600 dark:text-gray-300 text-center">No farm created yet</p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                Get started by creating your farm to manage your rabbits, hutches, and more.
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">Get started by creating your farm to manage your rabbits, hutches, and more.</p>
             </CardContent>
           </Card>
         )}

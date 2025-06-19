@@ -92,14 +92,14 @@ export default function AnalyticsCharts() {
   }
 
   const getBreedPerformance = () => {
-    const breedData: Record<string, { count: number; totalKits: number; avgWeight: number; totalWeight: number }> = {}
+    const breedData: Record<string, { count: number; total_kits: number; avgWeight: number; totalWeight: number }> = {}
 
     rabbits.forEach((rabbit) => {
       if (!breedData[rabbit.breed]) {
-        breedData[rabbit.breed] = { count: 0, totalKits: 0, avgWeight: 0, totalWeight: 0 }
+        breedData[rabbit.breed] = { count: 0, total_kits: 0, avgWeight: 0, totalWeight: 0 }
       }
       breedData[rabbit.breed].count++
-      breedData[rabbit.breed].totalKits += rabbit?.totalKits || 0
+      breedData[rabbit.breed].total_kits += rabbit?.total_kits || 0
       breedData[rabbit.breed].totalWeight += rabbit.weight
     })
 
@@ -107,11 +107,11 @@ export default function AnalyticsCharts() {
       .map(([breed, data]) => ({
         breed,
         count: data.count,
-        totalKits: data.totalKits,
+        total_kits: data.total_kits,
         avgWeight: data.totalWeight / data.count,
-        avgKitsPerRabbit: data.totalKits / data.count,
+        avgKitsPerRabbit: data.total_kits / data.count,
       }))
-      .sort((a, b) => b.totalKits - a.totalKits)
+      .sort((a, b) => b.total_kits - a.total_kits)
       .slice(0, 6)
   }
 
@@ -159,7 +159,7 @@ export default function AnalyticsCharts() {
 
   const maxEarnings = Math.max(...monthlyEarnings.map((d) => d.amount), 1)
   const maxProduction = Math.max(...productionTrends.map((d) => Math.max(d.births, d.sales)), 1)
-  const maxKits = Math.max(...breedPerformance.map((d) => d.totalKits), 1)
+  const maxKits = Math.max(...breedPerformance.map((d) => d.total_kits), 1)
 
   return (
     <div className="space-y-6">
@@ -289,7 +289,7 @@ export default function AnalyticsCharts() {
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.breed}</span>
                       <div className="text-right">
                         <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                          {data.totalKits} kits
+                          {data.total_kits} kits
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({data.count} rabbits)</span>
                       </div>
@@ -297,7 +297,7 @@ export default function AnalyticsCharts() {
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(data.totalKits / maxKits) * 100}%` }}
+                        style={{ width: `${(data.total_kits / maxKits) * 100}%` }}
                       />
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">

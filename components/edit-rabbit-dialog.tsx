@@ -10,6 +10,7 @@ import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import type { Rabbit as RabbitType } from "@/lib/types";
+import { Rabbit } from "lucide-react";
 
 interface EditRabbitDialogProps {
     rabbit: RabbitType;
@@ -27,8 +28,50 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
         birth_date: rabbit.birth_date ? new Date(rabbit.birth_date).toISOString().split("T")[0] : "",
         gender: rabbit.gender || "male",
         is_pregnant: rabbit.is_pregnant || false,
+        hutch_id: rabbit.hutch_id || "",
+        pregnancy_start_date: rabbit.pregnancy_start_date ? new Date(rabbit.pregnancy_start_date).toISOString().split("T")[0] : "",
+        expected_birth_date: rabbit.expected_birth_date ? new Date(rabbit.expected_birth_date).toISOString().split("T")[0] : "",
     });
     const [error, setError] = useState<string | null>(null);
+
+    const breeds = [
+        "New Zealand White",
+        "Californian",
+        "Dutch",
+        "Flemish Giant",
+        "Mini Rex",
+        "Angora",
+        "Havana",
+        "Lionhead",
+        "Silver Fox",
+        "Checkered Giant",
+        "English Spot",
+        "Cinnamon",
+        "American",
+        "Thrianta",
+        "Satin",
+    ];
+
+    const colors = [
+        "White",
+        "Black",
+        "Brown",
+        "Gray",
+        "Chocolate brown",
+        "Golden",
+        "Silver",
+        "Blue",
+        "Rust colored",
+        "Orange-red",
+        "Ivory",
+        "White with black points",
+        "Black and white",
+        "White with black spots",
+        "Black and white spotted",
+    ];
+
+    // Check if the rabbit is pregnant and has been served
+    const isPregnantAndServed = rabbit.is_pregnant && (rabbit.last_mating_date || rabbit.pregnancy_start_date);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,33 +82,31 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
 
         try {
             const token = localStorage.getItem("rabbit_farm_token");
-            if (!token) {
-                throw new Error("No authentication token found");
-            }
+            if (!token) throw new Error("No authentication token found");
 
             const updatedRabbit = {
-                ...rabbit,
-                name: formData.name,
-                breed: formData.breed,
-                color: formData.color,
-                weight: Number.parseFloat(formData.weight) || rabbit.weight,
-                birth_date: formData.birth_date || rabbit.birth_date,
-                gender: formData.gender as "male" | "female",
+                name: isPregnantAndServed ? rabbit.name : formData.name,
+                breed: isPregnantAndServed ? rabbit.breed : formData.breed,
+                color: isPregnantAndServed ? rabbit.color : formData.color,
+                weight: Number.parseFloat(formData.weight) || null,
+                birth_date: isPregnantAndServed ? rabbit.birth_date : formData.birth_date || null,
+                gender: isPregnantAndServed ? rabbit.gender : formData.gender as "male" | "female",
                 is_pregnant: formData.is_pregnant,
+                hutch_id: formData.hutch_id || null,
+                pregnancy_start_date: formData.is_pregnant ? formData.pregnancy_start_date || null : null,
+                expected_birth_date: formData.is_pregnant ? formData.expected_birth_date || null : null,
+                status: "active",
+                notes: rabbit.notes || null,
             };
 
             const response = await axios.put(
-                `${utils.apiUrl}/rabbits/${rabbit.id}`,
+                `${utils.apiUrl}/rabbits/${user.farm_id}/${rabbit.rabbit_id}`,
                 updatedRabbit,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    params: { farm_id: user.farm_id },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (response.data.success) {
                 onUpdate(response.data.data);
-                // Update local storage
                 const cachedRabbits = JSON.parse(localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`) || "[]") as RabbitType[];
                 const updatedRabbits = cachedRabbits.map((r) => (r.id === rabbit.id ? response.data.data : r));
                 localStorage.setItem(`rabbit_farm_rabbits_${user.farm_id}`, JSON.stringify(updatedRabbits));
@@ -81,14 +122,24 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
 
     return (
         <Dialog open={true} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 shadow-2xl">
+            <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 max-h-[80vh] overflow-y-auto shadow-2xl">
                 <DialogHeader className="bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-blue-200 dark:border-blue-700">
-                    <DialogTitle className="text-blue-600 dark:text-blue-400">Edit Rabbit Profile</DialogTitle>
+                    <DialogTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
+                        <Rabbit className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <span>Edit Rabbit Profile - {rabbit.rabbit_id}</span>
+                    </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {error && (
                         <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg border border-red-200 dark:border-red-700">
                             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                        </div>
+                    )}
+                    {isPregnantAndServed && (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                            <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                                This rabbit is pregnant and has been served. Critical details (name, breed, color, birth date, gender) cannot be edited.
+                            </p>
                         </div>
                     )}
                     <div>
@@ -97,26 +148,47 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                             id="name"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
+                            disabled={!!isPregnantAndServed}
+                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                     <div>
                         <Label htmlFor="breed" className="text-gray-900 dark:text-gray-100">Breed</Label>
-                        <Input
-                            id="breed"
+                        <Select
                             value={formData.breed}
-                            onChange={(e) => setFormData({ ...formData, breed: e.target.value })}
-                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
-                        />
+                            onValueChange={(value) => setFormData({ ...formData, breed: value })}
+                            disabled={!!isPregnantAndServed}
+                        >
+                            <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                                <SelectValue placeholder="Select breed" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                                {breeds.map((breed) => (
+                                    <SelectItem key={breed} value={breed}>
+                                        {breed}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <Label htmlFor="color" className="text-gray-900 dark:text-gray-100">Color</Label>
-                        <Input
-                            id="color"
+                        <Select
                             value={formData.color}
-                            onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
-                        />
+                            onValueChange={(value) => setFormData({ ...formData, color: value })}
+                            disabled={!!isPregnantAndServed}
+                        >
+                            <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                                <SelectValue placeholder="Select color" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                                {colors.map((color) => (
+                                    <SelectItem key={color} value={color}>
+                                        {color}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <Label htmlFor="weight" className="text-gray-900 dark:text-gray-100">Weight (kg)</Label>
@@ -126,7 +198,7 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                             step="0.1"
                             value={formData.weight}
                             onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
+                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                     <div>
@@ -136,7 +208,8 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                             type="date"
                             value={formData.birth_date}
                             onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
-                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600"
+                            disabled={!!isPregnantAndServed}
+                            className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                     <div>
@@ -144,6 +217,7 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                         <Select
                             value={formData.gender}
                             onValueChange={(value) => setFormData({ ...formData, gender: value as "male" | "female" })}
+                            disabled={!!isPregnantAndServed}
                         >
                             <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
                                 <SelectValue />

@@ -9,14 +9,14 @@ export interface Rabbit {
   birth_date?: string;
   weight: number;
   hutch_id: string;
-  parent_male?: string;
-  parent_female?: string;
+  parent_male_id?: string;
+  parent_female_id?: string;
   is_pregnant: boolean;
   last_mating_date?: string;
   mated_with?: string;
   expected_birth_date?: string;
-  totalLitters?: number;
-  totalKits?: number;
+  total_litters?: number;
+  total_kits?: number;
   healthRecords?: HealthRecord[];
   feedingSchedule?: FeedingSchedule;
   created_at?: string;
@@ -24,6 +24,7 @@ export interface Rabbit {
   notes?: string;
   actual_birth_date?: string;
   pregnancy_start_date?: string;
+  birth_history?: any[]
 }
 
 export interface HealthRecord {
@@ -117,4 +118,10 @@ export interface ProductionRecord {
   source?: string;
   notes?: string;
   created_at?: string;
+}
+
+export interface Alert {
+  type: string;
+  message: string;
+  variant: "destructive" | "secondary" | "outline";
 }
