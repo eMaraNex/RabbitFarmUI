@@ -44,14 +44,15 @@ const planetNames = [
 ];
 
 interface AddRowDialogProps {
+  open: boolean;
+  onClose: () => void;
   onRowAdded?: () => void;
 }
 
-export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
+export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialogProps) {
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -236,6 +237,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
         }
       }
 
+      // Uncomment if you want to create hutches via API
       // for (const hutch of newHutches) {
       //   await axios.post(`${utils.apiUrl}/hutches`, hutch, {
       //     headers: { Authorization: `Bearer ${token}` },
@@ -249,7 +251,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
       setExistingHutches(updatedHutches);
 
       setFormData({ name: "", description: "", capacity: "6", levels: "3" });
-      setOpen(false);
+      onClose();
 
       enqueueSnackbar(`Successfully created row "${newRowName}" with ${capacity} hutches across ${numLevels} levels!`, {
         variant: "success",
@@ -270,13 +272,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button className="w-full md:w-auto bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Row
-          </Button>
-        </DialogTrigger>
+      <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 rounded-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
@@ -381,7 +377,7 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={onClose}
                 disabled={isSubmitting}
                 className="dark:border-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
@@ -402,11 +398,10 @@ export default function AddRowDialog({ onRowAdded }: AddRowDialogProps) {
         isOpen={isFarmModalOpen}
         onClose={() => {
           setIsFarmModalOpen(false);
-          setOpen(true);
+          onClose();
         }}
         onFarmCreated={() => {
           setIsFarmModalOpen(false);
-          setOpen(true);
         }}
       />
     </>

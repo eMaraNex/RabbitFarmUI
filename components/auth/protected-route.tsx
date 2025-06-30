@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useAuth } from "@/lib/auth-context"
-import LoginPage from "../../app/login/page"
+import { useAuth } from "@/lib/auth-context";
+import LoginPage from "../../app/(auth)/login/page";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -22,12 +22,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
           <p className="text-lg text-gray-600">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!user) {
-    return <LoginPage />
+    return <LoginPage />;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

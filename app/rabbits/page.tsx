@@ -4,7 +4,7 @@ import RabbitList from "@/components/rabbit-list";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import Header from "@/components/header";
+import Header from "@/components/shared/header";
 import { ArrowLeft } from "lucide-react";
 
 export default function RabbitsPage() {
