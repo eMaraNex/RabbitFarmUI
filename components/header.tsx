@@ -1,19 +1,18 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Rabbit, Building, User, LogOut, Menu } from "lucide-react"
+import type React from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Rabbit, Building, User, LogOut, Menu, Plus } from "lucide-react";
 
 interface HeaderProps {
-    user?: any
-    rows?: any[]
-    logout: () => void
-    toggleSidebar?: () => void
-    handleRowAdded: () => void
-    CurrencySelector: React.ComponentType
-    ThemeToggle: React.ComponentType
-    AddRowDialog: React.ComponentType<{ onRowAdded: () => void }>
+    user?: any;
+    rows?: any[];
+    logout: () => void;
+    toggleSidebar?: () => void;
+    CurrencySelector: React.ComponentType;
+    ThemeToggle: React.ComponentType;
+    handleAddRow: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -21,10 +20,9 @@ const Header: React.FC<HeaderProps> = ({
     rows,
     logout,
     toggleSidebar,
-    handleRowAdded,
     CurrencySelector,
     ThemeToggle,
-    AddRowDialog,
+    handleAddRow,
 }) => {
     return (
         <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-gray-700/20 sticky top-0 z-40">
@@ -57,12 +55,18 @@ const Header: React.FC<HeaderProps> = ({
                         </div>
                         <CurrencySelector />
                         <ThemeToggle />
-                        <AddRowDialog onRowAdded={handleRowAdded} />
+                        <Button
+                            onClick={handleAddRow}
+                            className="w-full md:w-auto bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Row
+                        </Button>
                         <Button
                             onClick={logout}
                             variant="outline"
                             size="sm"
-                            className="bg-white/60 dark:bg-gray-700/60 hover:bg-red-500 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500 dark:hover:border-red-800 shadow-sm"
+                            className="bg-white/60 dark:bg-gray-700/60 hover:bg-white dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500 dark:hover:border-red-800 shadow-sm"
                         >
                             <LogOut className="h-4 w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Logout</span>
@@ -79,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
         </header>
-    )
-}
+    );
+};
 
-export default Header
+export default Header;

@@ -15,6 +15,7 @@ import {
   User,
   Menu,
   X,
+  Plus,
 } from "lucide-react";
 import HutchLayout from "@/components/hutch-layout";
 import RabbitProfile from "@/components/rabbit-profile";
@@ -131,7 +132,7 @@ const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({
 
   const daysToBirth = Math.ceil(
     (new Date(rabbit.expected_birth_date!).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
+    (1000 * 60 * 60 * 24)
   );
 
   return (
@@ -180,7 +181,7 @@ const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({
   );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({
+const Sidebar: React.FC<SidebarProps & { handleAddRow: () => void; addRowOpen: boolean }> = ({
   isOpen,
   onClose,
   user,
@@ -188,12 +189,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   logout,
   handleRowAdded,
   hasFarm,
+  handleAddRow,
+  addRowOpen,
 }) => {
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      } transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
+      className={`fixed inset-y-0 right-0 z-50 w-72 bg-background border-l border-border transform ${isOpen ? "translate-x-0" : "translate-x-full"
+        } transition-transform duration-300 ease-in-out shadow-lg md:hidden overflow-y-auto`}
     >
       <div className="flex justify-between items-center px-4 py-3 border-b border-border">
         <h2 className="text-lg font-medium">Menu</h2>
@@ -233,9 +235,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           <ThemeToggle />
         </div>
         {/* Add row button */}
-        <div className="w-full">
-          <AddRowDialog onRowAdded={handleRowAdded} />
-        </div>
+        <Button
+          onClick={handleAddRow}
+          className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Row
+        </Button>
         {/* Logout button */}
         <Button onClick={logout} variant="outline" className="w-full">
           <LogOut className="h-4 w-4 mr-2" />
@@ -273,6 +279,11 @@ const DashboardContent: React.FC = () => {
   const tabsListRef = useRef<HTMLDivElement>(null);
   const notifiedRabbitsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
+  const [addRowOpen, setAddRowOpen] = useState<boolean>(false);
+
+  const handleAddRow = () => {
+    setAddRowOpen(true);
+  };
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -358,9 +369,9 @@ const DashboardContent: React.FC = () => {
         expected_birth_date:
           r.is_pregnant && r.pregnancy_start_date
             ? new Date(
-                new Date(r.pregnancy_start_date).getTime() +
-                  (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
-              ).toISOString()
+              new Date(r.pregnancy_start_date).getTime() +
+              (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
+            ).toISOString()
             : r.expected_birth_date,
       }));
       const newRows = rowsResponse.data.data || [];
@@ -497,7 +508,7 @@ const DashboardContent: React.FC = () => {
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
       new Date(r.expected_birth_date).getTime() <=
-        new Date().getTime() + 7 * 24 * 60 * 60 * 1000
+      new Date().getTime() + 7 * 24 * 60 * 60 * 1000
   ).length;
 
   if (!dataLoaded) {
@@ -511,10 +522,9 @@ const DashboardContent: React.FC = () => {
         rows={rows}
         logout={logout}
         toggleSidebar={toggleSidebar}
-        handleRowAdded={handleRowAdded}
         CurrencySelector={CurrencySelector}
         ThemeToggle={ThemeToggle}
-        AddRowDialog={AddRowDialog}
+        handleAddRow={handleAddRow}
       />
       <Sidebar
         isOpen={isSidebarOpen}
@@ -524,6 +534,8 @@ const DashboardContent: React.FC = () => {
         logout={logout}
         handleRowAdded={handleRowAdded}
         hasFarm={hasFarm}
+        handleAddRow={handleAddRow}
+        addRowOpen={false}
       />
       {isSidebarOpen && (
         <div
@@ -717,19 +729,18 @@ const DashboardContent: React.FC = () => {
                     {alerts.map((alert, index) => (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${
-                          alert.variant === "destructive"
-                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                            : alert.variant === "secondary"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
+                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                          : alert.variant === "secondary"
                             ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
                             : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
-                        }`}
+                          }`}
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
                             {alert.type === "Medication Due" ||
-                            (alert.type === "Birth Expected" &&
-                              alert.variant === "destructive") ? (
+                              (alert.type === "Birth Expected" &&
+                                alert.variant === "destructive") ? (
                               <span className="text-red-800 dark:text-red-300">
                                 {alert.type}
                               </span>
@@ -747,8 +758,8 @@ const DashboardContent: React.FC = () => {
                           {alert.variant === "destructive"
                             ? "Overdue"
                             : alert.variant === "secondary"
-                            ? "Upcoming"
-                            : "Ready"}
+                              ? "Upcoming"
+                              : "Ready"}
                         </Badge>
                       </div>
                     ))}
@@ -767,6 +778,8 @@ const DashboardContent: React.FC = () => {
                 rabbits={rabbits}
                 rows={rows}
                 onRabbitSelect={setSelectedRabbit}
+                onRowAdded={handleRowAdded}
+                handleAddRow={handleAddRow}
               />
               {selectedRabbit && (
                 <RabbitProfile
@@ -817,6 +830,11 @@ const DashboardContent: React.FC = () => {
           </Card>
         )}
       </main>
+      <AddRowDialog
+        open={addRowOpen}
+        onClose={() => setAddRowOpen(false)}
+        onRowAdded={handleRowAdded}
+      />
     </div>
   );
 };

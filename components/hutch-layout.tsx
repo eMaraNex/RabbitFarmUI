@@ -22,9 +22,10 @@ interface HutchLayoutProps {
   rows: Row[];
   onRabbitSelect: (rabbit: RabbitType) => void;
   onRowAdded?: () => void;
+  handleAddRow: () => void;
 }
 
-export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect, onRowAdded }: HutchLayoutProps) {
+export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect, onRowAdded, handleAddRow, }: HutchLayoutProps) {
   const [selectedHutch, setSelectedHutch] = useState<string | null>(null);
   const [addRabbitOpen, setAddRabbitOpen] = useState(false);
   const [removeRabbitOpen, setRemoveRabbitOpen] = useState(false);
@@ -262,123 +263,154 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
       {/* Scrollable container for rows */}
       <div className="max-h-[70vh] overflow-y-auto space-y-6 sm:space-y-8 pr-2">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-          {rows.map((row) => {
-            const rowHutches = getRowHutches(row.name);
-            const levels = row.levels || ["A", "B", "C"];
-            return (
-              <Card
-                key={row.name}
-                className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <CardHeader className="pb-4 bg-gradient-to-r from-green-50/50 to-blue-50/50 dark:from-green-900/20 dark:to-blue-900/20 rounded-t-lg">
-                  <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Building className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
-                      <span className="text-lg sm:text-xl text-gray-900 dark:text-gray-100">{row.name} Row</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge
-                        variant="outline"
-                        className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300 self-start sm:self-auto"
-                      >
-                        {rowHutches.filter((h) => getRabbitsInHutch(h.id).length > 0).length}/{row.capacity} Occupied
-                      </Badge>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddHutch(row.name)}
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Hutch
-                      </Button>
-                    </div>
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">{row.description || "No description provided."}</p>
-                </CardHeader>
-                <CardContent className="space-y-4 bg-gradient-to-br from-white/50 to-gray-50/50 dark:from-gray-800/50 dark:to-gray-900/50">
-                  {levels.map((level) => {
-                    const levelHutches = rowHutches.filter((h) => h.level === level);
-                    return (
-                      <div key={level} className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant="secondary"
-                            className={`bg-gradient-to-r from-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-100 to-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-200 dark:from-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-900/40 dark:to-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-800/40 text-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-800 dark:text-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-300 border-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-200 dark:border-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
-                              }-700 text-xs`}
-                          >
-                            Level {level}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
-                          {levelHutches.map((hutch) => {
-                            const rabbitsInHutch = getRabbitsInHutch(hutch.id);
-                            const isOccupied = rabbitsInHutch.length > 0;
-                            const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
-                            const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
-                            return (
-                              <Card
-                                key={hutch.id}
-                                className={`group cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${selectedHutch === hutch.id
-                                  ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
-                                  : isOccupied
-                                    ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
-                                    : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
-                                  }`}
-                                onClick={() => handleHutchClick(hutch.id)}
-                              >
-                                <CardContent className="p-2 sm:p-3 text-center">
-                                  <div className="text-xs font-bold mb-1 text-gray-900 dark:text-gray-100">
-                                    {hutch.level}{hutch.position}
-                                  </div>
-                                  {isOccupied ? (
-                                    <>
-                                      <Rabbit className="h-3 w-3 sm:h-4 sm:w-4 mx-auto text-green-600 dark:text-green-400 mb-1" />
-                                      <div className="text-xs text-green-700 dark:text-green-300">
-                                        {utils.formatRabbitCount(does, bucks)}
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="h-3 w-3 sm:h-4 sm:w-4 mx-auto border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-full mb-1" />
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">Empty</div>
-                                    </>
-                                  )}
-                                  <div className="mt-2 group-hover:block hidden">
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemoveHutch(hutch.id);
-                                      }}
-                                      className=" mt-0 text-xs"
-                                    >
-                                      <Trash2 className="h-8 w-8" />
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </div>
+        {rows.length === 0 ? (
+          <div className="text-center py-16 bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600">
+            <Building className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              No rows added
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Start building your farm by adding your first row!
+            </p>
+            <Button
+              onClick={handleAddRow}
+              className="w-full md:w-auto bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-500 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Row
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+            {rows.map((row) => {
+              const rowHutches = getRowHutches(row.name);
+              const levels = row.levels || ["A", "B", "C"];
+              return (
+                <Card
+                  key={row.name}
+                  className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <CardHeader className="pb-4 bg-gradient-to-r from-green-50/50 to-blue-50/50 dark:from-green-900/20 dark:to-blue-900/20 rounded-t-lg">
+                    <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex items-center space-x-2">
+                        <Building className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-lg sm:text-xl text-gray-900 dark:text-gray-100">
+                          {row.name} Row
+                        </span>
                       </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300 self-start sm:self-auto"
+                        >
+                          {
+                            rowHutches.filter(
+                              (h) => getRabbitsInHutch(h.id).length > 0
+                            ).length
+                          }
+                          /{row.capacity} Occupied
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddHutch(row.name)}
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Hutch
+                        </Button>
+                      </div>
+                    </CardTitle>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                      {row.description || "No description provided."}
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4 bg-gradient-to-br from-white/50 to-gray-50/50 dark:from-gray-800/50 dark:to-gray-900/50">
+                    {levels.map((level) => {
+                      const levelHutches = rowHutches.filter(
+                        (h) => h.level === level
+                      );
+                      return (
+                        <div key={level} className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              variant="secondary"
+                              className={`bg-gradient-to-r from-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-100 to-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-200 dark:from-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-900/40 dark:to-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-800/40 text-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-800 dark:text-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-300 border-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-200 dark:border-${level === "A" ? "red" : level === "B" ? "yellow" : "blue"
+                                }-700 text-xs`}
+                            >
+                              Level {level}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2">
+                            {levelHutches.map((hutch) => {
+                              const rabbitsInHutch = getRabbitsInHutch(hutch.id);
+                              const isOccupied = rabbitsInHutch.length > 0;
+                              const does = rabbitsInHutch.filter((r) => r.gender === "female").length;
+                              const bucks = rabbitsInHutch.filter((r) => r.gender === "male").length;
+                              return (
+                                <Card
+                                  key={hutch.id}
+                                  className={`group cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${selectedHutch === hutch.id
+                                    ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
+                                    : isOccupied
+                                      ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
+                                      : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
+                                    }`}
+                                  onClick={() => handleHutchClick(hutch.id)}
+                                >
+                                  <CardContent className="p-2 sm:p-3 text-center">
+                                    <div className="text-xs font-bold mb-1 text-gray-900 dark:text-gray-100">
+                                      {hutch.level}{hutch.position}
+                                    </div>
+                                    {isOccupied ? (
+                                      <>
+                                        <Rabbit className="h-3 w-3 sm:h-4 sm:w-4 mx-auto text-green-600 dark:text-green-400 mb-1" />
+                                        <div className="text-xs text-green-700 dark:text-green-300">
+                                          {utils.formatRabbitCount(does, bucks)}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="h-3 w-3 sm:h-4 sm:w-4 mx-auto border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-full mb-1" />
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Empty
+                                        </div>
+                                      </>
+                                    )}
+                                    <div className="mt-2 group-hover:block hidden">
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRemoveHutch(hutch.id);
+                                        }}
+                                        className="mt-0 text-xs"
+                                      >
+                                        <Trash2 className="h-8 w-8" />
+                                      </Button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
-
 
       {/* Hutch Details Modal */}
       {selectedHutch && (
@@ -586,7 +618,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
       {/* Dialogs */}
       {addRabbitOpen && selectedHutch && (
-        <AddRabbitDialog hutch_id={selectedHutch} onClose={handleCloseDialogs} onRabbitAdded={handleRabbitAdded} />
+        <AddRabbitDialog
+          hutch_id={selectedHutch}
+          onClose={handleCloseDialogs}
+          onRabbitAdded={handleRabbitAdded}
+        />
       )}
 
       {removeRabbitOpen && selectedHutch && (
