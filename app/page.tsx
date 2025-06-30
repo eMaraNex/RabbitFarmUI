@@ -57,130 +57,25 @@ interface SidebarProps {
   handleRowAdded: () => void;
   hasFarm: boolean;
 }
-
-interface OverdueBirthBannerProps {
-  rabbit: RabbitType;
-  onDismiss: () => void;
-  onAddKits: (
-    rabbit: RabbitType,
-    buckId: string,
-    doeName?: string,
-    buckName?: string
-  ) => void;
+interface ServerAlert {
+  id: string;
+  name: string;
+  alert_start_date: string;
+  alert_end_date?: string;
+  alert_type: string;
+  severity: "low" | "medium" | "high";
+  message: string;
+  status: "pending" | "sent" | "completed" | "rejected";
+  farm_id: string;
+  user_id?: string;
+  rabbit_id?: string;
+  hutch_id?: string;
+  created_on: string;
+  updated_on: string;
+  is_active: boolean;
+  is_deleted: boolean;
+  rabbit?: RabbitType;
 }
-
-const OverdueBirthBanner: React.FC<OverdueBirthBannerProps> = ({
-  rabbit,
-  onDismiss,
-  onAddKits,
-}) => {
-  const [isDismissed, setIsDismissed] = useState(false);
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [breedingData, setBreedingData] = useState<{
-    buckId: string;
-    doeName?: string;
-    buckName?: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const fetchBreedingData = async () => {
-      if (!user?.farm_id || !rabbit.rabbit_id) return;
-      try {
-        const response = await axios.get(
-          `${utils.apiUrl}/breeds/${user.farm_id}?doe_id=${rabbit.rabbit_id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem(
-                "rabbit_farm_token"
-              )}`,
-            },
-          }
-        );
-        const records = response.data.data || [];
-        if (records.length === 0) {
-          toast({
-            variant: "destructive",
-            title: "No Breeding Record",
-            description: "No breeding record found for this doe.",
-          });
-          return;
-        }
-        const latestRecord = records.sort(
-          (a: any, b: any) =>
-            new Date(b.mating_date).getTime() -
-            new Date(a.mating_date).getTime()
-        )[0];
-        setBreedingData({
-          buckId: latestRecord.buck_id,
-          doeName: rabbit.name || latestRecord.doe_id,
-          buckName: latestRecord.buck_name || latestRecord.buck_id,
-        });
-      } catch (error) {
-        console.error("Error fetching breeding record:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch breeding record.",
-        });
-      }
-    };
-    fetchBreedingData();
-  }, [user, rabbit, toast]);
-
-  if (isDismissed || !breedingData) return null;
-
-  const daysToBirth = Math.ceil(
-    (new Date(rabbit.expected_birth_date!).getTime() - new Date().getTime()) /
-    (1000 * 60 * 60 * 24)
-  );
-
-  return (
-    <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 p-4 rounded-xl shadow-md mb-6 flex items-center justify-between animate-fade-in">
-      <div className="flex items-center space-x-3">
-        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-        <div>
-          <p className="text-sm font-medium text-red-800 dark:text-red-200">
-            Overdue Birth for {rabbit.name || "Unknown Rabbit"}
-          </p>
-          <p className="text-xs text-red-700 dark:text-red-300">
-            Expected birth was {Math.abs(daysToBirth)} day
-            {Math.abs(daysToBirth) !== 1 ? "s" : ""} ago. Add kits or update
-            status.
-          </p>
-        </div>
-      </div>
-      <div className="flex space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setIsDismissed(true);
-            onDismiss();
-          }}
-          className="border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30"
-        >
-          Dismiss
-        </Button>
-        <Button
-          size="sm"
-          onClick={() =>
-            onAddKits(
-              rabbit,
-              breedingData.buckId,
-              breedingData.doeName,
-              breedingData.buckName
-            )
-          }
-          className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
-        >
-          Add Kits
-        </Button>
-      </div>
-    </div>
-  );
-};
-
 const Sidebar: React.FC<SidebarProps & { handleAddRow: () => void; addRowOpen: boolean }> = ({
   isOpen,
   onClose,
@@ -275,7 +170,6 @@ const DashboardContent: React.FC = () => {
   const [buckNameForKit, setBuckNameForKit] = useState<string | undefined>(
     undefined
   );
-  const [overdueRabbits, setOverdueRabbits] = useState<RabbitType[]>([]);
   const tabsListRef = useRef<HTMLDivElement>(null);
   const notifiedRabbitsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
@@ -329,8 +223,8 @@ const DashboardContent: React.FC = () => {
 
   const loadData = useCallback(async () => {
     if (!user?.farm_id) {
-      setDataLoaded(true); // Allow UI to render FarmBanner
-      setHasFarm(false); // Ensure FarmBanner is shown
+      setDataLoaded(true);
+      setHasFarm(false);
       return;
     }
 
@@ -351,7 +245,7 @@ const DashboardContent: React.FC = () => {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("No authentication token found");
 
-      const [rowsResponse, hutchesResponse, rabbitsResponse] =
+      const [rowsResponse, hutchesResponse, rabbitsResponse, alertsResponse] =
         await Promise.all([
           axios.get(`${utils.apiUrl}/rows/${user.farm_id}`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -362,7 +256,11 @@ const DashboardContent: React.FC = () => {
           axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          axios.get(`${utils.apiUrl}/alerts/${user.farm_id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
+
       let newRabbits = rabbitsResponse.data.data || [];
       newRabbits = newRabbits.map((r: any) => ({
         ...r,
@@ -374,12 +272,24 @@ const DashboardContent: React.FC = () => {
             ).toISOString()
             : r.expected_birth_date,
       }));
+
       const newRows = rowsResponse.data.data || [];
       const newHutches = hutchesResponse.data.data || [];
+      const serverAlerts: ServerAlert[] = alertsResponse.data.data || [];
+      const mappedAlerts: Alert[] = serverAlerts
+        .map((alert) => ({
+          type: alert.alert_type === "birth" ? "Birth Expected" : alert.alert_type === "medication" ? "Medication Due" : alert.name,
+          message: alert.message,
+          variant: alert.severity === "high" ? "destructive"
+            : alert.severity === "medium" ? "secondary"
+              : "outline",
+        }));
       // Update state
       setRows(newRows);
       setHutches(newHutches);
       setRabbits(newRabbits);
+      setAlerts(mappedAlerts);
+
       // Save to local storage
       saveToStorage(user.farm_id, {
         rows: newRows,
@@ -401,6 +311,11 @@ const DashboardContent: React.FC = () => {
         setRabbits(cachedData.rabbits);
       }
       setDataLoaded(true);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch data from server.",
+      });
     }
   }, [user, loadFromStorage, saveToStorage, toast]);
 
@@ -417,27 +332,7 @@ const DashboardContent: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    if (dataLoaded) {
-      utils.generateAlerts(
-        rabbits,
-        setAlerts,
-        setOverdueRabbits,
-        notifiedRabbitsRef
-      );
-      const interval = setInterval(() => {
-        utils.generateAlerts(
-          rabbits,
-          setAlerts,
-          setOverdueRabbits,
-          notifiedRabbitsRef
-        );
-      }, 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [dataLoaded, rabbits, breedingRefreshTrigger]);
+  }, [loadData, breedingRefreshTrigger]);
 
   useEffect(() => {
     if (tabsListRef.current) {
@@ -445,7 +340,6 @@ const DashboardContent: React.FC = () => {
     }
   }, []);
 
-  // Scroll to the active tab when it changes
   useEffect(() => {
     if (tabsListRef.current) {
       const tabIndex = [
@@ -556,29 +450,6 @@ const DashboardContent: React.FC = () => {
       )}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
-        {hasFarm &&
-          overdueRabbits.map((rabbit) => (
-            <OverdueBirthBanner
-              key={rabbit.rabbit_id}
-              rabbit={rabbit}
-              onDismiss={() => {
-                if (rabbit.rabbit_id) {
-                  notifiedRabbitsRef.current.add(rabbit.rabbit_id);
-                  setOverdueRabbits(
-                    overdueRabbits.filter(
-                      (r) => r.rabbit_id !== rabbit.rabbit_id
-                    )
-                  );
-                }
-              }}
-              onAddKits={(rabbit, buckId, doeName, buckName) => {
-                setSelectedRabbitForKit(rabbit);
-                setBuckIdForKit(buckId);
-                setBuckNameForKit(buckName);
-                setShowAddKitDialog(true);
-              }}
-            />
-          ))}
         {hasFarm ? (
           <Tabs
             value={activeTab}
@@ -755,10 +626,8 @@ const DashboardContent: React.FC = () => {
                           </p>
                         </div>
                         <Badge variant={alert.variant} className="text-xs">
-                          {alert.variant === "destructive"
-                            ? "Overdue"
-                            : alert.variant === "secondary"
-                              ? "Upcoming"
+                          {alert.variant === "destructive" ? "Overdue"
+                            : alert.variant === "secondary" ? "Upcoming"
                               : "Ready"}
                         </Badge>
                       </div>
