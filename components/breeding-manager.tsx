@@ -196,7 +196,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
     } finally {
       setIsFetchingRabbits(false);
     }
-  }, [user?.farm_id, onRabbitsUpdate, toast]);
+  }, [user?.farm_id]);
 
   const fetchBreedingRecords = useCallback(async (): Promise<void> => {
     if (!user?.farm_id) {
@@ -219,7 +219,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
     } finally {
       setIsLoadingRecords(false);
     }
-  }, [user?.farm_id, toast]);
+  }, [user?.farm_id]);
 
   useEffect(() => {
     if (user?.farm_id && !isFetchingRabbits && !isLoadingRecords) {
@@ -227,7 +227,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
         console.error("Error fetching initial data:", err)
       );
     }
-  }, [user?.farm_id, fetchRabbits, fetchBreedingRecords]);
+  }, [user?.farm_id]);
 
   return (
     <div className="space-y-6">

@@ -114,7 +114,10 @@ export const getAddressFromCoordinates = async (latitude: number, longitude: num
     const response = await axios.get(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
     );
-    return response.data.display_name || "Address not found";
+    const suburb = response.data.address.suburb || response.data.address.city || response.data.address.town;
+    const state = response.data.address.state || response.data.address.region;
+    const country = response.data.address.country || response.data.address.country_code;
+    return `${suburb} - ${state}, ${country}` || "Address not found";
   } catch (error) {
     throw new Error("Failed to fetch address from coordinates.");
   }
