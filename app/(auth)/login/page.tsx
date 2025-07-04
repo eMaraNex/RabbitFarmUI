@@ -24,7 +24,6 @@ import { useAuth } from "../../../lib/auth-context";
 import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
 import { useSnackbar } from "notistack";
-import { getRabbitDynamicFarmName } from "@/lib/utils";
 
 export default function LoginPage() {
   const { login, forgotPassword } = useAuth();
@@ -80,7 +79,7 @@ export default function LoginPage() {
             <Rabbit className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-            {getRabbitDynamicFarmName() || "Rabbit Farm"}
+            Rabbit Farm
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
             Professional Rabbit Management System

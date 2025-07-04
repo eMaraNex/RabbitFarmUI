@@ -112,7 +112,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           farm_id: user?.farm_id ?? "",
           role_id: user?.role_id ?? "",
         };
-        debugger
         const farmData = await axios.get(`${utils.apiUrl}/farms/${userData.farm_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -166,11 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Preserve rabbit_farm_theme and clear other localStorage items
       const theme = localStorage.getItem("rabbit_farm_theme");
+      const farm = localStorage.getItem("rabbit_farm_data");
       localStorage.clear();
       if (theme) {
         localStorage.setItem("rabbit_farm_theme", theme);
       }
-
+      if (farm) {
+        localStorage.setItem("rabbit_farm_data", farm);
+      }
       // Clear user state and auth header
       setUser(null);
       setAuthHeader(null);
