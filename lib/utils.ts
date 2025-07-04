@@ -1,7 +1,7 @@
 import axios from "axios";
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Rabbit, Alert } from "@/lib/types";
+import type { Rabbit, Alert } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -114,7 +114,10 @@ export const getAddressFromCoordinates = async (latitude: number, longitude: num
     const response = await axios.get(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
     );
-    return response.data.display_name || "Address not found";
+    const suburb = response.data.address.suburb || response.data.address.city || response.data.address.town;
+    const state = response.data.address.state || response.data.address.region;
+    const country = response.data.address.country || response.data.address.country_code;
+    return `${suburb} - ${state}, ${country}` || "Address not found";
   } catch (error) {
     throw new Error("Failed to fetch address from coordinates.");
   }
@@ -310,3 +313,9 @@ export const generateAlerts = (
   setAlerts([...alertsList.slice(0, 15)]); // Force re-render
   setOverdueRabbits(overdueRabbitsList);
 };
+
+export const getRabbitDynamicFarmName = () => {
+  const farmDetails = localStorage.getItem("rabbit_farm_data");
+  const farm = farmDetails ? JSON.parse(farmDetails) : null;
+  return farm ? `${farm.name}` : "Rabbit Farm";
+}

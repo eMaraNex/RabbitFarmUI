@@ -14,7 +14,7 @@ import { useCurrency } from "@/lib/currency-context";
 import { useAuth } from "@/lib/auth-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
-import type { EarningsRecord, ProductionRecord } from "@/lib/types";
+import type { EarningsRecord, ProductionRecord } from "@/types";
 
 export default function EarningsTracker() {
   const { currency, formatAmount, convertToBaseCurrency, getCurrencySymbol } = useCurrency();

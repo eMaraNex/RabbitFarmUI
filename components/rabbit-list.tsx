@@ -20,7 +20,7 @@ import {
   Calendar,
   TrendingUp,
 } from "lucide-react";
-import type { Rabbit as RabbitType } from "@/lib/types";
+import type { RabbitListProps, Rabbit as RabbitType } from "@/types";
 import EditRabbitDialog from "@/components/edit-rabbit-dialog";
 import AddKitDialog from "@/components/add-kit-dialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,10 +29,6 @@ import { useToast } from "@/components/ui/use-toast";
 import * as utils from "@/lib/utils";
 import RabbitListSkeleton from "./skeletons/rabbits-list/skeleton";
 import AddRabbitDialog from "@/components/add-rabbit-dialog";
-
-interface RabbitListProps {
-  farmId: string;
-}
 
 const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
   const [rabbits, setRabbits] = useState<RabbitType[]>([]);
@@ -420,11 +416,10 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                     <td className="p-4">
                       <Badge
                         variant="secondary"
-                        className={`capitalize ${
-                          rabbit.gender === "male"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                            : "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
-                        }`}
+                        className={`capitalize ${rabbit.gender === "male"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                          : "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
+                          }`}
                       >
                         {rabbit.gender}
                       </Badge>
@@ -568,11 +563,10 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                       variant={page === pageNum ? "default" : "ghost"}
                       size="sm"
                       onClick={() => setPage(pageNum)}
-                      className={`w-10 h-10 p-0 rounded-xl ${
-                        page === pageNum
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
+                      className={`w-10 h-10 p-0 rounded-xl ${page === pageNum
+                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                        : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
                     >
                       {pageNum}
                     </Button>

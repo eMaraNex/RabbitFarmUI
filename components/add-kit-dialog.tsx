@@ -5,33 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Rabbit, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
 import axios from "axios";
-import type { Rabbit as RabbitType } from "@/lib/types";
+import type { AddKitDialogProps, KitFormData } from "@/types";
 
-interface KitFormData {
-    kit_number: string;
-    birth_weight: string;
-    gender: "male" | "female" | "";
-    color: string;
-    status: "alive" | "dead" | "";
-    notes: string;
-}
-
-interface AddKitDialogProps {
-    rabbit: RabbitType;
-    doeId: string;
-    buckId: string;
-    doeName?: string;
-    buckName?: string;
-    onClose: () => void;
-    onKitAdded: () => void;
-}
 
 const colors = [
     "White", "Black", "Brown", "Gray", "Chocolate brown", "Golden", "Silver", "Blue",

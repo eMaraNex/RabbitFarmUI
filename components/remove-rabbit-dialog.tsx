@@ -1,29 +1,18 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Building, Rabbit, Plus, Trash2, History, Eye, AlertTriangle, DollarSign } from "lucide-react";
+import { Trash2, AlertTriangle, DollarSign } from "lucide-react";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useSnackbar } from "notistack";
-import type { Hutch as HutchType, Rabbit as RabbitType, Row as RowType, EarningsRecord } from "@/lib/types";
-import AddRabbitDialog from "@/components/add-rabbit-dialog";
-
-// RemoveRabbitDialog Component
-interface RemoveRabbitDialogProps {
-  hutch_id: string;
-  rabbit: RabbitType | undefined;
-  onClose: () => void;
-  onRemovalSuccess?: (rabbitId: string) => void;
-}
+import type { Rabbit as RabbitType, EarningsRecord, RemoveRabbitDialogProps } from "@/types";
 
 export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();

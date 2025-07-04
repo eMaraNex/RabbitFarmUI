@@ -21,7 +21,7 @@ const CURRENCY_RATES: Record<Currency, number> = {
   USD: 1, // Base currency
   EUR: 0.91, // 1 USD = 0.91 EUR
   GBP: 0.79, // 1 USD = 0.79 GBP
-  KES: 149.5, // 1 USD = 149.5 KES
+  KES: 128.5, // 1 USD = 149.5 KES
 }
 
 const CURRENCY_SYMBOLS: Record<Currency, string> = {

@@ -10,30 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import type { Rabbit } from "@/lib/types";
+import type { BreedingManagerProps, BreedingRecord, CompatibilityResult, Rabbit } from "@/types";
 
-interface BreedingRecord {
-  id: string;
-  farm_id: string;
-  doe_id: string;
-  buck_id: string;
-  doe_name: string;
-  buck_name: string;
-  mating_date: string;
-  is_pregnant: boolean;
-  expected_birth_date?: string;
-  notes?: string;
-}
-
-interface BreedingManagerProps {
-  rabbits: Rabbit[];
-  onRabbitsUpdate: (updatedRabbits: Rabbit[]) => void;
-}
-
-interface CompatibilityResult {
-  compatible: boolean;
-  reason: string;
-}
 
 const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
   if (doe.parent_male_id === buck.id || doe.parent_female_id === buck.id) return true;
@@ -196,7 +174,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
     } finally {
       setIsFetchingRabbits(false);
     }
-  }, [user?.farm_id, onRabbitsUpdate, toast]);
+  }, [user?.farm_id]);
 
   const fetchBreedingRecords = useCallback(async (): Promise<void> => {
     if (!user?.farm_id) {
@@ -219,7 +197,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
     } finally {
       setIsLoadingRecords(false);
     }
-  }, [user?.farm_id, toast]);
+  }, [user?.farm_id]);
 
   useEffect(() => {
     if (user?.farm_id && !isFetchingRabbits && !isLoadingRecords) {
@@ -227,7 +205,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
         console.error("Error fetching initial data:", err)
       );
     }
-  }, [user?.farm_id, fetchRabbits, fetchBreedingRecords]);
+  }, [user?.farm_id]);
 
   return (
     <div className="space-y-6">

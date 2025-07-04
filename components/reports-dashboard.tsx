@@ -10,7 +10,7 @@ import { useCurrency } from "@/lib/currency-context";
 import { useAuth } from "@/lib/auth-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
-import type { Rabbit, EarningsRecord } from "@/lib/types";
+import type { Rabbit, EarningsRecord } from "@/types";
 
 export default function ReportsDashboard() {
   const { formatAmount, convertToBaseCurrency } = useCurrency();

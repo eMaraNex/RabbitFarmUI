@@ -5,49 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Building } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import FarmCreationModal from "@/components/farm-creation-modal";
-import type { Row, Hutch } from "@/lib/types";
+import type { Row, Hutch } from "@/types";
 import { useSnackbar } from "notistack";
-
-const planetNames = [
-  "Mercury",
-  "Venus",
-  "Earth",
-  "Mars",
-  "Jupiter",
-  "Saturn",
-  "Uranus",
-  "Neptune",
-  "Pluto",
-  "Ceres",
-  "Eris",
-  "Makemake",
-  "Haumea",
-  "Sedna",
-  "Quaoar",
-  "Orcus",
-  "Varuna",
-  "Ixion",
-  "Chaos",
-  "Huya",
-  "Altjira",
-  "Salacia",
-  "Varda",
-  "Gongong",
-];
-
-interface AddRowDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onRowAdded?: () => void;
-}
+import { AddRowDialogProps } from "@/types";
+import { planetNames } from "@/lib/constants";
 
 export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialogProps) {
   const { user } = useAuth();

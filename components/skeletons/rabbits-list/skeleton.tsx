@@ -3,12 +3,8 @@
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Rabbit, Heart, Baby, TrendingUp } from "lucide-react";
-
-interface RabbitListSkeletonProps {
-  farmId: string;
-}
+import { Heart, Baby, TrendingUp } from "lucide-react";
+import { RabbitListSkeletonProps } from "@/types";
 
 const RabbitListSkeleton: React.FC<RabbitListSkeletonProps> = () => {
   return (

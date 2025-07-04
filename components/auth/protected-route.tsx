@@ -4,10 +4,7 @@ import type React from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import LoginPage from "../../app/(auth)/login/page";
-
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
+import { ProtectedRouteProps } from "@/types";
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();

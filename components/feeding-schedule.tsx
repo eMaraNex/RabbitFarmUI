@@ -4,11 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Utensils, Clock, Plus } from "lucide-react"
-import type { Rabbit } from "@/lib/types"
-
-interface FeedingScheduleProps {
-  rabbits: Rabbit[]
-}
+import type { FeedingScheduleProps, Rabbit } from "@/types"
 
 export default function FeedingSchedule({ rabbits }: FeedingScheduleProps) {
   const getCurrentFeedingStatus = (rabbit: Rabbit) => {
