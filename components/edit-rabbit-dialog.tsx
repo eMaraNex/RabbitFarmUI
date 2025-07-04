@@ -9,14 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import type { Rabbit as RabbitType } from "@/lib/types";
+import type { EditRabbitDialogProps, Rabbit as RabbitType } from "@/types";
 import { Rabbit } from "lucide-react";
+import { breeds, colors } from "@/lib/constants";
 
-interface EditRabbitDialogProps {
-    rabbit: RabbitType;
-    onClose: () => void;
-    onUpdate: (updatedRabbit: RabbitType) => void;
-}
 
 export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabbitDialogProps) {
     const { user } = useAuth();
@@ -33,42 +29,6 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
         expected_birth_date: rabbit.expected_birth_date ? new Date(rabbit.expected_birth_date).toISOString().split("T")[0] : "",
     });
     const [error, setError] = useState<string | null>(null);
-
-    const breeds = [
-        "New Zealand White",
-        "Californian",
-        "Dutch",
-        "Flemish Giant",
-        "Mini Rex",
-        "Angora",
-        "Havana",
-        "Lionhead",
-        "Silver Fox",
-        "Checkered Giant",
-        "English Spot",
-        "Cinnamon",
-        "American",
-        "Thrianta",
-        "Satin",
-    ];
-
-    const colors = [
-        "White",
-        "Black",
-        "Brown",
-        "Gray",
-        "Chocolate brown",
-        "Golden",
-        "Silver",
-        "Blue",
-        "Rust colored",
-        "Orange-red",
-        "Ivory",
-        "White with black points",
-        "Black and white",
-        "White with black spots",
-        "Black and white spotted",
-    ];
 
     // Check if the rabbit is pregnant and has been served
     const isPregnantAndServed = rabbit.is_pregnant && (rabbit.last_mating_date || rabbit.pregnancy_start_date);

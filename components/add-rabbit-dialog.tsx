@@ -12,13 +12,8 @@ import { useAuth } from "@/lib/auth-context"
 import { generateRabbitId } from "@/lib/utils"
 import axios from "axios"
 import * as utils from "@/lib/utils"
-import { Rabbit } from "@/lib/types"
+import { AddRabbitDialogProps, Rabbit } from "@/types"
 
-interface AddRabbitDialogProps {
-  hutch_id: string;
-  onClose: () => void;
-  onRabbitAdded: (newRabbit: Rabbit) => void;
-}
 
 export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: AddRabbitDialogProps) {
   const { user } = useAuth();

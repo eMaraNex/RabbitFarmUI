@@ -11,12 +11,7 @@ import axios from "axios";
 import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
 import { MapPin, Building, Ruler, Globe, Clock, Locate } from "lucide-react";
-
-interface FarmCreationModalProps {
-    isOpen: boolean;
-    onClose: (skip?: boolean) => void;
-    onFarmCreated: () => void;
-}
+import { FarmCreationModalProps } from "@/types/farms";
 
 const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, onFarmCreated }) => {
     const { toast } = useToast();
@@ -105,6 +100,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
 
             const farmId = response.data.data.id;
             localStorage.setItem("rabbit_farm_id", farmId);
+            localStorage.setItem("rabbit_farm", response.data.data);
             if (user) {
                 user.farm_id = farmId;
             }

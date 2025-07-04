@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart3, TrendingUp, PieChart, Calendar } from "lucide-react"
 import { loadFromStorage } from "@/lib/storage"
 import { useCurrency } from "@/lib/currency-context"
-import type { Rabbit, EarningsRecord } from "@/lib/types"
+import type { Rabbit, EarningsRecord } from "@/types"
 
 export default function AnalyticsCharts() {
   const { formatAmount, convertToBaseCurrency } = useCurrency()

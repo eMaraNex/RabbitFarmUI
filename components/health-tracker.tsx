@@ -4,11 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Pill, AlertTriangle, Calendar, Plus } from "lucide-react"
-import type { Rabbit } from "@/lib/types"
-
-interface HealthTrackerProps {
-  rabbits: Rabbit[]
-}
+import type { HealthTrackerProps, Rabbit } from "@/types"
 
 export default function HealthTracker({ rabbits }: HealthTrackerProps) {
   const getHealthStatus = (rabbit: Rabbit) => {
@@ -241,10 +237,10 @@ export default function HealthTracker({ rabbits }: HealthTrackerProps) {
                     <Badge
                       variant={status === "overdue" ? "destructive" : status === "upcoming" ? "secondary" : "default"}
                       className={`flex-shrink-0 text-xs sm:text-sm whitespace-nowrap ${status === "good"
-                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
-                          : status === "overdue"
-                            ? "bg-gradient-to-r from-red-500 to-red-600"
-                            : "bg-gradient-to-r from-amber-500 to-amber-600 text-white"
+                        ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                        : status === "overdue"
+                          ? "bg-gradient-to-r from-red-500 to-red-600"
+                          : "bg-gradient-to-r from-amber-500 to-amber-600 text-white"
                         }`}
                     >
                       {status === "overdue" ? "Overdue" : status === "upcoming" ? "Upcoming" : "Up to date"}

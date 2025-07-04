@@ -3,19 +3,13 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Rabbit,
   Heart,
   Pill,
   AlertTriangle,
-  Building,
-  LogOut,
-  User,
-  Menu,
-  X,
-  Plus,
+  Building
 } from "lucide-react";
 import HutchLayout from "@/components/hutch-layout";
 import RabbitProfile from "@/components/rabbit-profile";
@@ -37,37 +31,12 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
-import type { Rabbit as RabbitType } from "@/lib/types";
+import type { Rabbit as RabbitType } from "@/types";
 import { useRouter } from "next/navigation";
 import Header from "@/components/shared/header";
 import SkeletonDashboard from "@/components/skeletons/dashboard/skeleton";
 import Sidebar from "@/components/shared/sidebar";
-// Define the Alert type
-interface Alert {
-  type: string;
-  message: string;
-  variant: "destructive" | "secondary" | "outline";
-}
-
-interface ServerAlert {
-  id: string;
-  name: string;
-  alert_start_date: string;
-  alert_end_date?: string;
-  alert_type: string;
-  severity: "low" | "medium" | "high";
-  message: string;
-  status: "pending" | "sent" | "completed" | "rejected";
-  farm_id: string;
-  user_id?: string;
-  rabbit_id?: string;
-  hutch_id?: string;
-  created_on: string;
-  updated_on: string;
-  is_active: boolean;
-  is_deleted: boolean;
-  rabbit?: RabbitType;
-}
+import { Alert, ServerAlert } from "@/types";
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
@@ -606,7 +575,7 @@ const DashboardContent: React.FC = () => {
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl font-bold text-center dark:text-white flex items-center justify-center space-x-2">
                 <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
-                <span>Welcome to Karagani Rabbit Farming</span>
+                <span>Welcome to Rabbit Farming</span>
               </CardTitle>
               <p className="text-gray-600 dark:text-gray-300 text-center">
                 No farm created yet

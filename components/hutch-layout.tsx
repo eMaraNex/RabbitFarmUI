@@ -10,20 +10,11 @@ import { Building, Rabbit, Plus, Trash2, History, Eye } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import AddRabbitDialog from "@/components/add-rabbit-dialog";
 import RemoveRabbitDialog from "@/components/remove-rabbit-dialog";
-import type { Hutch, Rabbit as RabbitType, Row } from "@/lib/types";
+import type { Hutch, HutchLayoutProps, Rabbit as RabbitType, Row } from "@/types";
 import * as utils from "@/lib/utils";
 import axios from "axios";
 import { useAuth } from "@/lib/auth-context";
 import { useSnackbar } from "notistack";
-
-interface HutchLayoutProps {
-  hutches: Hutch[];
-  rabbits: RabbitType[];
-  rows: Row[];
-  onRabbitSelect: (rabbit: RabbitType) => void;
-  onRowAdded?: () => void;
-  handleAddRow: () => void;
-}
 
 export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect, onRowAdded, handleAddRow, }: HutchLayoutProps) {
   const [selectedHutch, setSelectedHutch] = useState<string | null>(null);

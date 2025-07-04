@@ -8,13 +8,8 @@ import { X, Heart, Pill, Utensils, Edit, Rabbit } from "lucide-react";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import type { HealthRecord, Rabbit as RabbitType } from "@/lib/types";
+import type { HealthRecord, RabbitProfileProps, Rabbit as RabbitType } from "@/types";
 import EditRabbitDialog from "./edit-rabbit-dialog";
-
-interface RabbitProfileProps {
-  rabbit: RabbitType;
-  onClose: () => void;
-}
 
 export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
   const { user } = useAuth();

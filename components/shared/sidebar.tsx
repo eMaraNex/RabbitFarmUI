@@ -2,16 +2,8 @@ import { Building, LogOut, Plus, User, X } from "lucide-react";
 import { Button } from "../ui/button";
 import CurrencySelector from "../currency-selector";
 import ThemeToggle from "../theme-toggle";
+import { SidebarProps } from "@/types";
 
-interface SidebarProps {
-    isOpen: boolean;
-    onClose: () => void;
-    user: any;
-    rows: any[];
-    logout: () => void;
-    handleRowAdded: () => void;
-    hasFarm: boolean;
-}
 const Sidebar: React.FC<SidebarProps & { handleAddRow: () => void; addRowOpen: boolean }> = ({
     isOpen,
     onClose,

@@ -5,30 +5,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import * as utils from "./utils";
-
-interface User {
-  id?: string;
-  email: string;
-  name: string;
-  farm_id?: string;
-  role_id?: string;
-}
-
-interface AuthResponse {
-  success: boolean;
-  message: string;
-  data?: any;
-}
-
-interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<AuthResponse>;
-  register: (email: string, password: string, name: string, phone: string) => Promise<AuthResponse>;
-  logout: () => Promise<AuthResponse>;
-  forgotPassword: (email: string) => Promise<AuthResponse>;
-  resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<AuthResponse>;
-  isLoading: boolean;
-}
+import { AuthContextType, AuthResponse, User } from "@/types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -135,11 +112,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           farm_id: user?.farm_id ?? "",
           role_id: user?.role_id ?? "",
         };
-
+        debugger
+        const farmData = await axios.get(`${utils.apiUrl}/farms/${userData.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         // Store token and user data
         localStorage.setItem("rabbit_farm_token", token);
         localStorage.setItem("rabbit_farm_user", JSON.stringify(userData));
         localStorage.setItem("rabbit_farm_id", JSON.stringify(userData.farm_id));
+        localStorage.setItem("rabbit_farm_data", JSON.stringify(farmData.data.data));
         setUser(userData);
         setAuthHeader(token);
 

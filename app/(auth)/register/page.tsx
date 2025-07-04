@@ -25,6 +25,7 @@ import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
+import { getRabbitDynamicFarmName } from "@/lib/utils";
 
 export default function RegisterPage() {
   const { register, forgotPassword } = useAuth();
@@ -102,7 +103,7 @@ export default function RegisterPage() {
             <Rabbit className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-            Karagani Rabbit Farming
+            {getRabbitDynamicFarmName() || "Rabbit Farm"}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
             Professional Rabbit Management System
@@ -323,7 +324,7 @@ export default function RegisterPage() {
         </Dialog>
 
         <div className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
-          <p>© 2025 Karagani Rabbit Farming. All rights reserved.</p>
+          <p>© 2025 Rabbit Farming. All rights reserved.</p>
         </div>
       </div>
     </div>

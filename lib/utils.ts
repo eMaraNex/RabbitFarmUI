@@ -1,7 +1,7 @@
 import axios from "axios";
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Rabbit, Alert } from "@/lib/types";
+import type { Rabbit, Alert } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -313,3 +313,9 @@ export const generateAlerts = (
   setAlerts([...alertsList.slice(0, 15)]); // Force re-render
   setOverdueRabbits(overdueRabbitsList);
 };
+
+export const getRabbitDynamicFarmName = () => {
+  const farmDetails = localStorage.getItem("rabbit_farm_data");
+  const farm = farmDetails ? JSON.parse(farmDetails) : null;
+  return farm ? `${farm.name}` : "Rabbit Farm";
+}

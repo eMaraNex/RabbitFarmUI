@@ -10,30 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import type { Rabbit } from "@/lib/types";
+import type { BreedingManagerProps, BreedingRecord, CompatibilityResult, Rabbit } from "@/types";
 
-interface BreedingRecord {
-  id: string;
-  farm_id: string;
-  doe_id: string;
-  buck_id: string;
-  doe_name: string;
-  buck_name: string;
-  mating_date: string;
-  is_pregnant: boolean;
-  expected_birth_date?: string;
-  notes?: string;
-}
-
-interface BreedingManagerProps {
-  rabbits: Rabbit[];
-  onRabbitsUpdate: (updatedRabbits: Rabbit[]) => void;
-}
-
-interface CompatibilityResult {
-  compatible: boolean;
-  reason: string;
-}
 
 const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
   if (doe.parent_male_id === buck.id || doe.parent_female_id === buck.id) return true;

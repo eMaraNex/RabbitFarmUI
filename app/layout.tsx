@@ -7,8 +7,8 @@ import { CurrencyProvider } from '@/lib/currency-context';
 import { JSX, ReactNode } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Karagani Farming Management',
-  description: 'Software created to help manage Karagani farming operations.',
+  title: 'Farming Management',
+  description: 'Software created to help manage farming operations.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>): JSX.Element {

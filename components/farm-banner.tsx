@@ -4,10 +4,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import FarmCreationModal from "@/components/farm-creation-modal";
+import { FarmBannerProps } from "@/types/farms";
 
-interface FarmBannerProps {
-    onFarmCreated: () => void;
-}
 
 const FarmBanner: React.FC<FarmBannerProps> = ({ onFarmCreated }) => {
     const [isOpen, setIsOpen] = useState(false);
