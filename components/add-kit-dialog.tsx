@@ -12,13 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
 import axios from "axios";
 import type { AddKitDialogProps, KitFormData } from "@/types";
-
-
-const colors = [
-    "White", "Black", "Brown", "Gray", "Chocolate brown", "Golden", "Silver", "Blue",
-    "Rust colored", "Orange-red", "Ivory", "White with black points", "Black and white",
-    "White with black spots", "Black and white spotted",
-];
+import { colors } from "@/lib/constants";
 
 export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose, onKitAdded }: AddKitDialogProps) {
     const { user } = useAuth();

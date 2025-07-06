@@ -107,6 +107,15 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
   };
 
   const handleAddKit = (rabbit: RabbitType) => {
+    // Validation to prevent adding kit records if the rabbit is not pregnant
+    if (!rabbit.is_pregnant) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Cannot add kit records because the rabbit is not pregnant.",
+      });
+      return;
+    }
     setAddKitRabbit(rabbit);
   };
 
