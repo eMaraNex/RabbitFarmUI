@@ -180,19 +180,6 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
-              Date of Removal *
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-              required
-            />
-          </div>
           {isSale && (
             <div className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-lg border border-green-200 dark:border-green-700 space-y-4">
               <div className="flex items-center space-x-2 mb-3">
@@ -327,6 +314,20 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
           )}
 
           <div>
+            <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
+              Date of Removal *
+            </Label>
+            <input
+              id="date"
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100"
+              required
+            />
+          </div>
+          <div>
             <Label htmlFor="notes" className="text-gray-900 dark:text-gray-100">
               Additional Notes
             </Label>
@@ -337,21 +338,6 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
               rows={3}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
-              Date of Removal
-            </Label>
-            <input
-              id="date"
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100"
-              required
             />
           </div>
 
