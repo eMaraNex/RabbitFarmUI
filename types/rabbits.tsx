@@ -51,7 +51,7 @@ export interface KitFormData {
 export interface AddKitDialogProps {
     rabbit: Rabbit;
     doeId: string;
-    buckId: string;
+    buckId?: string;
     doeName?: string;
     buckName?: string;
     onClose: () => void;
