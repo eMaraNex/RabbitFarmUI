@@ -13,6 +13,7 @@ import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useSnackbar } from "notistack";
 import type { Rabbit as RabbitType, EarningsRecord, RemoveRabbitDialogProps } from "@/types";
+import { reasons, saleTypes } from "@/lib/constants";
 
 export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
@@ -31,25 +32,6 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
     sale_notes: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const reasons = [
-    "Sale",
-    "Death - Natural",
-    "Death - Disease",
-    "Death - Accident",
-    "Transfer to another farm",
-    "Breeding loan",
-    "Retirement",
-    "Health issues",
-    "Other",
-  ];
-
-  const saleTypes = [
-    { value: "whole", label: "Whole Rabbit" },
-    { value: "meat_only", label: "Meat Only" },
-    { value: "skin_only", label: "Skin Only" },
-    { value: "meat_and_skin", label: "Meat and Skin" },
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
