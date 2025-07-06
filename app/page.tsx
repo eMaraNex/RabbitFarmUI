@@ -58,9 +58,6 @@ const DashboardContent: React.FC = () => {
   const [selectedRabbitForKit, setSelectedRabbitForKit] =
     useState<RabbitType | null>(null);
   const [buckIdForKit, setBuckIdForKit] = useState<string>("");
-  const [buckNameForKit, setBuckNameForKit] = useState<string | undefined>(
-    undefined
-  );
   const tabsListRef = useRef<HTMLDivElement>(null);
   const notifiedRabbitsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
@@ -275,7 +272,6 @@ const DashboardContent: React.FC = () => {
       notifiedRabbitsRef.current.delete(selectedRabbitForKit.rabbit_id);
     }
     setBuckIdForKit("");
-    setBuckNameForKit(undefined);
   }, [loadData, selectedRabbitForKit]);
 
   const toggleSidebar = () => {
@@ -334,7 +330,6 @@ const DashboardContent: React.FC = () => {
           doeId={selectedRabbitForKit.rabbit_id ?? ""}
           buckId={buckIdForKit}
           doeName={selectedRabbitForKit.name}
-          buckName={buckNameForKit}
           onClose={() => setShowAddKitDialog(false)}
           onKitAdded={handleKitAdded}
         />
