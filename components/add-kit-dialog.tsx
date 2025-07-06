@@ -27,8 +27,8 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
     const [kits, setKits] = useState<KitFormData[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [nextKitNumber, setNextKitNumber] = useState<number>(1);
-    const [actualBuckId, setActualBuckId] = useState<string | null>(null);
-    const [actualBuckName, setActualBuckName] = useState<string | null>(null);
+    const [buckOptions, setBuckOptions] = useState<any>([]);
+    const [selectedBuckOption, setSelectedBuckOption] = useState<any | null>(null);
 
     // Fetch existing kits to determine next kit_number
     useEffect(() => {
@@ -39,15 +39,36 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
                 const breedingResponse = await axios.get(`${utils.apiUrl}/breeds/history/${user.farm_id}/${doeId}`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
                 });
-                const breedingRecords = breedingResponse.data.data || [];
-                setActualBuckId(breedingRecords.buck_id);
-                setActualBuckName(breedingRecords.doe_id);
+                const breedingData = breedingResponse.data.data || [];
+                const breedingArray = Array.isArray(breedingData) ? breedingData : [breedingData];
+                const validBreedingRecords = breedingArray
+                    .filter((record: any) => record && record.buck_id && record.doe_id === doeId)
+                    .sort((a: any, b: any) => new Date(b.mating_date).getTime() - new Date(a.mating_date).getTime());
+
+                const uniqueBucks = new Map<string, any>();
+                for (const record of validBreedingRecords) {
+                    if (!uniqueBucks.has(record.buck_id)) {
+                        uniqueBucks.set(record.buck_id, {
+                            buck_id: record.buck_id,
+                            buck_name: record.buck_id,
+                            breeding_record_id: record.id,
+                            mating_date: record.mating_date,
+                            expected_birth_date: record.expected_birth_date,
+                        });
+                    }
+                }
+
+                const buckOptionsArray = Array.from(uniqueBucks.values());
+                setBuckOptions(buckOptionsArray);
+                if (buckOptionsArray.length > 0) {
+                    setSelectedBuckOption(buckOptionsArray[0]);
+                }
             } catch (error) {
                 console.error("Error fetching initial data:", error);
                 toast({
                     variant: "destructive",
                     title: "Warning",
-                    description: "Could not fetch some initial data. You can still proceed.",
+                    description: "Could not fetch breeding history. You can still proceed.",
                 });
             }
         };
@@ -163,7 +184,7 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
                     `${utils.apiUrl}/breeds/${user.farm_id}`,
                     {
                         doe_id: doeId,
-                        buck_id: actualBuckId || null,
+                        buck_id: selectedBuckOption?.buck_id || null,
                         mating_date: new Date(new Date(actualBirthDate).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
                         expected_birth_date: actualBirthDate,
                         actual_birth_date: actualBirthDate,
@@ -200,13 +221,13 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
             );
             // Create kit records
             const kitData = kits.map((kit) => ({
-                breeding_record_id: breedingRecordId, // Include breeding_record_id
+                breeding_record_id: breedingRecordId,
                 kit_number: kit.kit_number,
                 birth_weight: kit.birth_weight && kit.birth_weight.trim() !== "" ? parseFloat(kit.birth_weight) : null,
                 gender: kit.gender || null,
                 color: kit.color || null,
                 status: kit.status || "alive",
-                parent_male_id: actualBuckId || null,
+                parent_male_id: selectedBuckOption?.buck_id || null,
                 parent_female_id: doeId,
                 notes: kit.notes || null,
                 actual_birth_date: actualBirthDate,
@@ -244,6 +265,10 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
     const femaleCount = kits.filter((kit) => kit.gender === "female").length;
     const maleCount = kits.filter((kit) => kit.gender === "male").length;
 
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString();
+    };
+
     return (
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent
@@ -274,13 +299,52 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
                             <Label htmlFor="parent_male_id" className="text-gray-900 dark:text-gray-100">
                                 Parent Male (Buck)
                             </Label>
-                            <Input
-                                id="parent_male_id"
-                                type="text"
-                                value={actualBuckId || "Not specified"}
-                                className="mt-1 bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 opacity-75 cursor-not-allowed"
-                                disabled
-                            />
+                            {buckOptions.length > 1 ? (
+                                <Select
+                                    value={selectedBuckOption?.buck_id || ""}
+                                    onValueChange={(value) => {
+                                        const selected = buckOptions.find((option: any) => option.buck_id === value);
+                                        setSelectedBuckOption(selected || null);
+                                    }}
+                                >
+                                    <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                                        <SelectValue placeholder="Select buck">
+                                            {selectedBuckOption ? (
+                                                <span>
+                                                    {selectedBuckOption.buck_id} (Mated: {formatDate(selectedBuckOption.mating_date)})
+                                                </span>
+                                            ) : (
+                                                "Select buck"
+                                            )}
+                                        </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                                        {buckOptions.map((option: any) => (
+                                            <SelectItem key={option.buck_id} value={option.buck_id}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{option.buck_id}</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        Mated: {formatDate(option.mating_date)} | Expected: {formatDate(option.expected_birth_date)}
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="parent_male_id"
+                                    type="text"
+                                    value={buckOptions.length === 1 ? buckOptions[0].buck_id : "Not specified"}
+                                    className="mt-1 bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 opacity-75 cursor-not-allowed"
+                                    disabled
+                                />
+                            )}
+                            {buckOptions.length > 1 && (
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                    Multiple breeding records found. Please select the appropriate buck.
+                                </p>
+                            )}
                         </div>
                         <div>
                             <Label htmlFor="parent_female_id" className="text-gray-900 dark:text-gray-100">
@@ -315,7 +379,7 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
                                 <span>Gender</span>
                                 <span>Color</span>
                                 <span>Status</span>
-                                <span>Birth Weight (kg)</span>
+                                <span>Weight (kg)</span>
                                 <span>Actions</span>
                                 <span></span>
                             </div>
@@ -404,7 +468,6 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
                                         onChange={(e) => updateKit(index, "birth_weight", e.target.value)}
                                         className="text-sm px-2 py-1 h-8 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                                         style={{ width: "60px" }}
-                                        placeholder="Optional"
                                     />
                                 </div>
                                 <Button
