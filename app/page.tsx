@@ -135,7 +135,7 @@ const DashboardContent: React.FC = () => {
 
       const [rowsResponse, hutchesResponse, rabbitsResponse, alertsResponse] =
         await Promise.all([
-          axios.get(`${utils.apiUrl}/rows/${user.farm_id}`, {
+          axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, {

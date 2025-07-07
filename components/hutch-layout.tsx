@@ -28,8 +28,8 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const [showHistory, setShowHistory] = useState(false);
   const [removalHistory, setRemovalHistory] = useState<any[]>([]);
   const [rabbits, setRabbits] = useState<RabbitType[]>(initialRabbits);
-  const [newHutchData, setNewHutchData] = useState({ row_name: "", level: "", position: "1" });
-  const [expandRowData, setExpandRowData] = useState({ row_name: "", additionalCapacity: "" });
+  const [newHutchData, setNewHutchData] = useState({ row_name: "", row_id: "", level: "", position: "1" });
+  const [expandRowData, setExpandRowData] = useState({ row_name: "", row_id: "", additionalCapacity: "" });
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -113,7 +113,12 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       );
       return;
     }
-    setNewHutchData({ row_name, level: row.levels[0] || "A", position: "1" });
+    setNewHutchData({
+      row_name,
+      row_id: row.id ?? "",
+      level: row.levels[0] || "A",
+      position: "1"
+    });
     setAddHutchOpen(true);
   };
 
@@ -135,10 +140,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
-
+      debugger
       const response = await axios.post(
         `${utils.apiUrl}/rows/expand`,
         {
+          row_id: row.id ?? "",
           name: expandRowData.row_name,
           farm_id: user?.farm_id,
           additionalCapacity: additionalCapacity,
@@ -152,7 +158,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
           { variant: "success" }
         );
         setExpandCapacityOpen(false);
-        setExpandRowData({ row_name: "", additionalCapacity: "" });
+        setExpandRowData({ row_name: "", row_id: "", additionalCapacity: "" });
         if (onRowAdded) onRowAdded();
       }
     } catch (error: any) {
@@ -173,10 +179,10 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         return;
       }
       const hutchId = `${newHutchData.row_name}-${newHutchData.level}${newHutchData.position}`;
-      const newHutch: Hutch = {
+      const newHutch = {
         id: hutchId,
         farm_id: user?.farm_id || "",
-        row_name: newHutchData.row_name,
+        row_id: newHutchData.row_id,
         level: newHutchData.level,
         position: parseInt(newHutchData.position),
         size: "medium",
@@ -229,7 +235,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
     setExpandCapacityOpen(false);
     setHutchToRemove(null);
     setShowHistory(false);
-    setExpandRowData({ row_name: "", additionalCapacity: "" });
+    setExpandRowData({ row_name: "", row_id: "", additionalCapacity: "" });
     if (!addRabbitOpen && !removeRabbitOpen && !addHutchOpen && !removeHutchOpen && !expandCapacityOpen) {
       setSelectedHutch(null);
     }
@@ -326,8 +332,8 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                             onClick={() => handleAddHutch(row.name)}
                             disabled={isAtCapacity}
                             className={`${isAtCapacity
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-green-500 hover:bg-green-600"
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-500 hover:bg-green-600"
                               } text-white transition-colors text-xs md:text-sm`}
                           >
                             <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
@@ -338,7 +344,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setExpandRowData({ row_name: row.name, additionalCapacity: "" });
+                              setExpandRowData({ row_name: row.name, row_id: row.id ?? "", additionalCapacity: "" });
                               setExpandCapacityOpen(true);
                             }}
                             className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs md:text-sm"
@@ -394,10 +400,10 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                                 <Card
                                   key={hutch.id}
                                   className={`group cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${selectedHutch === hutch.id
-                                      ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
-                                      : isOccupied
-                                        ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
-                                        : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
+                                    ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-300 dark:border-blue-600"
+                                    : isOccupied
+                                      ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 border-green-200 dark:border-green-700"
+                                      : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/60 dark:to-gray-700/60 border-gray-200 dark:border-gray-600"
                                     }`}
                                   onClick={() => handleHutchClick(hutch.id)}
                                 >
@@ -450,6 +456,86 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
           </div>
         )}
       </div>
+
+      {/* Hutch Details Modal and Dialogs remain the same */}
+      {/* ... (keeping all modal/dialog code unchanged for brevity) ... */}
+
+      {/* Add Hutch Dialog with updated preview */}
+      {addHutchOpen && (
+        <Dialog open={addHutchOpen} onOpenChange={setAddHutchOpen}>
+          <DialogContent className="w-[95vw] max-w-md md:max-w-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur-md mx-auto">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Plus className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                <span className="truncate">Add New Hutch to {newHutchData.row_name}</span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div>
+                  <Label htmlFor="level" className="text-sm md:text-base">Level</Label>
+                  <Select
+                    value={newHutchData.level}
+                    onValueChange={(value) => setNewHutchData({ ...newHutchData, level: value })}
+                  >
+                    <SelectTrigger className="text-sm md:text-base">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rows
+                        .find((r) => r.name === newHutchData.row_name)
+                        ?.levels.map((level: string) => (
+                          <SelectItem key={level} value={level} className="text-sm md:text-base">
+                            Level {level}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="position" className="text-sm md:text-base">Position</Label>
+                  <Select
+                    value={newHutchData.position}
+                    onValueChange={(value) => setNewHutchData({ ...newHutchData, position: value })}
+                  >
+                    <SelectTrigger className="text-sm md:text-base">
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => (
+                        <SelectItem key={pos} value={pos.toString()} className="text-sm md:text-base">
+                          Position {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm md:text-base text-blue-800 dark:text-blue-300">
+                  <strong>Hutch ID:</strong> {newHutchData.row_name}-{newHutchData.level}{newHutchData.position}
+                </p>
+                <p className="text-xs md:text-sm text-blue-600 dark:text-blue-400 mt-1">
+                  This hutch will be added to {newHutchData.row_name} row at level {newHutchData.level}, position {newHutchData.position}
+                </p>
+              </div>
+              <div className="flex flex-col space-y-2 md:flex-row md:justify-end md:space-y-0 md:space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setAddHutchOpen(false)}
+                  className="bg-white/50 dark:bg-gray-700/50 text-sm md:text-base w-full md:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleAddHutchSubmit} className="bg-green-500 hover:bg-green-600 text-white text-sm md:text-base w-full md:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Hutch
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Hutch Details Modal */}
       {selectedHutch && !removeHutchOpen && (
@@ -677,82 +763,6 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         />
       )}
 
-      {addHutchOpen && (
-        <Dialog open={addHutchOpen} onOpenChange={setAddHutchOpen}>
-          <DialogContent className="w-[95vw] max-w-md md:max-w-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur-md mx-auto">
-            <DialogHeader className="space-y-2">
-              <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
-                <Plus className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
-                <span className="truncate">Add New Hutch to {newHutchData.row_name}</span>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                <div>
-                  <Label htmlFor="level" className="text-sm md:text-base">Level</Label>
-                  <Select
-                    value={newHutchData.level}
-                    onValueChange={(value) => setNewHutchData({ ...newHutchData, level: value })}
-                  >
-                    <SelectTrigger className="text-sm md:text-base">
-                      <SelectValue placeholder="Select level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {rows
-                        .find((r) => r.name === newHutchData.row_name)
-                        ?.levels.map((level: string) => (
-                          <SelectItem key={level} value={level} className="text-sm md:text-base">
-                            Level {level}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="position" className="text-sm md:text-base">Position</Label>
-                  <Select
-                    value={newHutchData.position}
-                    onValueChange={(value) => setNewHutchData({ ...newHutchData, position: value })}
-                  >
-                    <SelectTrigger className="text-sm md:text-base">
-                      <SelectValue placeholder="Select position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => (
-                        <SelectItem key={pos} value={pos.toString()} className="text-sm md:text-base">
-                          Position {pos}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm md:text-base text-blue-800 dark:text-blue-300">
-                  <strong>Hutch ID:</strong> {newHutchData.row_name}-{newHutchData.level}{newHutchData.position}
-                </p>
-                <p className="text-xs md:text-sm text-blue-600 dark:text-blue-400 mt-1">
-                  This hutch will be added to {newHutchData.row_name} row at level {newHutchData.level}, position {newHutchData.position}
-                </p>
-              </div>
-              <div className="flex flex-col space-y-2 md:flex-row md:justify-end md:space-y-0 md:space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setAddHutchOpen(false)}
-                  className="bg-white/50 dark:bg-gray-700/50 text-sm md:text-base w-full md:w-auto"
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleAddHutchSubmit} className="bg-green-500 hover:bg-green-600 text-white text-sm md:text-base w-full md:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Hutch
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
       {/* Expand Row Capacity Dialog */}
       {expandCapacityOpen && (
         <Dialog open={expandCapacityOpen} onOpenChange={setExpandCapacityOpen}>
@@ -822,7 +832,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                         variant="outline"
                         onClick={() => {
                           setExpandCapacityOpen(false);
-                          setExpandRowData({ row_name: "", additionalCapacity: "" });
+                          setExpandRowData({ row_name: "", row_id: "", additionalCapacity: "" });
                         }}
                         className="bg-white/50 dark:bg-gray-700/50 text-sm md:text-base w-full md:w-auto"
                       >

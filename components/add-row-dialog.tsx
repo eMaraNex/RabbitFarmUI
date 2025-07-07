@@ -73,7 +73,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
         if (!token) throw new Error("Authentication token missing");
 
         const [rowsResponse, hutchesResponse] = await Promise.all([
-          axios.get(`${utils.apiUrl}/rows/${user.farm_id}`, {
+          axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, {
@@ -179,7 +179,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
 
-      const response = await axios.post(`${utils.apiUrl}/rows/${user.farm_id}`, newRow, {
+      const response = await axios.post(`${utils.apiUrl}/rows/create/${user.farm_id}`, newRow, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.data.success) {
