@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Building, Rabbit, Plus, Trash2, History, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Building, Rabbit, Plus, Trash2, History, Eye, AlertTriangle, Expand } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import AddRabbitDialog from "@/components/add-rabbit-dialog";
 import RemoveRabbitDialog from "@/components/remove-rabbit-dialog";
@@ -22,11 +23,13 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const [removeRabbitOpen, setRemoveRabbitOpen] = useState(false);
   const [addHutchOpen, setAddHutchOpen] = useState(false);
   const [removeHutchOpen, setRemoveHutchOpen] = useState(false);
-  const [hutchToRemove, setHutchToRemove] = useState<string | null>(null); // NEW STATE
+  const [expandCapacityOpen, setExpandCapacityOpen] = useState(false);
+  const [hutchToRemove, setHutchToRemove] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [removalHistory, setRemovalHistory] = useState<any[]>([]);
   const [rabbits, setRabbits] = useState<RabbitType[]>(initialRabbits);
   const [newHutchData, setNewHutchData] = useState({ row_name: "", level: "", position: "1" });
+  const [expandRowData, setExpandRowData] = useState({ row_name: "", additionalCapacity: "" });
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -109,32 +112,28 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
     }
     const rowHutches = getRowHutches(row_name);
     if (rowHutches.length >= row.capacity) {
-      enqueueSnackbar(`Cannot add more hutches to ${row_name}. Row capacity (${row.capacity}) reached. Please expand row capacity.`, {
-        variant: "warning",
-        action: (
-          <Button
-            size="sm"
-            onClick={() => handleExpandRowCapacity(row_name)}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            Expand Capacity
-          </Button>
-        ),
-      });
+      enqueueSnackbar(
+        `Row ${row_name} is at full capacity (${row.capacity} hutches). Please expand the capacity first to add more hutches.`,
+        { variant: "warning" }
+      );
       return;
     }
     setNewHutchData({ row_name, level: row.levels[0] || "A", position: "1" });
     setAddHutchOpen(true);
   };
 
-
-  const handleExpandRowCapacity = async (row_name: string) => {
+  const handleExpandRowCapacity = async () => {
     try {
-      const row = rows.find((r) => r.name === row_name);
+      const row = rows.find((r) => r.name === expandRowData.row_name);
       if (!row) throw new Error("Row not found");
-      const additionalCapacity = prompt("Enter additional capacity (e.g., 3, 6, 9):");
-      if (!additionalCapacity || isNaN(parseInt(additionalCapacity))) {
-        enqueueSnackbar("Invalid capacity entered.", { variant: "error" });
+      const additionalCapacity = parseInt(expandRowData.additionalCapacity);
+      if (isNaN(additionalCapacity) || additionalCapacity <= 0) {
+        enqueueSnackbar("Please enter a valid positive number for additional capacity.", { variant: "error" });
+        return;
+      }
+
+      if (additionalCapacity > 20) {
+        enqueueSnackbar("Maximum additional capacity is 20 hutches per expansion.", { variant: "error" });
         return;
       }
       const token = localStorage.getItem("rabbit_farm_token");
@@ -142,14 +141,19 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       const response = await axios.post(
         `${utils.apiUrl}/rows/expand`,
         {
-          name: row_name,
+          name: expandRowData.row_name,
           farm_id: user?.farm_id,
-          additionalCapacity: parseInt(additionalCapacity),
+          additionalCapacity: additionalCapacity,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success) {
-        enqueueSnackbar(`Row ${row_name} capacity expanded by ${additionalCapacity}!`, { variant: "success" });
+        enqueueSnackbar(
+          `Row ${expandRowData.row_name} capacity expanded by ${additionalCapacity} hutches!`,
+          { variant: "success" }
+        );
+        setExpandCapacityOpen(false);
+        setExpandRowData({ row_name: "", additionalCapacity: "" });
         if (onRowAdded) onRowAdded();
       }
     } catch (error: any) {
@@ -181,7 +185,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       };
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
-      await axios.post(`${utils.apiUrl}/hutches`, newHutch, {
+      await axios.post(`${utils.apiUrl}/hutches/${user?.farm_id}`, newHutch, {
         headers: { Authorization: `Bearer ${token}` },
       });
       enqueueSnackbar(`Hutch ${hutchId} added successfully!`, { variant: "success" });
@@ -220,12 +224,14 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
     setRemoveRabbitOpen(false);
     setAddHutchOpen(false);
     setRemoveHutchOpen(false);
-    setHutchToRemove(null); // RESET hutchToRemove
+    setExpandCapacityOpen(false);
+    setHutchToRemove(null);
     setShowHistory(false);
-    if (!addRabbitOpen && !removeRabbitOpen && !addHutchOpen && !removeHutchOpen) {
+    setExpandRowData({ row_name: "", additionalCapacity: "" });
+    if (!addRabbitOpen && !removeRabbitOpen && !addHutchOpen && !removeHutchOpen && !expandCapacityOpen) {
       setSelectedHutch(null);
     }
-  }, [addRabbitOpen, removeRabbitOpen, addHutchOpen, removeHutchOpen]);
+  }, [addRabbitOpen, removeRabbitOpen, addHutchOpen, removeHutchOpen, expandCapacityOpen]);
 
   const handleRabbitAdded = useCallback(
     (newRabbit: RabbitType) => {
@@ -275,6 +281,8 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
             {rows.map((row) => {
               const rowHutches = getRowHutches(row.name);
               const levels = row.levels || ["A", "B", "C"];
+              const isAtCapacity = rowHutches.length >= row.capacity;
+
               return (
                 <Card
                   key={row.name}
@@ -287,32 +295,57 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                         <span className="text-lg sm:text-xl text-gray-900 dark:text-gray-100">
                           {row.name} Row
                         </span>
+                        {isAtCapacity && (
+                          <Badge variant="outline" className="bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Full
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge
                           variant="outline"
                           className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300 self-start sm:self-auto"
                         >
-                          {
-                            rowHutches.filter(
-                              (h) => getRabbitsInHutch(h.id).length > 0
-                            ).length
-                          }
+                          {rowHutches.filter((h) => getRabbitsInHutch(h.id).length > 0).length}
                           /{row.capacity} Occupied
                         </Badge>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAddHutch(row.name)}
-                          className="bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Hutch
-                        </Button>
+                        <div className="flex flex-col sm:flex-row gap-1">
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddHutch(row.name)}
+                            disabled={isAtCapacity}
+                            className={`${isAtCapacity
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-500 hover:bg-green-600"
+                              } text-white transition-colors`}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Hutch
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setExpandRowData({ row_name: row.name, additionalCapacity: "" });
+                              setExpandCapacityOpen(true);
+                            }}
+                            className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300"
+                          >
+                            <Expand className="h-4 w-4 mr-1" />
+                            Expand
+                          </Button>
+                        </div>
                       </div>
                     </CardTitle>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                      {row.description || "No description provided."}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                        {row.description || "No description provided."}
+                      </p>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Capacity: {rowHutches.length}/{row.capacity}
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4 bg-gradient-to-br from-white/50 to-gray-50/50 dark:from-gray-800/50 dark:to-gray-900/50">
                     {levels.map((level) => {
@@ -630,46 +663,59 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         <Dialog open={addHutchOpen} onOpenChange={setAddHutchOpen}>
           <DialogContent className="sm:max-w-[500px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md">
             <DialogHeader>
-              <DialogTitle>Add New Hutch to {newHutchData.row_name}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-green-600" />
+                Add New Hutch to {newHutchData.row_name}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="level">Level</Label>
-                <Select
-                  value={newHutchData.level}
-                  onValueChange={(value) => setNewHutchData({ ...newHutchData, level: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rows
-                      .find((r) => r.name === newHutchData.row_name)
-                      ?.levels.map((level: string) => (
-                        <SelectItem key={level} value={level}>
-                          Level {level}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="level">Level</Label>
+                  <Select
+                    value={newHutchData.level}
+                    onValueChange={(value) => setNewHutchData({ ...newHutchData, level: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rows
+                        .find((r) => r.name === newHutchData.row_name)
+                        ?.levels.map((level: string) => (
+                          <SelectItem key={level} value={level}>
+                            Level {level}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="position">Position</Label>
+                  <Select
+                    value={newHutchData.position}
+                    onValueChange={(value) => setNewHutchData({ ...newHutchData, position: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => (
+                        <SelectItem key={pos} value={pos.toString()}>
+                          Position {pos}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="position">Position</Label>
-                <Select
-                  value={newHutchData.position}
-                  onValueChange={(value) => setNewHutchData({ ...newHutchData, position: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((pos) => (
-                      <SelectItem key={pos} value={pos.toString()}>
-                        Position {pos}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  <strong>Hutch ID:</strong> {newHutchData.row_name}-{newHutchData.level}{newHutchData.position}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  This hutch will be added to {newHutchData.row_name} row at level {newHutchData.level}, position {newHutchData.position}
+                </p>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button
@@ -680,9 +726,102 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                   Cancel
                 </Button>
                 <Button onClick={handleAddHutchSubmit} className="bg-green-500 hover:bg-green-600 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Hutch
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Expand Row Capacity Dialog */}
+      {expandCapacityOpen && (
+        <Dialog open={expandCapacityOpen} onOpenChange={setExpandCapacityOpen}>
+          <DialogContent className="sm:max-w-[500px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Expand className="h-5 w-5 text-blue-600" />
+                Expand Row Capacity - {expandRowData.row_name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              {(() => {
+                const currentRow = rows.find((r) => r.name === expandRowData.row_name);
+                const currentHutches = getRowHutches(expandRowData.row_name);
+
+                return (
+                  <>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <span className="font-medium text-amber-800 dark:text-amber-300">Current Status</span>
+                      </div>
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        Row <strong>{expandRowData.row_name}</strong> currently has <strong>{currentHutches.length}</strong> hutches
+                        out of <strong>{currentRow?.capacity}</strong> maximum capacity.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="additionalCapacity" className="text-base font-medium">
+                        Additional Capacity
+                      </Label>
+                      <Input
+                        id="additionalCapacity"
+                        type="number"
+                        min="1"
+                        max="20"
+                        placeholder="Enter number of additional hutches (1-20)"
+                        value={expandRowData.additionalCapacity}
+                        onChange={(e) => setExpandRowData({
+                          ...expandRowData,
+                          additionalCapacity: e.target.value
+                        })}
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Recommended values: 3, 6, 9, 12 hutches
+                      </p>
+                    </div>
+
+                    {expandRowData.additionalCapacity && !isNaN(parseInt(expandRowData.additionalCapacity)) && (
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building className="h-4 w-4 text-green-600" />
+                          <span className="font-medium text-green-800 dark:text-green-300">After Expansion</span>
+                        </div>
+                        <p className="text-sm text-green-700 dark:text-green-400">
+                          New capacity will be <strong>{(currentRow?.capacity || 0) + parseInt(expandRowData.additionalCapacity)}</strong> hutches
+                          <br />
+                          Available space for <strong>{parseInt(expandRowData.additionalCapacity)}</strong> new hutches
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setExpandCapacityOpen(false);
+                          setExpandRowData({ row_name: "", additionalCapacity: "" });
+                        }}
+                        className="bg-white/50 dark:bg-gray-700/50"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleExpandRowCapacity}
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        disabled={!expandRowData.additionalCapacity || isNaN(parseInt(expandRowData.additionalCapacity)) || parseInt(expandRowData.additionalCapacity) <= 0}
+                      >
+                        <Expand className="h-4 w-4 mr-2" />
+                        Expand Capacity
+                      </Button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>
@@ -692,10 +831,22 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         <Dialog open={removeHutchOpen} onOpenChange={setRemoveHutchOpen}>
           <DialogContent className="sm:max-w-[500px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md">
             <DialogHeader>
-              <DialogTitle>Remove Hutch {hutchToRemove}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-red-600" />
+                Remove Hutch {hutchToRemove}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p>Are you sure you want to remove this hutch? This action cannot be undone.</p>
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <span className="font-medium text-red-800 dark:text-red-300">Warning</span>
+                </div>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  Are you sure you want to remove hutch <strong>{hutchToRemove}</strong>?
+                  This action cannot be undone and will permanently delete the hutch from your farm.
+                </p>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
@@ -712,6 +863,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                   onClick={handleRemoveHutchSubmit}
                   className="bg-red-500 hover:bg-red-600"
                 >
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Remove Hutch
                 </Button>
               </div>
