@@ -11,18 +11,21 @@ import { Trash2, AlertTriangle, DollarSign } from "lucide-react";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { useCurrency } from "@/lib/currency-context";
 import { useSnackbar } from "notistack";
 import type { Rabbit as RabbitType, EarningsRecord, RemoveRabbitDialogProps } from "@/types";
+import { reasons, saleTypes } from "@/lib/constants";
 
 export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
+  const { currency, getCurrencySymbol, getCurrencyRates } = useCurrency();
   const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     reason: "",
     notes: "",
     date: new Date().toISOString().split("T")[0],
     saleAmount: "",
-    currency: "USD",
+    currency: currency,
     saleWeight: "",
     sale_type: undefined as "whole" | "meat_only" | "skin_only" | "meat_and_skin" | undefined,
     includes_urine: false,
@@ -31,25 +34,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
     sale_notes: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const reasons = [
-    "Sale",
-    "Death - Natural",
-    "Death - Disease",
-    "Death - Accident",
-    "Transfer to another farm",
-    "Breeding loan",
-    "Retirement",
-    "Health issues",
-    "Other",
-  ];
-
-  const saleTypes = [
-    { value: "whole", label: "Whole Rabbit" },
-    { value: "meat_only", label: "Meat Only" },
-    { value: "skin_only", label: "Skin Only" },
-    { value: "meat_and_skin", label: "Meat and Skin" },
-  ];
+  const currencyRates = getCurrencyRates();
+  const availableCurrencies = Object.keys(currencyRates) as Array<keyof typeof currencyRates>;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +139,16 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
 
   const isSale = formData.reason === "Sale";
 
+  const getCurrencyDisplayName = (currencyCode: string) => {
+    const symbols = {
+      USD: "USD ($)",
+      EUR: "EUR (€)",
+      GBP: "GBP (£)",
+      KES: "KES (KSh)",
+    };
+    return symbols[currencyCode as keyof typeof symbols] || currencyCode;
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-white/20 dark:border-gray-600/20 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -198,19 +194,6 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
-              Date of Removal *
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-              required
-            />
-          </div>
           {isSale && (
             <div className="bg-gradient-to-r from-green-50/80 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-lg border border-green-200 dark:border-green-700 space-y-4">
               <div className="flex items-center space-x-2 mb-3">
@@ -240,16 +223,17 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
                   </Label>
                   <Select
                     value={formData.currency}
-                    onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                    onValueChange={(value) => setFormData({ ...formData, currency: value as typeof formData.currency })}
                   >
                     <SelectTrigger className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                      <SelectItem value="KES">KES (KSh)</SelectItem>
+                      {availableCurrencies.map((curr) => (
+                        <SelectItem key={curr} value={curr}>
+                          {getCurrencyDisplayName(curr)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -345,22 +329,8 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
           )}
 
           <div>
-            <Label htmlFor="notes" className="text-gray-900 dark:text-gray-100">
-              Additional Notes
-            </Label>
-            <Textarea
-              id="notes"
-              placeholder="Add any additional details about the removal..."
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-              rows={3}
-            />
-          </div>
-
-          <div>
             <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
-              Date of Removal
+              Date of Removal *
             </Label>
             <input
               id="date"
@@ -372,6 +342,22 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
               required
             />
           </div>
+
+          {!isSale && (
+            <div>
+              <Label htmlFor="notes" className="text-gray-900 dark:text-gray-100">
+                Additional Notes
+              </Label>
+              <Textarea
+                id="notes"
+                placeholder="Add any additional details about the removal..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="mt-1 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="bg-gradient-to-r from-amber-50/80 to-amber-100/80 dark:from-amber-900/30 dark:to-amber-800/30 p-4 rounded-lg border-amber-lg border-200 dark:border-amber-700">
             <div className="flex items-start space-x-2">

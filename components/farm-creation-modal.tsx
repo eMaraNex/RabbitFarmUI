@@ -1,17 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import axios from "axios";
 import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
-import { MapPin, Building, Ruler, Globe, Clock, Locate } from "lucide-react";
-import { FarmCreationModalProps } from "@/types/farms";
+import { MapPin, Building, Ruler, Globe, Clock, Locate, Check, ChevronsUpDown } from "lucide-react";
+import type { FarmCreationModalProps } from "@/types/farms";
+import { timezones } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, onFarmCreated }) => {
     const { toast } = useToast();
@@ -29,6 +34,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [timezoneOpen, setTimezoneOpen] = useState(false)
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
@@ -50,7 +56,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
         setIsFetchingLocation(true);
         try {
             const { latitude, longitude } = await utils.getCurrentLocation();
-            let address = await utils.getAddressFromCoordinates(latitude, longitude);
+            const address = await utils.getAddressFromCoordinates(latitude, longitude);
             setFormData((prev) => ({
                 ...prev,
                 latitude: latitude.toString(),
@@ -78,12 +84,10 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
-
         setIsLoading(true);
         try {
             const token = localStorage.getItem("rabbit_farm_token");
             if (!token) throw new Error("No authentication token found");
-
             const payload = {
                 name: formData.name,
                 location: formData.location || undefined,
@@ -126,6 +130,8 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
             setIsLoading(false);
         }
     };
+
+    const selectedTimezone = timezones.find((tz) => tz.zone === formData.timezone)
 
     return (
         <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -176,7 +182,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
                                 variant="outline"
                                 onClick={handleGetCurrentLocation}
                                 disabled={isFetchingLocation}
-                                className="flex items-center dark:border-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                className="flex items-center dark:border-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 bg-transparent"
                             >
                                 <Locate className="h-4 w-4 mr-2" />
                                 {isFetchingLocation ? "Fetching..." : "Use Current Location"}
@@ -252,13 +258,62 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
                             <Clock className="h-4 w-4 mr-2 text-teal-500" />
                             Timezone
                         </Label>
-                        <Input
-                            id="timezone"
-                            value={formData.timezone}
-                            onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                            placeholder="e.g., America/New_York"
-                            className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400"
-                        />
+                        <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={timezoneOpen}
+                                    className="w-full h-12 justify-between bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                >
+                                    <span className="truncate">
+                                        {selectedTimezone ? `${selectedTimezone.name} - ${selectedTimezone.gmt}` : "Select timezone..."}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                className="w-[--radix-popover-trigger-width] p-0 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 z-50"
+                                side="bottom"
+                                align="start"
+                            >
+                                <Command className="bg-white dark:bg-gray-800">
+                                    <CommandInput
+                                        placeholder="Search timezone..."
+                                        className="h-9 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-0 focus:ring-0"
+                                    />
+                                    <CommandList className="max-h-[200px] overflow-y-auto scrollbar-thin">
+                                        <CommandEmpty className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                            No timezone found.
+                                        </CommandEmpty>
+                                        <CommandGroup>
+                                            {timezones.map((timezone) => (
+                                                <CommandItem
+                                                    key={timezone.zone}
+                                                    value={timezone.zone}
+                                                    onSelect={(value) => {
+                                                        setFormData({ ...formData, timezone: value })
+                                                        setTimezoneOpen(false)
+                                                    }}
+                                                    className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5"
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            formData.timezone === timezone.zone ? "opacity-100" : "opacity-0",
+                                                        )}
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{timezone.name}</span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">{timezone.gmt}</span>
+                                                    </div>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     {errors.submit && (
