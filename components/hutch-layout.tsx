@@ -22,6 +22,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const [removeRabbitOpen, setRemoveRabbitOpen] = useState(false);
   const [addHutchOpen, setAddHutchOpen] = useState(false);
   const [removeHutchOpen, setRemoveHutchOpen] = useState(false);
+  const [hutchToRemove, setHutchToRemove] = useState<string | null>(null); // NEW STATE
   const [showHistory, setShowHistory] = useState(false);
   const [removalHistory, setRemovalHistory] = useState<any[]>([]);
   const [rabbits, setRabbits] = useState<RabbitType[]>(initialRabbits);
@@ -126,10 +127,6 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
     setAddHutchOpen(true);
   };
 
-  const handleRemoveHutch = (hutchId: string) => {
-    setSelectedHutch(hutchId);
-    setRemoveHutchOpen(true);
-  };
 
   const handleExpandRowCapacity = async (row_name: string) => {
     try {
@@ -197,19 +194,20 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
   const handleRemoveHutchSubmit = async () => {
     try {
-      const hutch = getHutch(selectedHutch!);
+      const hutch = getHutch(hutchToRemove!);
       if (!hutch) throw new Error("Hutch not found");
-      if (getRabbitsInHutch(selectedHutch!).length > 0) {
+      if (getRabbitsInHutch(hutchToRemove!).length > 0) {
         enqueueSnackbar("Cannot remove hutch with rabbits. Please remove rabbits first.", { variant: "error" });
         return;
       }
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
-      await axios.delete(`${utils.apiUrl}/hutches/${user?.farm_id}/${selectedHutch}`, {
+      await axios.delete(`${utils.apiUrl}/hutches/${user?.farm_id}/${hutchToRemove}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      enqueueSnackbar(`Hutch ${selectedHutch} removed successfully!`, { variant: "success" });
+      enqueueSnackbar(`Hutch ${hutchToRemove} removed successfully!`, { variant: "success" });
       setRemoveHutchOpen(false);
+      setHutchToRemove(null);
       setSelectedHutch(null);
       if (onRowAdded) onRowAdded();
     } catch (error: any) {
@@ -222,6 +220,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
     setRemoveRabbitOpen(false);
     setAddHutchOpen(false);
     setRemoveHutchOpen(false);
+    setHutchToRemove(null); // RESET hutchToRemove
     setShowHistory(false);
     if (!addRabbitOpen && !removeRabbitOpen && !addHutchOpen && !removeHutchOpen) {
       setSelectedHutch(null);
@@ -380,7 +379,9 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                                         variant="destructive"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleRemoveHutch(hutch.id);
+                                          e.preventDefault();
+                                          setHutchToRemove(hutch.id);
+                                          setRemoveHutchOpen(true);
                                         }}
                                         className="mt-0 text-xs"
                                       >
@@ -404,7 +405,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       </div>
 
       {/* Hutch Details Modal */}
-      {selectedHutch && (
+      {selectedHutch && !removeHutchOpen && (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <Card
             key={selectedHutch}
@@ -687,18 +688,21 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         </Dialog>
       )}
 
-      {removeHutchOpen && selectedHutch && (
+      {removeHutchOpen && hutchToRemove && (
         <Dialog open={removeHutchOpen} onOpenChange={setRemoveHutchOpen}>
           <DialogContent className="sm:max-w-[500px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md">
             <DialogHeader>
-              <DialogTitle>Remove Hutch {selectedHutch}</DialogTitle>
+              <DialogTitle>Remove Hutch {hutchToRemove}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p>Are you sure you want to remove this hutch? This action cannot be undone.</p>
               <div className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
-                  onClick={() => setRemoveHutchOpen(false)}
+                  onClick={() => {
+                    setRemoveHutchOpen(false);
+                    setHutchToRemove(null);
+                  }}
                   className="bg-white/50 dark:bg-gray-700/50"
                 >
                   Cancel
