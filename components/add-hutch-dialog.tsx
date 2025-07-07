@@ -62,7 +62,7 @@ export default function AddHutchDialog() {
       const fetchData = async () => {
         try {
           const [rowsResponse, hutchesResponse] = await Promise.all([
-            axios.get(`${utils.apiUrl}/rows/${user.farm_id}`),
+            axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`),
             axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`),
           ])
           const newRows = rowsResponse.data.data || []

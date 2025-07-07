@@ -1,4 +1,5 @@
 export interface Row {
+  id?: string;
   name: string;
   farm_id?: string;
   description?: string;
