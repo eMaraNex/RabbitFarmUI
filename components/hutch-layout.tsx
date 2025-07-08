@@ -140,7 +140,6 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
-      debugger
       const response = await axios.post(
         `${utils.apiUrl}/rows/expand`,
         {
