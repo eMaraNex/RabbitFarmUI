@@ -315,7 +315,12 @@ export const generateAlerts = (
 };
 
 export const getRabbitDynamicFarmName = () => {
-  const farmDetails = localStorage.getItem("rabbit_farm_data");
-  const farm = farmDetails ? JSON.parse(farmDetails) : null;
-  return farm ? `${farm.name}` : "Rabbit Farm";
-}
+  try {
+    const farmDetails = localStorage.getItem("rabbit_farm_data");
+    const farm = farmDetails ? JSON.parse(farmDetails) : null;
+    return farm && farm.name ? farm.name : "Rabbit Farm";
+  } catch (error) {
+    console.error("Error parsing rabbit_farm_data:", error);
+    return "Rabbit Farm";
+  }
+};
