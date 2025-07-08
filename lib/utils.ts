@@ -314,11 +314,6 @@ export const generateAlerts = (
   setOverdueRabbits(overdueRabbitsList);
 };
 
-// export const getRabbitDynamicFarmName = () => {
-//   const farmDetails = localStorage.getItem("rabbit_farm_data");
-//   const farm = farmDetails ? JSON.parse(farmDetails) : null;
-//   return farm ? `${farm.name}` : "Rabbit Farm";
-// }
 export const getRabbitDynamicFarmName = () => {
   try {
     const farmDetails = localStorage.getItem("rabbit_farm_data");
