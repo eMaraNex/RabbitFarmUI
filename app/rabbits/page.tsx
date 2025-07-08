@@ -4,7 +4,6 @@ import RabbitList from "@/components/rabbit-list";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import Header from "@/components/shared/header";
 import { ArrowLeft } from "lucide-react";
 
 export default function RabbitsPage() {
@@ -15,8 +14,9 @@ export default function RabbitsPage() {
     // Fetch farmId from localStorage only on the client
     useEffect(() => {
         if (typeof window !== "undefined") {
-            const storedFarmId = localStorage.getItem("rabbit_farm_id") || "";
-            setFarmId(user?.farm_id || storedFarmId);
+            const farmIdRaw = localStorage.getItem('rabbit_farm_id');
+            const farmId = farmIdRaw ? JSON.parse(farmIdRaw) : '';
+            setFarmId(farmId ?? user?.farm_id);
         }
     }, [user]);
 
