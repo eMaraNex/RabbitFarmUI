@@ -221,8 +221,8 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
           </div>
 
           {/* Stats Cards */}
-          <div className="flex gap-4">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl p-4 min-w-[120px]">
+          <div className="flex flex-row gap-2">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl p-4 w-[100px] sm:w-[120px]">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wide">
@@ -234,7 +234,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-2xl p-4 min-w-[120px]">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-2xl p-4 w-[100px] sm:w-[120px]">
               <div className="flex items-center gap-2 mb-1">
                 <Heart className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <span className="text-xs font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">
@@ -246,7 +246,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl p-4 min-w-[120px]">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl p-4 w-[100px] sm:w-[120px]">
               <div className="flex items-center gap-2 mb-1">
                 <Baby className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 <span className="text-xs font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wide">
@@ -281,7 +281,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl"
+                className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-xl"
               >
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                   {selectedRabbits.length} selected
@@ -289,7 +289,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                  className="h-5 w-5 p-0 text-blue-600 hover:text-blue-800"
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -301,13 +301,13 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
               size="sm"
               className="rounded-xl border-gray-200 dark:border-gray-700"
             >
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="h-3 w-3 mr-1" />
               Filter
             </Button>
 
             <Button
               onClick={handleAddRabbit}
-              className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-2 py-1 text-xs shadow-lg flex-1 max-w-[110px]"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Rabbit
