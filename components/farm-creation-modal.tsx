@@ -81,56 +81,133 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
         }
     };
 
+    // const handleSubmit = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!validateForm()) return;
+    //     setIsLoading(true);
+    //     try {
+    //         const token = localStorage.getItem("rabbit_farm_token");
+    //         if (!token) throw new Error("No authentication token found");
+    //         const payload = {
+    //             name: formData.name,
+    //             location: formData.location || undefined,
+    //             latitude: formData.latitude ? Number(formData.latitude) : undefined,
+    //             longitude: formData.longitude ? Number(formData.longitude) : undefined,
+    //             size: formData.size ? Number(formData.size) : undefined,
+    //             description: formData.description || undefined,
+    //             timezone: formData.timezone,
+    //         };
+
+    //         const response = await axios.post(`${utils.apiUrl}/farms`, payload, {
+    //             headers: { Authorization: `Bearer ${token}` },
+    //         });
+
+    //         const farmId = response.data.data.id;
+    //         localStorage.setItem("rabbit_farm_id", farmId);
+    //         localStorage.setItem("rabbit_farm", response.data.data);
+    //         if (user) {
+    //             user.farm_id = farmId;
+    //         }
+
+    //         toast({
+    //             title: "Farm Created",
+    //             description: `${formData.name} has been successfully created!`,
+    //             className: "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
+    //         });
+
+    //         setFormData({ id: "", name: "", location: "", latitude: "", longitude: "", size: "", description: "", timezone: "UTC" });
+    //         onFarmCreated();
+    //         onClose();
+    //     } catch (error: any) {
+    //         const errorMessage = error.response?.data?.message || "Failed to create farm. Please try again.";
+    //         setErrors({ submit: errorMessage });
+    //         toast({
+    //             title: "Error",
+    //             description: errorMessage,
+    //             variant: "destructive",
+    //         });
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
+
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!validateForm()) return;
-        setIsLoading(true);
-        try {
-            const token = localStorage.getItem("rabbit_farm_token");
-            if (!token) throw new Error("No authentication token found");
-            const payload = {
-                name: formData.name,
-                location: formData.location || undefined,
-                latitude: formData.latitude ? Number(formData.latitude) : undefined,
-                longitude: formData.longitude ? Number(formData.longitude) : undefined,
-                size: formData.size ? Number(formData.size) : undefined,
-                description: formData.description || undefined,
-                timezone: formData.timezone,
-            };
+      e.preventDefault();
+      if (!validateForm()) return;
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem("rabbit_farm_token");
+        if (!token) throw new Error("No authentication token found");
+        const payload = {
+          name: formData.name,
+          location: formData.location || undefined,
+          latitude: formData.latitude ? Number(formData.latitude) : undefined,
+          longitude: formData.longitude
+            ? Number(formData.longitude)
+            : undefined,
+          size: formData.size ? Number(formData.size) : undefined,
+          description: formData.description || undefined,
+          timezone: formData.timezone,
+        };
 
-            const response = await axios.post(`${utils.apiUrl}/farms`, payload, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+        // Clear existing farm-related local storage
+        localStorage.removeItem("rabbit_farm_id");
+        localStorage.removeItem("rabbit_farm_data");
+debugger
+        const response = await axios.post(`${utils.apiUrl}/farms`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+debugger
+        const farmId = response.data.data.id;
+        const farmData = response.data.data;
 
-            const farmId = response.data.data.id;
-            localStorage.setItem("rabbit_farm_id", farmId);
-            localStorage.setItem("rabbit_farm", response.data.data);
-            if (user) {
-                user.farm_id = farmId;
-            }
+        // Set new farm data
+        localStorage.setItem("rabbit_farm_id", farmId);
+        localStorage.setItem("rabbit_farm_data", JSON.stringify(farmData));
 
-            toast({
-                title: "Farm Created",
-                description: `${formData.name} has been successfully created!`,
-                className: "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
-            });
-
-            setFormData({ id: "", name: "", location: "", latitude: "", longitude: "", size: "", description: "", timezone: "UTC" });
-            onFarmCreated();
-            onClose();
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.message || "Failed to create farm. Please try again.";
-            setErrors({ submit: errorMessage });
-            toast({
-                title: "Error",
-                description: errorMessage,
-                variant: "destructive",
-            });
-        } finally {
-            setIsLoading(false);
+        // Update user object if it exists
+        if (user) {
+          user.farm_id = farmId;
         }
-    };
 
+        toast({
+          title: "Farm Created",
+          description: `${formData.name} has been successfully created!`,
+          className:
+            "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
+        });
+
+        // Reset form
+        setFormData({
+          id: "",
+          name: "",
+          location: "",
+          latitude: "",
+          longitude: "",
+          size: "",
+          description: "",
+          timezone: "UTC",
+        });
+
+        // Pass farm data to parent component
+        onFarmCreated();
+
+        // Close modal
+        onClose();
+      } catch (error: any) {
+        const errorMessage =
+          error.response?.data?.message ||
+          "Failed to create farm. Please try again.";
+        setErrors({ submit: errorMessage });
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     const selectedTimezone = timezones.find((tz) => tz.zone === formData.timezone)
 
     return (
