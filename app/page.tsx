@@ -44,34 +44,23 @@ const DashboardContent: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  // const tempFarmId = localStorage.getItem("rabbit_farm_id");
-  // const farmId =
-  //   typeof tempFarmId === "string" ? JSON.parse(tempFarmId) : tempFarmId;
 
-  // Get the farm ID from localStorage
   const tempFarmId = localStorage.getItem("rabbit_farm_id");
 
-  // Check if tempFarmId is a string and try to parse it only if it looks like JSON
   let farmId;
-  if (typeof tempFarmId === "string") {
-    try {
-      // Attempt to parse as JSON
-      farmId =
-        tempFarmId.startsWith("{") || tempFarmId.startsWith("[")
-          ? JSON.parse(tempFarmId)
-          : tempFarmId; // Treat as plain string if not JSON-like
-    } catch (error) {
-      console.error("Failed to parse rabbit_farm_id:", error);
-      farmId = tempFarmId; // Fallback to the raw string
-    }
-  } else {
-    farmId = tempFarmId; // Use as-is if not a string (e.g., null)
+  try {
+    farmId = tempFarmId ? JSON.parse(tempFarmId) : null;
+  } catch (e) {
+    farmId = tempFarmId; 
   }
 
-  // Set hasFarm based on farmId or user.farm_id
-  // const [hasFarm, setHasFarm] = useState<boolean>(!!farmId || !!user?.farm_id);
+  const finalFarmId =
+    farmId && typeof farmId === "object" ? farmId.farmId : farmId;
 
-  const [hasFarm, setHasFarm] = useState<boolean>(!!farmId || !!user?.farm_id);
+  // Set hasFarm to true only if finalFarmId is a non-empty string
+  const [hasFarm, setHasFarm] = useState<boolean>(
+    !!finalFarmId && finalFarmId !== ""
+  );
 
   debugger;
   const [breedingRefreshTrigger, setBreedingRefreshTrigger] =
@@ -105,7 +94,6 @@ const DashboardContent: React.FC = () => {
         rows: cachedRows ? JSON.parse(cachedRows) : [],
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
         rabbits: cachedRabbits ? JSON.parse(cachedRabbits) : [],
-        // farmDetails: cachedFarmDetails ? JSON.parse(cachedFarmDetails) : [],
       };
     } catch (error) {
       console.error("Error loading from storage:", error);
@@ -138,7 +126,6 @@ const DashboardContent: React.FC = () => {
   const loadData = useCallback(async () => {
     if (!user?.farm_id) {
       setDataLoaded(true);
-      // setHasFarm(false);
       return;
     }
 
@@ -148,14 +135,12 @@ const DashboardContent: React.FC = () => {
     if (
       cachedData.rows.length ||
       cachedData.hutches.length ||
-      cachedData.rabbits.length 
-      // cachedData?.farmDetails?.name
+      cachedData.rabbits.length
     ) {
       setRows(cachedData.rows);
       setHutches(cachedData.hutches);
       setRabbits(cachedData.rabbits);
       setDataLoaded(true);
-      // setFarmName(cachedData?.farmDetails?.name);
     }
 
     try {
@@ -222,7 +207,6 @@ const DashboardContent: React.FC = () => {
       });
 
       setDataLoaded(true);
-      // setHasFarm(true);
     } catch (error) {
       console.error("Error fetching data:", error);
       if (
