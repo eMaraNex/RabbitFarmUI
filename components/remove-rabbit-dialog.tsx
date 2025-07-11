@@ -59,7 +59,7 @@ export default function RemoveRabbitDialog({ hutch_id, hutch_name, rabbit, onClo
         rabbit_id: rabbit.rabbit_id,
         hutch_id,
         farm_id: user.farm_id,
-        reason: formData.reason,
+        reason: formData.reason.toLowerCase(),
         notes: formData.notes,
         date: formData.date,
         ...(formData.reason === "Sale" && {
