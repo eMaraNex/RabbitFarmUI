@@ -214,16 +214,16 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
     try {
       const hutch = getHutch(hutchToRemove!);
       if (!hutch) throw new Error("Hutch not found");
-      if (getRabbitsInHutch(hutchToRemove!).length > 0) {
+      if (getRabbitsInHutch(hutch.name).length > 0) {
         enqueueSnackbar("Cannot remove hutch with rabbits. Please remove rabbits first.", { variant: "error" });
         return;
       }
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("Authentication token missing");
-      await axios.delete(`${utils.apiUrl}/hutches/${user?.farm_id}/${hutchToRemove}`, {
+      await axios.delete(`${utils.apiUrl}/hutches/${user?.farm_id}/${hutch.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      enqueueSnackbar(`Hutch ${hutchToRemove} removed successfully!`, { variant: "success" });
+      enqueueSnackbar(`Hutch ${hutch.name} removed successfully!`, { variant: "success" });
       setRemoveHutchOpen(false);
       setHutchToRemove(null);
       setSelectedHutch(null);
@@ -253,8 +253,9 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       enqueueSnackbar(`Rabbit ${newRabbit.rabbit_id} has been added successfully!`, { variant: "success" });
       setShowHistory(false);
       setAddRabbitOpen(false);
+      if (onRowAdded) onRowAdded();
     },
-    [enqueueSnackbar]
+    [enqueueSnackbar, onRowAdded]
   );
 
   return (

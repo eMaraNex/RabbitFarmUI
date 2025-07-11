@@ -18,7 +18,6 @@ import { breeds, colors } from "@/lib/constants"
 
 export default function AddRabbitDialog({ hutch_name, hutch_id, onClose, onRabbitAdded }: AddRabbitDialogProps) {
   const { user } = useAuth();
-  debugger;
   const [formData, setFormData] = useState({
     rabbit_id: generateRabbitId(user?.farm_id || "Default"),
     gender: "",
@@ -56,6 +55,7 @@ export default function AddRabbitDialog({ hutch_name, hutch_id, onClose, onRabbi
       birth_date: formData.birth_date,
       weight: Number.parseFloat(formData.weight) || 0,
       hutch_id: hutch_id,
+      hutch_name: hutch_name,
       parent_male_id: formData.parent_male_id || undefined,
       parent_female_id: formData.parent_female_id || undefined,
       is_pregnant: false,
@@ -67,7 +67,10 @@ export default function AddRabbitDialog({ hutch_name, hutch_id, onClose, onRabbi
         headers: { Authorization: `Bearer ${localStorage.getItem("rabbit_farm_token")}` },
       });
       if (response.data.success) {
-        const addedRabbit: Rabbit = response.data.data;
+        const addedRabbit: Rabbit = {
+          ...response.data.data,
+          hutch_name: hutch_name
+        };
         // Update local storage
         const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${user.farm_id}`);
         const existingRabbits: Rabbit[] = cachedRabbits ? JSON.parse(cachedRabbits) : [];
