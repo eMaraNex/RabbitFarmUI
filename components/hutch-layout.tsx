@@ -177,9 +177,9 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         enqueueSnackbar(`Cannot add more hutches to ${newHutchData.row_name}. Row capacity reached.`, { variant: "error" });
         return;
       }
-      const hutchId = `${newHutchData.row_name}-${newHutchData.level}${newHutchData.position}`;
+      const hutchName = `${newHutchData.row_name}-${newHutchData.level}${newHutchData.position}`;
       const newHutch = {
-        id: hutchId,
+        name: hutchName,
         farm_id: user?.farm_id || "",
         row_id: newHutchData.row_id,
         level: newHutchData.level,
@@ -195,7 +195,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       await axios.post(`${utils.apiUrl}/hutches/${user?.farm_id}`, newHutch, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      enqueueSnackbar(`Hutch ${hutchId} added successfully!`, { variant: "success" });
+      enqueueSnackbar(`Hutch ${hutchName} added successfully!`, { variant: "success" });
       setAddHutchOpen(false);
       if (onRowAdded) onRowAdded();
     } catch (error: any) {

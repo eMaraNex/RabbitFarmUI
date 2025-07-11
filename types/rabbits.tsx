@@ -2,6 +2,7 @@ import { FeedingSchedule } from "./feeding";
 import { HealthRecord } from "./health";
 
 export interface Rabbit {
+    hutch_name?: string;
     id?: string;
     rabbit_id?: string;
     farm_id: string;
