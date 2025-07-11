@@ -266,7 +266,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {availableDoes.map((doe) => (
                     <SelectItem key={doe.id} value={doe.id || ''}>
-                      {doe.name} ({doe.hutch_id || 'N/A'}) - {doe.breed} {!utils.isRabbitMature(doe).isMature ? '(Too Young)' : ''}
+                      {doe.name} ({doe.hutch_name || 'N/A'}) - {doe.breed} {!utils.isRabbitMature(doe).isMature ? '(Too Young)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -282,7 +282,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
                 <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                   {availableBucks.map((buck) => (
                     <SelectItem key={buck.id} value={buck.id || ''}>
-                      {buck.name} ({buck.hutch_id || 'N/A'}) - {buck.breed} {!utils.isRabbitMature(buck).isMature ? '(Too Young)' : ''}
+                      {buck.name} ({buck.hutch_name || 'N/A'}) - {buck.breed} {!utils.isRabbitMature(buck).isMature ? '(Too Young)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
