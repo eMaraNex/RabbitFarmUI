@@ -2,6 +2,7 @@ import { Rabbit } from "./rabbits";
 import { Row } from "./rows";
 
 export interface Hutch {
+  name: string;
   id: string;
   farm_id?: string;
   row_name: string;

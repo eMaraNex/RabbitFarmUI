@@ -13,12 +13,14 @@ import { generateRabbitId } from "@/lib/utils"
 import axios from "axios"
 import * as utils from "@/lib/utils"
 import { AddRabbitDialogProps, Rabbit } from "@/types"
+import { breeds, colors } from "@/lib/constants"
 
 
-export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: AddRabbitDialogProps) {
+export default function AddRabbitDialog({ hutch_name, onClose, onRabbitAdded }: AddRabbitDialogProps) {
   const { user } = useAuth();
+  debugger;
   const [formData, setFormData] = useState({
-    rabbit_id: generateRabbitId(),
+    rabbit_id: generateRabbitId(user?.farm_id || "Default"),
     gender: "",
     breed: "",
     color: "",
@@ -28,42 +30,6 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
     parent_male_id: "",
     parent_female_id: "",
   });
-
-  const breeds = [
-    "New Zealand White",
-    "Californian",
-    "Dutch",
-    "Flemish Giant",
-    "Mini Rex",
-    "Angora",
-    "Havana",
-    "Lionhead",
-    "Silver Fox",
-    "Checkered Giant",
-    "English Spot",
-    "Cinnamon",
-    "American",
-    "Thrianta",
-    "Satin",
-  ]
-
-  const colors = [
-    "White",
-    "Black",
-    "Brown",
-    "Gray",
-    "Chocolate brown",
-    "Golden",
-    "Silver",
-    "Blue",
-    "Rust colored",
-    "Orange-red",
-    "Ivory",
-    "White with black points",
-    "Black and white",
-    "White with black spots",
-    "Black and white spotted",
-  ]
 
   const saveToStorage = (farmId: string, rabbits: Rabbit[]) => {
     try {
@@ -89,7 +55,7 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
       color: formData.color,
       birth_date: formData.birth_date,
       weight: Number.parseFloat(formData.weight) || 0,
-      hutch_id: hutch_id,
+      hutch_name: hutch_name,
       parent_male_id: formData.parent_male_id || undefined,
       parent_female_id: formData.parent_female_id || undefined,
       is_pregnant: false,
@@ -124,7 +90,7 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
         <DialogHeader className="bg-gradient-to-r from-green-50/80 to-blue-50/80 dark:from-green-900/30 dark:to-blue-900/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-gray-200 dark:border-gray-600">
           <DialogTitle className="flex items-center space-x-2 text-gray-900 dark:text-gray-100">
             <RabbitIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <span>Add Rabbit to {hutch_id}</span>
+            <span>Add Rabbit to {hutch_name}</span>
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -257,7 +223,7 @@ export default function AddRabbitDialog({ hutch_id, onClose, onRabbitAdded }: Ad
               <li>• Feeding schedule: {formData.gender === "male" ? "170g" : "150g"} daily</li>
               <li>• Health records: Empty (ready for first checkup)</li>
               <li>• Breeding status: Not pregnant</li>
-              <li>• Hutch assignment: {hutch_id}</li>
+              <li>• Hutch assignment: {hutch_name}</li>
             </ul>
           </div>
 

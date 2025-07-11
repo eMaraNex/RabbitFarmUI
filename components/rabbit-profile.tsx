@@ -32,7 +32,7 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
         setLoading(false);
         return;
       }
-      if (rabbit && rabbit.name && rabbit.breed && rabbit.hutch_id) {
+      if (rabbit && rabbit.name && rabbit.breed && rabbit.hutch_name) {
         setRabbitData(rabbit);
         setLoading(false);
         return;
@@ -153,7 +153,7 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Hutch:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{rabbitData.hutch_id}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{rabbitData.hutch_name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">Breed:</span>
