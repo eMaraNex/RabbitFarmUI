@@ -443,7 +443,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           e.preventDefault();
-                                          setHutchToRemove(hutch.id);
+                                          setHutchToRemove(hutch.name);
                                           setRemoveHutchOpen(true);
                                         }}
                                         className="p-1 h-6 w-6 text-xs"
