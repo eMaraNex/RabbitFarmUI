@@ -45,7 +45,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   };
 
   const getHutch = useCallback((hutch_name: string) => {
-    return hutches.find((hutch) => hutch.id === hutch_name) || null;
+    return hutches.find((hutch) => hutch.name === hutch_name) || null;
   }, [hutches]);
 
   const getRowHutches = useCallback((row_name: string) => {
@@ -86,13 +86,13 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   }, [selectedHutchDetails, getRemovalHistory]);
 
   const handleRemovalSuccess = useCallback(async (removedRabbitId: string) => {
-    if (selectedHutch) {
+    if (selectedHutchDetails?.id) {
       setRabbits((prev) => prev.filter((r) => r.rabbit_id !== removedRabbitId));
-      const history = await getRemovalHistory(selectedHutch);
+      const history = await getRemovalHistory(selectedHutchDetails.id);
       setRemovalHistory(history);
       setShowHistory(true);
     }
-  }, [selectedHutch, getRemovalHistory]);
+  }, [selectedHutchDetails, getRemovalHistory]);
 
   const handleHutchClick = (hutchId: string) => {
     setSelectedHutch(hutchId);
@@ -758,6 +758,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       {addRabbitOpen && selectedHutch && (
         <AddRabbitDialog
           hutch_name={selectedHutch}
+          hutch_id={selectedHutchDetails?.id || ""}
           onClose={handleCloseDialogs}
           onRabbitAdded={handleRabbitAdded}
         />
@@ -766,6 +767,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       {removeRabbitOpen && selectedHutch && (
         <RemoveRabbitDialog
           hutch_name={selectedHutch}
+          hutch_id={selectedHutchDetails?.id || ""}
           rabbit={rabbits.find((r) => r.hutch_name === selectedHutch)}
           onClose={handleCloseDialogs}
           onRemovalSuccess={handleRemovalSuccess}

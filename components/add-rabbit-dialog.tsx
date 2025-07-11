@@ -16,7 +16,7 @@ import { AddRabbitDialogProps, Rabbit } from "@/types"
 import { breeds, colors } from "@/lib/constants"
 
 
-export default function AddRabbitDialog({ hutch_name, onClose, onRabbitAdded }: AddRabbitDialogProps) {
+export default function AddRabbitDialog({ hutch_name, hutch_id, onClose, onRabbitAdded }: AddRabbitDialogProps) {
   const { user } = useAuth();
   debugger;
   const [formData, setFormData] = useState({
@@ -55,7 +55,7 @@ export default function AddRabbitDialog({ hutch_name, onClose, onRabbitAdded }: 
       color: formData.color,
       birth_date: formData.birth_date,
       weight: Number.parseFloat(formData.weight) || 0,
-      hutch_name: hutch_name,
+      hutch_id: hutch_id,
       parent_male_id: formData.parent_male_id || undefined,
       parent_female_id: formData.parent_female_id || undefined,
       is_pregnant: false,
