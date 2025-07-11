@@ -4,13 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Rabbit,
-  Heart,
-  Pill,
-  AlertTriangle,
-  Building
-} from "lucide-react";
+import { Rabbit, Heart, Pill, AlertTriangle, Building } from "lucide-react";
 import HutchLayout from "@/components/hutch-layout";
 import RabbitProfile from "@/components/rabbit-profile";
 import BreedingManager from "@/components/breeding-manager";
@@ -46,12 +40,28 @@ const DashboardContent: React.FC = () => {
   const [rabbits, setRabbits] = useState<RabbitType[]>([]);
   const [hutches, setHutches] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
+  const [farmName, setFarmName] = useState<String>("");
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+
+  const tempFarmId = localStorage.getItem("rabbit_farm_id");
+
+  let farmId;
+  try {
+    farmId = tempFarmId ? JSON.parse(tempFarmId) : null;
+  } catch (e) {
+    farmId = tempFarmId;
+  }
+
+  const finalFarmId =
+    farmId && typeof farmId === "object" ? farmId.farmId : farmId;
+
+  // Set hasFarm to true only if finalFarmId is a non-empty string
   const [hasFarm, setHasFarm] = useState<boolean>(
-    !!user?.farm_id || !!localStorage.getItem("rabbit_farm_id")
+    !!finalFarmId && finalFarmId !== ""
   );
+
   const [breedingRefreshTrigger, setBreedingRefreshTrigger] =
     useState<number>(0);
   const [showAddKitDialog, setShowAddKitDialog] = useState<boolean>(false);
@@ -66,6 +76,8 @@ const DashboardContent: React.FC = () => {
   const handleAddRow = () => {
     setAddRowOpen(true);
   };
+  const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
+  const farmDetails = cachedFarmDetails ? JSON.parse(cachedFarmDetails) : [];
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -76,6 +88,7 @@ const DashboardContent: React.FC = () => {
       const cachedRabbits = localStorage.getItem(
         `rabbit_farm_rabbits_${farmId}`
       );
+      const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
       return {
         rows: cachedRows ? JSON.parse(cachedRows) : [],
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
@@ -112,7 +125,6 @@ const DashboardContent: React.FC = () => {
   const loadData = useCallback(async () => {
     if (!user?.farm_id) {
       setDataLoaded(true);
-      setHasFarm(false);
       return;
     }
 
@@ -164,14 +176,21 @@ const DashboardContent: React.FC = () => {
       const newRows = rowsResponse.data.data || [];
       const newHutches = hutchesResponse.data.data || [];
       const serverAlerts: ServerAlert[] = alertsResponse.data.data || [];
-      const mappedAlerts: Alert[] = serverAlerts
-        .map((alert) => ({
-          type: alert.alert_type === "birth" ? "Birth Expected" : alert.alert_type === "medication" ? "Medication Due" : alert.name,
-          message: alert.message,
-          variant: alert.severity === "high" ? "destructive"
-            : alert.severity === "medium" ? "secondary"
+      const mappedAlerts: Alert[] = serverAlerts.map(alert => ({
+        type:
+          alert.alert_type === "birth"
+            ? "Birth Expected"
+            : alert.alert_type === "medication"
+              ? "Medication Due"
+              : alert.name,
+        message: alert.message,
+        variant:
+          alert.severity === "high"
+            ? "destructive"
+            : alert.severity === "medium"
+              ? "secondary"
               : "outline",
-        }));
+      }));
       // Update state
       setRows(newRows);
       setHutches(newHutches);
@@ -186,7 +205,6 @@ const DashboardContent: React.FC = () => {
       });
 
       setDataLoaded(true);
-      setHasFarm(true);
     } catch (error) {
       console.error("Error fetching data:", error);
       if (
@@ -213,7 +231,7 @@ const DashboardContent: React.FC = () => {
       if (user?.farm_id) {
         saveToStorage(user.farm_id, { rows, hutches, rabbits: updatedRabbits });
       }
-      setBreedingRefreshTrigger((prev) => prev + 1);
+      setBreedingRefreshTrigger(prev => prev + 1);
     },
     [user, rows, hutches, saveToStorage]
   );
@@ -250,7 +268,7 @@ const DashboardContent: React.FC = () => {
 
   useEffect(() => {
     const handleStorageChange = () => {
-      setHasFarm(!!user?.farm_id || !!localStorage.getItem("rabbit_farm_id"));
+      setHasFarm(!!farmId || !!user?.farm_id);
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
@@ -279,13 +297,13 @@ const DashboardContent: React.FC = () => {
   };
 
   const totalRabbits = rabbits.length;
-  const does = rabbits.filter((r) => r.gender === "female").length;
-  const bucks = rabbits.filter((r) => r.gender === "male").length;
+  const does = rabbits.filter(r => r.gender === "female").length;
+  const bucks = rabbits.filter(r => r.gender === "male").length;
   const pregnantDoes = rabbits.filter(
-    (r) => r.is_pregnant && utils.isRabbitMature(r).isMature
+    r => r.is_pregnant && utils.isRabbitMature(r).isMature
   ).length;
   const upcomingBirths = rabbits.filter(
-    (r) =>
+    r =>
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
       new Date(r.expected_birth_date).getTime() <=
@@ -306,6 +324,7 @@ const DashboardContent: React.FC = () => {
         CurrencySelector={CurrencySelector}
         ThemeToggle={ThemeToggle}
         handleAddRow={handleAddRow}
+        farmName={farmDetails?.name}
       />
       <Sidebar
         isOpen={isSidebarOpen}
@@ -335,7 +354,7 @@ const DashboardContent: React.FC = () => {
         />
       )}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {!hasFarm && <FarmBanner onFarmCreated={handleFarmCreated} />}
+        {/* {!hasFarm && } */}
         {hasFarm ? (
           <Tabs
             value={activeTab}
@@ -448,7 +467,7 @@ const DashboardContent: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      {alerts.filter((a) => a.type === "Medication Due").length}
+                      {alerts.filter(a => a.type === "Medication Due").length}
                     </div>
                     <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
                       Medication due
@@ -487,10 +506,10 @@ const DashboardContent: React.FC = () => {
                       <div
                         key={index}
                         className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
-                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                          : alert.variant === "secondary"
-                            ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
-                            : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
+                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                            : alert.variant === "secondary"
+                              ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
+                              : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
                           }`}
                       >
                         <div>
@@ -512,8 +531,10 @@ const DashboardContent: React.FC = () => {
                           </p>
                         </div>
                         <Badge variant={alert.variant} className="text-xs">
-                          {alert.variant === "destructive" ? "Overdue"
-                            : alert.variant === "secondary" ? "Upcoming"
+                          {alert.variant === "destructive"
+                            ? "Overdue"
+                            : alert.variant === "secondary"
+                              ? "Upcoming"
                               : "Ready"}
                         </Badge>
                       </div>
@@ -566,23 +587,26 @@ const DashboardContent: React.FC = () => {
             </TabsContent>
           </Tabs>
         ) : (
-          <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 shadow-xl max-w-2xl mx-auto">
-            <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl font-bold text-center dark:text-white flex items-center justify-center space-x-2">
-                <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
-                <span>Welcome to Rabbit Farming</span>
-              </CardTitle>
-              <p className="text-gray-600 dark:text-gray-300 text-center">
-                No farm created yet
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                Get started by creating your farm to manage your rabbits,
-                hutches, and more.
-              </p>
-            </CardContent>
-          </Card>
+          <>
+            <FarmBanner onFarmCreated={handleFarmCreated} />
+            <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 shadow-xl max-w-2xl mx-auto">
+              <CardHeader className="space-y-1 pb-6">
+                <CardTitle className="text-2xl font-bold text-center dark:text-white flex items-center justify-center space-x-2">
+                  <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <span>Welcome to Rabbit Farming</span>
+                </CardTitle>
+                <p className="text-gray-600 dark:text-gray-300 text-center">
+                  No farm created yet
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                  Get started by creating your farm to manage your rabbits,
+                  hutches, and more.
+                </p>
+              </CardContent>
+            </Card>
+          </>
         )}
       </main>
       <AddRowDialog
