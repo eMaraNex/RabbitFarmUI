@@ -2,6 +2,7 @@ import { FeedingSchedule } from "./feeding";
 import { HealthRecord } from "./health";
 
 export interface Rabbit {
+    hutch_name?: string;
     id?: string;
     rabbit_id?: string;
     farm_id: string;
@@ -11,7 +12,7 @@ export interface Rabbit {
     color: string;
     birth_date?: string;
     weight: number;
-    hutch_id: string;
+    hutch_id?: string;
     parent_male_id?: string;
     parent_female_id?: string;
     is_pregnant: boolean;
@@ -31,8 +32,9 @@ export interface Rabbit {
 }
 
 export interface RemovalRecord {
+    hutch_name?: string;
     rabbit_id?: string;
-    hutch_id: string;
+    hutch_id?: string;
     reason: string;
     notes: string;
     date: string;
@@ -59,7 +61,8 @@ export interface AddKitDialogProps {
 }
 
 export interface AddRabbitDialogProps {
-    hutch_id: string;
+    hutch_name?: string;
+    hutch_id?: string;
     onClose: () => void;
     onRabbitAdded: (newRabbit: Rabbit) => void;
 }
@@ -82,7 +85,8 @@ export interface RabbitProfileProps {
 }
 
 export interface RemoveRabbitDialogProps {
-    hutch_id: string;
+    hutch_name?: string;
+    hutch_id?: string;
     rabbit: Rabbit | undefined;
     onClose: () => void;
     onRemovalSuccess?: (rabbitId: string) => void;

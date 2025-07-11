@@ -16,7 +16,7 @@ import { useSnackbar } from "notistack";
 import type { Rabbit as RabbitType, EarningsRecord, RemoveRabbitDialogProps } from "@/types";
 import { reasons, saleTypes } from "@/lib/constants";
 
-export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
+export default function RemoveRabbitDialog({ hutch_id, hutch_name, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
   const { currency, getCurrencySymbol, getCurrencyRates } = useCurrency();
   const { enqueueSnackbar } = useSnackbar();
@@ -59,7 +59,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
         rabbit_id: rabbit.rabbit_id,
         hutch_id,
         farm_id: user.farm_id,
-        reason: formData.reason,
+        reason: formData.reason.toLowerCase(),
         notes: formData.notes,
         date: formData.date,
         ...(formData.reason === "Sale" && {
@@ -155,7 +155,7 @@ export default function RemoveRabbitDialog({ hutch_id, rabbit, onClose, onRemova
         <DialogHeader className="bg-gradient-to-r from-red-50/80 to-red-100/80 dark:from-red-900/30 dark:to-red-800/30 -m-6 mb-6 p-6 rounded-t-lg border-b border-red-200 dark:border-red-700">
           <DialogTitle className="flex items-center space-x-2 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-5 w-5" />
-            <span className="text-red-600 dark:text-red-400">Remove Rabbit from {hutch_id}</span>
+            <span className="text-red-600 dark:text-red-400">Remove Rabbit from {hutch_name}</span>
           </DialogTitle>
         </DialogHeader>
 

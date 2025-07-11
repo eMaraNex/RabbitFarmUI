@@ -7,36 +7,48 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Generate sequential rabbit IDs
-export function generateRabbitId(): string {
-  let maxId = 0;
-
-  // Iterate through all localStorage keys
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    // Check for keys matching the rabbit farm pattern
-    if (key?.startsWith("rabbit_farm_rabbits_")) {
-      try {
-        const rabbits = JSON.parse(localStorage.getItem(key) || "[]");
-        // Find the max ID from this set of rabbits
-        const localMaxId = rabbits.reduce((max: number, rabbit: any) => {
-          const idNum = Number.parseInt(rabbit.rabbit_id?.replace("RB-", "") || "0");
-          return Math.max(max, idNum);
-        }, 0);
-        maxId = Math.max(maxId, localMaxId);
-      } catch (error) {
-        console.error(`Error parsing rabbits from ${key}:`, error);
-      }
+// Generate sequential rabbit IDs based on farm name
+export function generateRabbitId(farmId: string): string {
+  const tempFarm = localStorage.getItem('rabbit_farm_data') ?? '';
+  const farmDetails = tempFarm ? JSON.parse(tempFarm) : {};
+  const farmData = farmDetails.id === farmId ? farmDetails : null;
+  const farmName = farmData?.name ?? 'Default';
+  const words = farmName.trim().split(/\s+/);
+  let prefix = "";
+  if (words.length >= 2) {
+    prefix = `${words[0][0]}${words[1][0]}`.toUpperCase();
+  } else {
+    prefix = words[0][0].toUpperCase();
+  }
+  const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`);
+  let existingIds: number[] = [];
+  if (cachedRabbits) {
+    try {
+      const rabbits = JSON.parse(cachedRabbits) as Rabbit[];
+      existingIds = rabbits
+        .filter((rabbit: Rabbit) => rabbit.rabbit_id && rabbit.rabbit_id.startsWith(`${prefix}-`))
+        .map((rabbit: Rabbit) => {
+          const idNum = rabbit.rabbit_id ? Number.parseInt(rabbit.rabbit_id.replace(`${prefix}-`, '')) : 0;
+          return idNum;
+        })
+        .filter((id: number) => !isNaN(id));
+    } catch (error) {
+      console.error(`Error parsing rabbits for farm ${farmName}:`, error);
     }
   }
 
-  return `RB-${String(maxId + 1).padStart(3, "0")}`;
+  const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+  let nextId = maxId + 1;
+  while (existingIds.includes(nextId)) {
+    nextId++;
+  }
+  return `${prefix}-${nextId.toString().padStart(3, '0')}`;
 }
 
 // Generate rabbit names for large scale operations
 export function generateRabbitName(id: string): string {
   // For large operations, use ID as name
-  return id
+  return id;
 }
 
 // Calculate age in months
