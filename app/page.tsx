@@ -51,7 +51,7 @@ const DashboardContent: React.FC = () => {
   try {
     farmId = tempFarmId ? JSON.parse(tempFarmId) : null;
   } catch (e) {
-    farmId = tempFarmId; 
+    farmId = tempFarmId;
   }
 
   const finalFarmId =
@@ -62,7 +62,6 @@ const DashboardContent: React.FC = () => {
     !!finalFarmId && finalFarmId !== ""
   );
 
-  debugger;
   const [breedingRefreshTrigger, setBreedingRefreshTrigger] =
     useState<number>(0);
   const [showAddKitDialog, setShowAddKitDialog] = useState<boolean>(false);
@@ -130,7 +129,6 @@ const DashboardContent: React.FC = () => {
     }
 
     // Check local storage first
-    debugger;
     const cachedData = loadFromStorage(user.farm_id);
     if (
       cachedData.rows.length ||
@@ -169,9 +167,9 @@ const DashboardContent: React.FC = () => {
         expected_birth_date:
           r.is_pregnant && r.pregnancy_start_date
             ? new Date(
-                new Date(r.pregnancy_start_date).getTime() +
-                  (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
-              ).toISOString()
+              new Date(r.pregnancy_start_date).getTime() +
+              (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
+            ).toISOString()
             : r.expected_birth_date,
       }));
 
@@ -183,15 +181,15 @@ const DashboardContent: React.FC = () => {
           alert.alert_type === "birth"
             ? "Birth Expected"
             : alert.alert_type === "medication"
-            ? "Medication Due"
-            : alert.name,
+              ? "Medication Due"
+              : alert.name,
         message: alert.message,
         variant:
           alert.severity === "high"
             ? "destructive"
             : alert.severity === "medium"
-            ? "secondary"
-            : "outline",
+              ? "secondary"
+              : "outline",
       }));
       // Update state
       setRows(newRows);
@@ -309,7 +307,7 @@ const DashboardContent: React.FC = () => {
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
       new Date(r.expected_birth_date).getTime() <=
-        new Date().getTime() + 7 * 24 * 60 * 60 * 1000
+      new Date().getTime() + 7 * 24 * 60 * 60 * 1000
   ).length;
 
   if (!dataLoaded) {
@@ -507,19 +505,18 @@ const DashboardContent: React.FC = () => {
                     {alerts.map((alert, index) => (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${
-                          alert.variant === "destructive"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
                             ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
                             : alert.variant === "secondary"
-                            ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
-                            : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
-                        }`}
+                              ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
+                              : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
+                          }`}
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
                             {alert.type === "Medication Due" ||
-                            (alert.type === "Birth Expected" &&
-                              alert.variant === "destructive") ? (
+                              (alert.type === "Birth Expected" &&
+                                alert.variant === "destructive") ? (
                               <span className="text-red-800 dark:text-red-300">
                                 {alert.type}
                               </span>
@@ -537,8 +534,8 @@ const DashboardContent: React.FC = () => {
                           {alert.variant === "destructive"
                             ? "Overdue"
                             : alert.variant === "secondary"
-                            ? "Upcoming"
-                            : "Ready"}
+                              ? "Upcoming"
+                              : "Ready"}
                         </Badge>
                       </div>
                     ))}
