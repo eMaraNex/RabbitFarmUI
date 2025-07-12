@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -40,14 +40,24 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
   const [sortField, setSortField] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
   const { toast } = useToast();
   const [pageSize, setPageSize] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [addRabbitOpen, setAddRabbitOpen] = useState<boolean>(false);
+  const isMounted = useRef(true);
 
   const handleAddRabbit = () => {
     setAddRabbitOpen(true);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchRabbits = useCallback(async () => {
     if (!farmId) return;
@@ -69,12 +79,11 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
           limit: Number(pageSize),
           sortField,
           sortOrder,
-          searchTerm: searchTerm?.trim() || undefined,
+          searchTerm: debouncedSearchTerm?.trim() || undefined,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const { data, pagination } = response.data.data;
-      console.log('pagiantion', data, pagination)
       setRabbits(data);
       setTotalItems(Number(pagination?.totalItems || 0));
     } catch (err) {
@@ -88,10 +97,22 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
     } finally {
       setLoading(false);
     }
-  }, [farmId, page]);
+  }, [farmId, page, pageSize, sortField, sortOrder, debouncedSearchTerm, toast]);
 
   useEffect(() => {
     fetchRabbits();
+  }, [fetchRabbits]);
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm) return;
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -102,16 +123,6 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
     setPageSize(Number(newPageSize));
     setPage(1);
   }, []);
-
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (page !== 1) {
-        setPage(1);
-      }
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm, page]);
 
   const handleEdit = useCallback((rabbit: RabbitType) => {
     setEditingRabbit(rabbit);
@@ -269,11 +280,11 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
   ];
 
   const emptyState = {
-    title: searchTerm ? "No rabbits found" : "No rabbits yet",
-    description: searchTerm
-      ? `No rabbits match "${searchTerm}". Try adjusting your search.`
+    title: debouncedSearchTerm ? "No rabbits found" : "No rabbits yet",
+    description: debouncedSearchTerm
+      ? `No rabbits match "${debouncedSearchTerm}". Try adjusting your search.`
       : "Start building your colony by adding your first rabbit!",
-    action: !searchTerm ? {
+    action: !debouncedSearchTerm ? {
       label: "Add Your First Rabbit",
       onClick: handleAddRabbit,
     } : undefined,
@@ -461,6 +472,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
         pageSizeOptions={[5, 10, 15, 20, 30, 50]}
         showPageSizeSelector={true}
         showItemsInfo={true}
+        currentPageItems={rabbits?.length || 0}
         className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800"
       />
 

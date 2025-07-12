@@ -15,6 +15,7 @@ interface PaginationProps {
     showPageSizeSelector?: boolean;
     showItemsInfo?: boolean;
     className?: string;
+    currentPageItems?: number;
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -27,6 +28,7 @@ const Pagination: React.FC<PaginationProps> = ({
     showPageSizeSelector = true,
     showItemsInfo = true,
     className = "",
+    currentPageItems
 }) => {
     // Ensure we have valid numbers
     const validCurrentPage = Number(currentPage) || 1;
@@ -36,6 +38,10 @@ const Pagination: React.FC<PaginationProps> = ({
     const totalPages = Math.ceil(validTotalItems / validPageSize);
     const startItem = validTotalItems === 0 ? 0 : (validCurrentPage - 1) * validPageSize + 1;
     const endItem = Math.min(validCurrentPage * validPageSize, validTotalItems);
+
+    const itemsOnCurrentPage = currentPageItems !== undefined
+        ? currentPageItems
+        : (validTotalItems === 0 ? 0 : Math.min(validPageSize, validTotalItems - (validCurrentPage - 1) * validPageSize));
 
     const handlePageChange = (page: number) => {
         const validPage = Number(page);
@@ -102,7 +108,7 @@ const Pagination: React.FC<PaginationProps> = ({
             {/* Items info */}
             {showItemsInfo && (
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Showing {startItem} to {endItem} of {validTotalItems} entries
+                    Showing {itemsOnCurrentPage} of {validTotalItems} entries
                 </div>
             )}
 
