@@ -65,6 +65,7 @@ export interface AddRabbitDialogProps {
     hutch_id?: string;
     onClose: () => void;
     onRabbitAdded: (newRabbit: Rabbit) => void;
+    customHutches?: boolean;
 }
 
 
