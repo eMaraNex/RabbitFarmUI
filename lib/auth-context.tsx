@@ -111,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: user?.name ?? "Farm Administrator",
           farm_id: user?.farm_id ?? "",
           role_id: user?.role_id ?? "",
+          email_verified: user?.email_verified ?? ''
         };
         const farmData = await axios.get(`${utils.apiUrl}/farms/${userData.farm_id}`, {
           headers: { Authorization: `Bearer ${token}` },

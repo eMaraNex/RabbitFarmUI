@@ -16,6 +16,7 @@ import AnalyticsCharts from "@/components/analytics-charts";
 import CurrencySelector from "@/components/currency-selector";
 import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
+import EmailVerificationBanner from "@/components/email-verification-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
 import AddKitDialog from "@/components/add-kit-dialog";
@@ -354,7 +355,7 @@ const DashboardContent: React.FC = () => {
         />
       )}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* {!hasFarm && } */}
+        {user && !user.email_verified && <EmailVerificationBanner />}
         {hasFarm ? (
           <Tabs
             value={activeTab}
@@ -506,10 +507,10 @@ const DashboardContent: React.FC = () => {
                       <div
                         key={index}
                         className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
-                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                            : alert.variant === "secondary"
-                              ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
-                              : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
+                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                          : alert.variant === "secondary"
+                            ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
+                            : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
                           }`}
                       >
                         <div>
