@@ -11,6 +11,7 @@ const EmailVerificationBanner: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isDismissed, setIsDismissed] = useState(false);
     const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+    const [verificationSent, setVerificationSent] = useState(false);
 
     useEffect(() => {
         if (dismissedAt) {
@@ -28,7 +29,10 @@ const EmailVerificationBanner: React.FC = () => {
         setDismissedAt(Date.now());
     };
 
-    if (!user || user.email_verified || isDismissed) return null;
+    const handleVerificationSent = () => {
+        setVerificationSent(true);
+    };
+    if (!user || user.email_verified || isDismissed || verificationSent) return null;
 
     return (
         <>
@@ -66,6 +70,7 @@ const EmailVerificationBanner: React.FC = () => {
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}
                 userEmail={user?.email || ""}
+                onVerificationSent={handleVerificationSent}
             />
         </>
     );

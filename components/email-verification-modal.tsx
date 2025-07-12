@@ -20,6 +20,7 @@ interface EmailVerificationModalProps {
     isOpen: boolean;
     onClose: () => void;
     userEmail: string;
+    onVerificationSent?: () => void;
 }
 
 interface FormErrors {
@@ -30,6 +31,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     isOpen,
     onClose,
     userEmail,
+    onVerificationSent
 }) => {
     const { enqueueSnackbar } = useSnackbar();
     const [email, setEmail] = useState(userEmail);
@@ -84,6 +86,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
                     variant: "success",
                 });
                 onClose();
+                onVerificationSent?.();
             } else {
                 enqueueSnackbar(response.data.message || "Failed to send verification email", {
                     variant: "error",
