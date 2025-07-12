@@ -25,46 +25,175 @@ import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
 import { useSnackbar } from "notistack";
 
+interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+  forgot_email?: string;
+}
+
 export default function LoginPage() {
   const { login, forgotPassword } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" });
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState<boolean>(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const response = await login(formData.email, formData.password);
-    enqueueSnackbar(response.message, {
-      variant: response.success ? "success" : "error",
-    });
-    setIsLoading(false);
-  };
+  const validateField = (field: keyof LoginFormData | 'forgot_email', value: string): string | null => {
+    switch (field) {
+      case 'email':
+      case 'forgot_email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!value) return "Email is required";
+        if (!emailRegex.test(value)) return "Invalid email format";
+        return null;
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    const response = await login("admin@org.com", "admin@2025");
-    enqueueSnackbar(response.message, {
-      variant: response.success ? "success" : "error",
-    });
-    setIsLoading(false);
-  };
+      case 'password':
+        if (!value) return "Password is required";
+        if (value.length < 6) return "Password must be at least 6 characters";
+        return null;
 
-  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const response = await forgotPassword(forgotPasswordEmail);
-    enqueueSnackbar(response.message, {
-      variant: response.success ? "success" : "error",
-    });
-    if (response.success) {
-      setForgotPasswordEmail("");
-      setIsForgotPasswordOpen(false);
+      default:
+        return null;
     }
-    setIsLoading(false);
+  };
+
+  // Validation function for form submission
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    // Validate email
+    const emailError = validateField('email', formData.email);
+    if (emailError) newErrors.email = emailError;
+
+    // Validate password
+    const passwordError = validateField('password', formData.password);
+    if (passwordError) newErrors.password = passwordError;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Real-time validation for any field
+  const handleFieldChange = (field: keyof LoginFormData, value: string): void => {
+    setFormData({ ...formData, [field]: value });
+    const error = validateField(field, value);
+    setErrors((prev: FormErrors) => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors[field] = error;
+      } else {
+        delete newErrors[field];
+      }
+      return newErrors;
+    });
+  };
+
+  // Handle forgot password email validation
+  const handleForgotPasswordEmailChange = (value: string): void => {
+    setForgotPasswordEmail(value);
+    const error = validateField('forgot_email', value);
+    setErrors((prev: FormErrors) => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors.forgot_email = error;
+      } else {
+        delete newErrors.forgot_email;
+      }
+      return newErrors;
+    });
+  };
+
+  const handleInputChange = (field: keyof LoginFormData) => {
+    return (e: React.ChangeEvent<HTMLInputElement>): void => {
+      handleFieldChange(field, e.target.value);
+    };
+  };
+
+  // Check if form is valid (no errors and all required fields filled)
+  const isFormValid = (): boolean => {
+    const hasErrors = errors.email || errors.password;
+    const hasEmptyFields = !formData.email || !formData.password;
+    return !hasErrors && !hasEmptyFields;
+  };
+
+  // Check if forgot password form is valid
+  const isForgotPasswordValid = (): boolean => {
+    const hasError = errors.forgot_email;
+    const isEmpty = !forgotPasswordEmail;
+    return !hasError && !isEmpty;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    if (!validateForm()) {
+      enqueueSnackbar("Please fix the errors in the form", { variant: "error" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await login(formData.email, formData.password);
+      enqueueSnackbar(response.message, {
+        variant: response.success ? "success" : "error",
+      });
+    } catch (error) {
+      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const response = await login("admin@org.com", "admin@2025");
+      enqueueSnackbar(response.message, {
+        variant: response.success ? "success" : "error",
+      });
+    } catch (error) {
+      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    const emailError = validateField('forgot_email', forgotPasswordEmail);
+    if (emailError) {
+      setErrors(prev => ({ ...prev, forgot_email: emailError }));
+      enqueueSnackbar("Please enter a valid email address", { variant: "error" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await forgotPassword(forgotPasswordEmail);
+      enqueueSnackbar(response.message, {
+        variant: response.success ? "success" : "error",
+      });
+      if (response.success) {
+        setForgotPasswordEmail("");
+        setIsForgotPasswordOpen(false);
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.forgot_email;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -146,13 +275,15 @@ export default function LoginPage() {
                     type="email"
                     placeholder="admin@org.com"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={handleInputChange('email')}
+                    className={`pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.email ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -166,10 +297,9 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="pl-10 pr-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={handleInputChange('password')}
+                    className={`pl-10 pr-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.password ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                   <button
@@ -184,6 +314,9 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                )}
               </div>
 
               <div className="flex justify-between">
@@ -204,8 +337,8 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
-                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                disabled={isLoading || !isFormValid()}
+                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
@@ -235,26 +368,40 @@ export default function LoginPage() {
                     type="email"
                     placeholder="Enter your email"
                     value={forgotPasswordEmail}
-                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                    className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleForgotPasswordEmailChange(e.target.value)
+                    }
+                    className={`pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.forgot_email ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                 </div>
+                {errors.forgot_email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.forgot_email}</p>
+                )}
               </div>
 
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsForgotPasswordOpen(false)}
+                  onClick={() => {
+                    setIsForgotPasswordOpen(false);
+                    setForgotPasswordEmail("");
+                    setErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.forgot_email;
+                      return newErrors;
+                    });
+                  }}
                   className="dark:border-gray-600 dark:text-white"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                  disabled={isLoading || !isForgotPasswordValid()}
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Sending..." : "Send Reset Link"}
                 </Button>
