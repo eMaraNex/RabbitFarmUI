@@ -201,6 +201,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
             features: ["water bottle", "feeder"],
             is_occupied: false,
             is_deleted: 0,
+            name: ""
           });
         }
       }
@@ -332,9 +333,9 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
               <p className="text-sm text-green-700 dark:text-green-500">
                 Existing rows: {existingRows.length} | Total hutches: {existingHutches.length}
               </p>
-              <p className="text-sm text-green-700 dark:text-green-500 mt-1">
+              {/* <p className="text-sm text-green-700 dark:text-green-500 mt-1">
                 Next row will be: <strong>{getNextPlanetName()}</strong>
-              </p>
+              </p> */}
             </div>
             {errors.submit && (
               <div className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-400 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
