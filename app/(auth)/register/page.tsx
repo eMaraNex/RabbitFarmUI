@@ -26,68 +26,171 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 
+interface FormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  name: string;
+  phone: string;
+}
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  name?: string;
+  phone?: string;
+}
+
 export default function RegisterPage() {
   const { register, forgotPassword } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
+    confirmPassword: "",
     name: "",
     phone: "",
   });
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState<boolean>(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const response = await register(
-      formData.email,
-      formData.password,
-      formData.name,
-      formData.phone
-    );
-    enqueueSnackbar(response.message, {
-      variant: response.success ? "success" : "error",
-    });
-    if (response.success) {
-      setTimeout(() => router.push("/login"), 2000);
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Invalid email format";
     }
-    setIsLoading(false);
+
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
+
+    // Phone validation
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone is required";
+    } else if (formData.phone.trim().length < 10) {
+      newErrors.phone = "Phone must be at least 10 characters";
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleGoogleRegister = async () => {
-    setIsLoading(true);
-    const response = await register(
-      "admin@org.com",
-      "admin@2025",
-      "Admin User",
-      ""
-    );
-    enqueueSnackbar(response.message, {
-      variant: response.success ? "success" : "error",
-    });
-    if (response.success) {
-      setTimeout(() => router.push("/login"), 2000);
+  const handleConfirmPasswordChange = (value: string): void => {
+    setFormData({ ...formData, confirmPassword: value });
+    if (formData.password === value) {
+      setErrors((prev: FormErrors) => {
+        const newErrors = { ...prev };
+        delete newErrors.confirmPassword;
+        return newErrors;
+      });
+    } else if (value && formData.password !== value) {
+      setErrors((prev: FormErrors) => ({
+        ...prev,
+        confirmPassword: "Passwords do not match"
+      }));
     }
-    setIsLoading(false);
   };
 
-  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    if (!validateForm()) {
+      enqueueSnackbar("Please fix the errors in the form", { variant: "error" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await register(
+        formData.email,
+        formData.password,
+        formData.name,
+        formData.phone
+      );
+      enqueueSnackbar(response.message, {
+        variant: response.success ? "success" : "error",
+      });
+      if (response.success) {
+        setTimeout(() => router.push("/login"), 2000);
+      }
+    } catch (error) {
+      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const response = await register(
+        "admin@org.com",
+        "admin@2025",
+        "Admin User",
+        ""
+      );
+      enqueueSnackbar(response.message, {
+        variant: response.success ? "success" : "error",
+      });
+      if (response.success) {
+        setTimeout(() => router.push("/login"), 2000);
+      }
+    } catch (error) {
+      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setIsLoading(true);
-    const response = await forgotPassword(forgotPasswordEmail);
-    enqueueSnackbar(response.message, {
-      variant: response.success ? "success" : "error",
-    });
-    if (response.success) {
-      setForgotPasswordEmail("");
-      setIsForgotPasswordOpen(false);
+    try {
+      const response = await forgotPassword(forgotPasswordEmail);
+      enqueueSnackbar(response.message, {
+        variant: response.success ? "success" : "error",
+      });
+      if (response.success) {
+        setForgotPasswordEmail("");
+        setIsForgotPasswordOpen(false);
+      }
+    } catch (error) {
+      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  };
+
+  const handleInputChange = (field: keyof FormData) => {
+    return (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setFormData({ ...formData, [field]: e.target.value });
+    };
   };
 
   return (
@@ -169,13 +272,15 @@ export default function RegisterPage() {
                     type="text"
                     placeholder="Enter your name"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={handleInputChange('name')}
+                    className={`pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.name ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                 </div>
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="dark:text-gray-200">
@@ -188,13 +293,15 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="admin@org.com"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={handleInputChange('email')}
+                    className={`pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.email ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone" className="dark:text-gray-200">
@@ -207,13 +314,15 @@ export default function RegisterPage() {
                     type="tel"
                     placeholder="Enter your phone"
                     value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={handleInputChange('phone')}
+                    className={`pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.phone ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                 </div>
+                {errors.phone && (
+                  <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="dark:text-gray-200">
@@ -226,10 +335,9 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="pl-10 pr-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    onChange={handleInputChange('password')}
+                    className={`pl-10 pr-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.password ? "border-red-500 dark:border-red-500" : ""
+                      }`}
                     required
                   />
                   <button
@@ -244,6 +352,48 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="dark:text-gray-200">
+                  Confirm Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleConfirmPasswordChange(e.target.value)}
+                    className={`pl-10 pr-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.confirmPassword ? "border-red-500 dark:border-red-500" : ""
+                      } ${formData.confirmPassword && formData.password === formData.confirmPassword
+                        ? "border-green-500 dark:border-green-500"
+                        : ""
+                      }`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                )}
+                {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                  <p className="text-green-500 text-sm mt-1">Passwords match!</p>
+                )}
               </div>
               <div className="flex justify-between">
                 <button
@@ -263,8 +413,8 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
-                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                disabled={isLoading || Object.keys(errors).length > 0}
+                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white disabled:opacity-50"
               >
                 {isLoading ? "Registering..." : "Register"}
               </Button>
@@ -294,7 +444,7 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="Enter your email"
                     value={forgotPasswordEmail}
-                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForgotPasswordEmail(e.target.value)}
                     className="pl-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                     required
                   />
