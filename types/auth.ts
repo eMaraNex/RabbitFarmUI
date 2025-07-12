@@ -8,6 +8,7 @@ export interface User {
   name: string;
   farm_id?: string;
   role_id?: string;
+  email_verified?: boolean;
 }
 
 export interface AuthResponse {
