@@ -5,6 +5,7 @@ export interface Row {
   description?: string;
   capacity: number;
   occupied?: number;
+  is_deleted: number;
   levels: string[];
   created_at?: string;
   updated_at?: string;

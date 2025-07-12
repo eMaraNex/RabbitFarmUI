@@ -502,6 +502,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
       )}
       {addRabbitOpen && (
         <AddRabbitDialog
+          customHutches={true}
           hutch_id={""}
           onClose={() => setAddRabbitOpen(false)}
           onRabbitAdded={(newRabbit) => {
