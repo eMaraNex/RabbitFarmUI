@@ -60,62 +60,78 @@ export default function RegisterPage() {
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Real-time validation function
+  const validateField = (field: keyof FormData, value: string): string | null => {
+    switch (field) {
+      case 'email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!value) return "Email is required";
+        if (!emailRegex.test(value)) return "Invalid email format";
+        return null;
+
+      case 'name':
+        if (!value.trim()) return "Name is required";
+        if (value.trim().length < 2) return "Name must be at least 2 characters";
+        return null;
+
+      case 'phone':
+        if (!value.trim()) return "Phone is required";
+        if (value.trim().length < 10) return "Phone must be at least 10 characters";
+        return null;
+
+      case 'password':
+        if (!value) return "Password is required";
+        if (value.length < 6) return "Password must be at least 6 characters";
+        return null;
+
+      case 'confirmPassword':
+        if (!value) return "Please confirm your password";
+        if (formData.password !== value) return "Passwords do not match";
+        return null;
+
+      default:
+        return null;
+    }
+  };
+
+  // Validation function for form submission
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Invalid email format";
-    }
 
-    // Name validation
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    }
-
-    // Phone validation
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone is required";
-    } else if (formData.phone.trim().length < 10) {
-      newErrors.phone = "Phone must be at least 10 characters";
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
-    // Confirm password validation
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
+    // Validate all fields
+    Object.keys(formData).forEach((key) => {
+      const field = key as keyof FormData;
+      const error = validateField(field, formData[field]);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleConfirmPasswordChange = (value: string): void => {
-    setFormData({ ...formData, confirmPassword: value });
-    if (formData.password === value) {
-      setErrors((prev: FormErrors) => {
-        const newErrors = { ...prev };
-        delete newErrors.confirmPassword;
-        return newErrors;
-      });
-    } else if (value && formData.password !== value) {
-      setErrors((prev: FormErrors) => ({
-        ...prev,
-        confirmPassword: "Passwords do not match"
-      }));
-    }
+  const handleFieldChange = (field: keyof FormData, value: string): void => {
+    setFormData({ ...formData, [field]: value });
+    const error = validateField(field, value);
+    setErrors((prev: FormErrors) => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors[field] = error;
+      } else {
+        delete newErrors[field];
+      }
+      if (field === 'password' && formData.confirmPassword) {
+        const confirmError = validateField('confirmPassword', formData.confirmPassword);
+        if (confirmError) {
+          newErrors.confirmPassword = confirmError;
+        } else {
+          delete newErrors.confirmPassword;
+        }
+      }
+
+      return newErrors;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -189,8 +205,13 @@ export default function RegisterPage() {
 
   const handleInputChange = (field: keyof FormData) => {
     return (e: React.ChangeEvent<HTMLInputElement>): void => {
-      setFormData({ ...formData, [field]: e.target.value });
+      handleFieldChange(field, e.target.value);
     };
+  };
+  const isFormValid = (): boolean => {
+    const hasErrors = Object.keys(errors).length > 0;
+    const hasEmptyFields = !formData.email || !formData.password || !formData.confirmPassword || !formData.name || !formData.phone;
+    return !hasErrors && !hasEmptyFields;
   };
 
   return (
@@ -368,7 +389,7 @@ export default function RegisterPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleConfirmPasswordChange(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange('confirmPassword', e.target.value)}
                     className={`pl-10 pr-10 h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 ${errors.confirmPassword ? "border-red-500 dark:border-red-500" : ""
                       } ${formData.confirmPassword && formData.password === formData.confirmPassword
                         ? "border-green-500 dark:border-green-500"
@@ -391,7 +412,7 @@ export default function RegisterPage() {
                 {errors.confirmPassword && (
                   <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
                 )}
-                {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                {formData.confirmPassword && formData.password === formData.confirmPassword && !errors.confirmPassword && (
                   <p className="text-green-500 text-sm mt-1">Passwords match!</p>
                 )}
               </div>
@@ -413,8 +434,8 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading || Object.keys(errors).length > 0}
-                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white disabled:opacity-50"
+                disabled={isLoading || !isFormValid()}
+                className="w-full h-12 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Registering..." : "Register"}
               </Button>
