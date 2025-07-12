@@ -15,6 +15,7 @@ const Header: React.FC<HeaderProps> = ({
     CurrencySelector,
     ThemeToggle,
     handleAddRow,
+    farmName,
 }) => {
     return (
         <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-gray-700/20 sticky top-0 z-40">
@@ -26,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div>
                             <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                                {getRabbitDynamicFarmName() ?? "Rabbit Farm"}
+                                {farmName || "Rabbit Farm"}
                             </h1>
                             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 hidden sm:block">
                                 Professional Rabbit Management System

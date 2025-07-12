@@ -9,8 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Enable PWA features
-  headers: async () => {
+  async headers() {
     return [
       {
         source: '/sw.js',
@@ -19,16 +18,20 @@ const nextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=0, must-revalidate',
           },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
         ],
       },
-    ];
-  },
-  // Add PWA-specific rewrites if needed
-  async rewrites() {
-    return [
       {
         source: '/manifest.json',
-        destination: '/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400',
+          },
+        ],
       },
     ];
   },

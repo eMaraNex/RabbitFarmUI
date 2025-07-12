@@ -6,6 +6,7 @@ export interface HeaderProps {
     CurrencySelector: React.ComponentType;
     ThemeToggle: React.ComponentType;
     handleAddRow: () => void;
+    farmName:String
 }
 
 export interface SidebarProps {
