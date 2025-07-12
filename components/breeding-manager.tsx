@@ -212,37 +212,49 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Available Does</CardTitle>
+            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">
+              Available Does
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent">
               {availableDoes.length}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Ready for breeding</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Ready for breeding
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Pregnant Does</CardTitle>
+            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">
+              Pregnant Does
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-red-600 dark:from-pink-400 dark:to-red-400 bg-clip-text text-transparent">
               {pregnantDoes.length}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Currently expecting</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Currently expecting
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Active Bucks</CardTitle>
+            <CardTitle className="text-lg text-gray-900 dark:text-gray-100">
+              Active Bucks
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
               {availableBucks.length}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Available for breeding</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Available for breeding
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -252,13 +264,17 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
         <CardHeader className="bg-gradient-to-r from-pink-50/80 to-red-50/80 dark:from-pink-900/30 dark:to-red-900/30 border-b border-gray-200 dark:border-gray-600">
           <CardTitle className="flex items-center space-x-2">
             <Heart className="h-5 w-5 text-pink-600 dark:text-pink-400" />
-            <span className="text-gray-900 dark:text-gray-100">Breeding Planner</span>
+            <span className="text-gray-900 dark:text-gray-100">
+              Breeding Planner
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
             <div>
-              <label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">Select Doe</label>
+              <label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">
+                Select Doe
+              </label>
               <Select value={selectedDoe} onValueChange={setSelectedDoe}>
                 <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
                   <SelectValue placeholder="Choose a doe" />
@@ -274,7 +290,9 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">Select Buck</label>
+              <label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">
+                Select Buck
+              </label>
               <Select value={selectedBuck} onValueChange={setSelectedBuck}>
                 <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
                   <SelectValue placeholder="Choose a buck" />
@@ -290,25 +308,36 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
             </div>
           </div>
 
-          {selectedDoe && selectedBuck && (
+          {selectedDoe && selectedBuck && !isLoading && (
             <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60">
               {(() => {
-                const compatibility = getBreedingCompatibility(selectedDoe, selectedBuck);
+                const compatibility = getBreedingCompatibility(
+                  selectedDoe,
+                  selectedBuck
+                );
                 return (
                   <div className="flex items-center space-x-3">
                     {compatibility.compatible ? (
-                      <Badge variant="default" className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                      <Badge
+                        variant="default"
+                        className="bg-gradient-to-r from-green-500 to-green-600 text-white"
+                      >
                         Compatible
                       </Badge>
                     ) : (
-                      <Badge variant="destructive" className="bg-gradient-to-r from-red-500 to-red-600">
+                      <Badge
+                        variant="destructive"
+                        className="bg-gradient-to-r from-red-500 to-red-600"
+                      >
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Not Compatible
                       </Badge>
                     )}
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{compatibility.reason}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {compatibility.reason}
+                    </span>
                   </div>
-                )
+                );
               })()}
             </div>
           )}
@@ -330,28 +359,44 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
       {/* Pregnant Does */}
       <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-gray-900 dark:text-gray-100">Pregnant Does - Expected Births</CardTitle>
+          <CardTitle className="text-gray-900 dark:text-gray-100">
+            Pregnant Does - Expected Births
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {pregnantDoes.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">No pregnant does at the moment.</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                No pregnant does at the moment.
+              </p>
             ) : (
-              pregnantDoes.map((doe) => (
+              pregnantDoes.map(doe => (
                 <div
                   key={doe.id}
                   className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gradient-to-r from-pink-50/80 to-pink-100/80 dark:from-pink-900/30 dark:to-pink-800/30"
                 >
                   <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">{doe.name}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Hutch {doe.hutch_id || 'N/A'}  {/* • Mated with {doe.mated_with} */}</p>
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                      {doe.name}
+                    </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Mating Date: {doe.pregnancy_start_date ? new Date(doe.pregnancy_start_date).toLocaleDateString() : "N/A"}
+                      Hutch {doe.hutch_id || "N/A"}{" "}
+                      {/* • Mated with {doe.mated_with} */}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Mating Date:{" "}
+                      {doe.pregnancy_start_date
+                        ? new Date(
+                            doe.pregnancy_start_date
+                          ).toLocaleDateString()
+                        : "N/A"}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {doe.expected_birth_date ? new Date(doe.expected_birth_date).toLocaleDateString() : "TBD"}
+                      {doe.expected_birth_date
+                        ? new Date(doe.expected_birth_date).toLocaleDateString()
+                        : "TBD"}
                     </p>
                     <Badge
                       variant="outline"
@@ -359,8 +404,10 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
                     >
                       {doe.expected_birth_date
                         ? `${Math.ceil(
-                          (new Date(doe.expected_birth_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-                        )} days`
+                            (new Date(doe.expected_birth_date).getTime() -
+                              new Date().getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          )} days`
                         : "TBD"}
                     </Badge>
                   </div>
@@ -374,19 +421,29 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
       {/* Breeding History */}
       <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-gray-900 dark:text-gray-100">Recent Breeding History</CardTitle>
+          <CardTitle className="text-gray-900 dark:text-gray-100">
+            Recent Breeding History
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingRecords ? (
-            <p className="text-gray-600 dark:text-gray-400">Loading breeding records...</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              Loading breeding records...
+            </p>
           ) : breedingRecords.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400">No breeding records found.</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              No breeding records found.
+            </p>
           ) : (
             <div className="space-y-3">
               {breedingRecords
-                .sort((a, b) => new Date(b.mating_date).getTime() - new Date(a.mating_date).getTime())
+                .sort(
+                  (a, b) =>
+                    new Date(b.mating_date).getTime() -
+                    new Date(a.mating_date).getTime()
+                )
                 .slice(0, 5)
-                .map((record) => (
+                .map(record => (
                   <div
                     key={record.id}
                     className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/60 dark:to-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600"
@@ -416,5 +473,5 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
