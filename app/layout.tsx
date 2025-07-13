@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/lib/theme-context';
 import { CurrencyProvider } from '@/lib/currency-context';
 import { JSX, ReactNode } from 'react';
 import PWAInstaller from '@/components/PWAInstaller.';
+import { ToastProvider } from '@/lib/toast-provider';
 
 export const metadata: Metadata = {
   title: 'Sungura Master',
@@ -110,8 +111,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <NotistackProvider>
             <CurrencyProvider>
               <ThemeProvider>
-                <PWAInstaller />
-                {children}
+                <ToastProvider>
+                  <PWAInstaller />
+                  {children}
+                </ToastProvider >
               </ThemeProvider>
             </CurrencyProvider>
           </NotistackProvider>

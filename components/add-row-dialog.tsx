@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth-context";
-import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import FarmCreationModal from "@/components/farm-creation-modal";
@@ -20,7 +19,6 @@ import { planetNames } from "@/lib/constants";
 export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialogProps) {
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
-  const { toast } = useToast();
   const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -52,7 +50,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
     return possibleLevels.filter(level => capacity % level === 0);
   };
 
- 
+
   const saveToStorage = (farmId: string, data: { rows: Row[]; hutches: Hutch[] }) => {
     try {
       localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows));
@@ -191,6 +189,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
         description: formData.description || `${newRowName} row with ${capacity} hutches across ${numLevels} levels`,
         capacity,
         levels: Object.keys(distribution),
+        is_deleted: 0
       };
 
       const token = localStorage.getItem("rabbit_farm_token");
@@ -218,7 +217,11 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
             features: ["water bottle", "feeder"],
             is_occupied: false,
             is_deleted: 0,
-            name: ""
+            name: "",
+            row_id: "",
+            last_cleaned: null,
+            created_at: "",
+            updated_at: ""
           });
         }
       }

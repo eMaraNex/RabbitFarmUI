@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Heart, Plus, AlertTriangle } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import type { BreedingManagerProps, BreedingRecord, CompatibilityResult, Rabbit } from "@/types";
+import { useToast } from '@/lib/toast-provider';
 
 
 const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
@@ -23,7 +23,7 @@ const checkInbreeding = (doe: Rabbit, buck: Rabbit): boolean => {
 
 export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpdate }: BreedingManagerProps) {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { showSuccess, showError } = useToast();
   const [selectedDoe, setSelectedDoe] = useState<string>("");
   const [selectedBuck, setSelectedBuck] = useState<string>("");
   const [rabbits, setRabbits] = useState<Rabbit[]>(initialRabbits);
@@ -79,11 +79,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
 
     const compatibility = getBreedingCompatibility(selectedDoe, selectedBuck);
     if (!compatibility.compatible) {
-      toast({
-        variant: "destructive",
-        title: "Cannot Schedule Breeding",
-        description: compatibility.reason,
-      });
+      showError('Error', "Cannot Schedule Breeding");
       return;
     }
 
@@ -125,23 +121,16 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
 
       if (breedResponse.status === 201) {
         setSuccess("Breeding scheduled successfully!");
-        toast({
-          title: "Success",
-          description: "Breeding scheduled successfully!",
-        });
+        showSuccess('Success', "Breeding scheduled successfully!");
         setSelectedDoe("");
         setSelectedBuck("");
         onRabbitsUpdate(updatedRabbits);
-        await fetchBreedingRecords(); // Only fetch breeding records
+        await fetchBreedingRecords();
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || "Failed to schedule breeding. Please try again.";
       setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
+      showError('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -165,11 +154,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
         await new Promise((resolve) => setTimeout(resolve, delay));
         await fetchRabbits(retryCount + 1);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch rabbits after retries.",
-        });
+        showError('Error', "Failed to fetch rabbits after retries.");
       }
     } finally {
       setIsFetchingRabbits(false);
@@ -189,11 +174,7 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
       setBreedingRecords(records);
     } catch (err: any) {
       setBreedingRecords([]);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch breeding records.",
-      });
+      showError('Error', "Failed to fetch breeding records.");
     } finally {
       setIsLoadingRecords(false);
     }
@@ -387,8 +368,8 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
                       Mating Date:{" "}
                       {doe.pregnancy_start_date
                         ? new Date(
-                            doe.pregnancy_start_date
-                          ).toLocaleDateString()
+                          doe.pregnancy_start_date
+                        ).toLocaleDateString()
                         : "N/A"}
                     </p>
                   </div>
@@ -404,10 +385,10 @@ export default function BreedingManager({ rabbits: initialRabbits, onRabbitsUpda
                     >
                       {doe.expected_birth_date
                         ? `${Math.ceil(
-                            (new Date(doe.expected_birth_date).getTime() -
-                              new Date().getTime()) /
-                              (1000 * 60 * 60 * 24)
-                          )} days`
+                          (new Date(doe.expected_birth_date).getTime() -
+                            new Date().getTime()) /
+                          (1000 * 60 * 60 * 24)
+                        )} days`
                         : "TBD"}
                     </Badge>
                   </div>
