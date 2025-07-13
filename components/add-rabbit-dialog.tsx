@@ -92,7 +92,6 @@ export default function AddRabbitDialog({ hutch_name, hutch_id, customHutches, o
     const finalHutchName = customHutches ? (selectedHutch?.name || "") : hutch_name;
 
     if (!finalHutchId) {
-      alert("Please select a hutch.");
       return;
     }
 
