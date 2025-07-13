@@ -47,7 +47,12 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
       return { rows: [], hutches: [] };
     }
   };
+  const getValidLevels = (capacity: number) => {
+    const possibleLevels = [2, 3, 4, 5, 6];
+    return possibleLevels.filter(level => capacity % level === 0);
+  };
 
+ 
   const saveToStorage = (farmId: string, data: { rows: Row[]; hutches: Hutch[] }) => {
     try {
       localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows));
@@ -107,14 +112,26 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
     return Array.from({ length: numLevels }, (_, i) => String.fromCharCode(65 + i));
   };
 
+  // const distributeHutches = (capacity: number, numLevels: number) => {
+  //   const levels = generateLevels(numLevels);
+  //   const baseHutchesPerLevel = Math.floor(capacity / numLevels);
+  //   const remainder = capacity % numLevels;
+  //   const distribution: { [key: string]: number } = {};
+
+  //   levels.forEach((level, index) => {
+  //     distribution[level] = baseHutchesPerLevel + (index < remainder ? 1 : 0);
+  //   });
+
+  //   return distribution;
+  // };
+
   const distributeHutches = (capacity: number, numLevels: number) => {
     const levels = generateLevels(numLevels);
-    const baseHutchesPerLevel = Math.floor(capacity / numLevels);
-    const remainder = capacity % numLevels;
+    const hutchesPerLevel = capacity / numLevels; // This will now always be an integer due to validation
     const distribution: { [key: string]: number } = {};
 
-    levels.forEach((level, index) => {
-      distribution[level] = baseHutchesPerLevel + (index < remainder ? 1 : 0);
+    levels.forEach(level => {
+      distribution[level] = hutchesPerLevel;
     });
 
     return distribution;
@@ -239,6 +256,18 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
     }
   };
 
+  useEffect(() => {
+    const capacity = parseInt(formData.capacity);
+    const levels = parseInt(formData.levels);
+    const validLevels = getValidLevels(capacity);
+    if (!validLevels.includes(levels)) {
+      setFormData(prev => ({
+        ...prev,
+        levels: validLevels.length > 0 ? validLevels[0].toString() : "3",
+      }));
+    }
+  }, [formData.capacity]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
@@ -250,47 +279,64 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium dark:text-gray-200">
+              <Label
+                htmlFor="name"
+                className="text-sm font-medium dark:text-gray-200"
+              >
                 Row Name
               </Label>
               <Input
                 id="name"
                 placeholder={`Suggested: ${getNextPlanetName()}`}
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={e =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 dark:text-gray-100"
               />
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Leave empty to use: {getNextPlanetName()}
               </p>
-              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-xs text-red-500">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="capacity" className="text-sm font-medium dark:text-gray-200">
+              <Label
+                htmlFor="capacity"
+                className="text-sm font-medium dark:text-gray-200"
+              >
                 Capacity
               </Label>
               <Select
                 value={formData.capacity}
-                onValueChange={(value) => setFormData({ ...formData, capacity: value })}
+                onValueChange={value =>
+                  setFormData({ ...formData, capacity: value })
+                }
               >
                 <SelectTrigger className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Select capacity" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[6, 8, 12, 15, 18, 24].map((cap) => (
+                  {[6, 8, 12, 15, 18, 24].map(cap => (
                     <SelectItem key={cap} value={cap.toString()}>
                       {cap} Hutches
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.capacity && <p className="text-xs text-red-500">{errors.capacity}</p>}
+              {errors.capacity && (
+                <p className="text-xs text-red-500">{errors.capacity}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="levels" className="text-sm font-medium dark:text-gray-200">
+              <Label
+                htmlFor="levels"
+                className="text-sm font-medium dark:text-gray-200"
+              >
                 Number of Levels
               </Label>
-              <Select
+              {/* <Select
                 value={formData.levels}
                 onValueChange={(value) => setFormData({ ...formData, levels: value })}
               >
@@ -304,34 +350,66 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
                     </SelectItem>
                   ))}
                 </SelectContent>
+              </Select> */}
+              <Select
+                value={formData.levels}
+                onValueChange={value =>
+                  setFormData({ ...formData, levels: value })
+                }
+              >
+                <SelectTrigger className="h-12 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectValue placeholder="Select number of levels" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getValidLevels(parseInt(formData.capacity)).map(num => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} Levels
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
-              {errors.levels && <p className="text-xs text-red-500">{errors.levels}</p>}
+              {errors.levels && (
+                <p className="text-xs text-red-500">{errors.levels}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium dark:text-gray-200">
+              <Label
+                htmlFor="description"
+                className="text-sm font-medium dark:text-gray-200"
+              >
                 Description
               </Label>
               <Textarea
                 id="description"
                 placeholder="Describe this row's purpose or location..."
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={e =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 className="bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100"
                 rows={3}
               />
             </div>
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-blue-200 dark:border-blue-800">
-              <h4 className="font-medium text-blue-800 dark:text-blue-400 mb-2">Row Configuration</h4>
+              <h4 className="font-medium text-blue-800 dark:text-blue-400 mb-2">
+                Row Configuration
+              </h4>
               <ul className="text-sm text-blue-700 dark:text-blue-500 space-y-1">
-                <li>· {formData.levels} Levels ({generateLevels(parseInt(formData.levels)).join(", ")})</li>
+                <li>
+                  · {formData.levels} Levels (
+                  {generateLevels(parseInt(formData.levels)).join(", ")})
+                </li>
                 <li>· {formData.capacity} Total Hutches</li>
                 <li>· Each hutch includes water bottle and feeder</li>
               </ul>
             </div>
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border-green-200 dark:border-green-800">
-              <h4 className="font-medium text-green-800 dark:text-green-400 mb-2">Current Status</h4>
+              <h4 className="font-medium text-green-800 dark:text-green-400 mb-2">
+                Current Status
+              </h4>
               <p className="text-sm text-green-700 dark:text-green-500">
-                Existing rows: {existingRows.length} | Total hutches: {existingHutches.length}
+                Existing rows: {existingRows.length} | Total hutches:{" "}
+                {existingHutches.length}
               </p>
               {/* <p className="text-sm text-green-700 dark:text-green-500 mt-1">
                 Next row will be: <strong>{getNextPlanetName()}</strong>
