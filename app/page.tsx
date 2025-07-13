@@ -16,6 +16,7 @@ import AnalyticsCharts from "@/components/analytics-charts";
 import CurrencySelector from "@/components/currency-selector";
 import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
+import Calendar from "@/components/calender";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
@@ -45,6 +46,72 @@ const DashboardContent: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const sampleEvents: any[] = [
+    {
+      id: "1",
+      date: "2024-12-15",
+      title: "Team Meeting",
+      description: "Weekly team sync meeting",
+      type: "event",
+      time: "10:00 AM",
+    },
+    {
+      id: "6",
+      date: "2024-12-15",
+      title: "Team Meeting",
+      description: "Weekly team sync meeting",
+      type: "event",
+      time: "10:00 AM",
+    },
+    {
+      id: "7",
+      date: "2024-12-15",
+      title: "Team Meeting",
+      description: "Weekly team sync meeting",
+      type: "event",
+      time: "10:00 AM",
+    },
+    {
+      id: "8",
+      date: "2024-12-15",
+      title: "Team Meeting",
+      description: "Weekly team sync meeting",
+      type: "event",
+      time: "10:00 AM",
+    },
+    {
+      id: "2",
+      date: "2024-12-20",
+      title: "Project Deadline",
+      description: "Submit final project deliverables",
+      type: "event",
+      time: "5:00 PM",
+    },
+    {
+      id: "3",
+      date: "2025-01-15",
+      title: "Doctor Appointment",
+      description: "Annual health checkup",
+      type: "notification",
+      time: "2:00 PM",
+    },
+    {
+      id: "4",
+      date: "2025-01-20",
+      title: "Conference Call",
+      description: "Client presentation meeting",
+      type: "notification",
+      time: "11:00 AM",
+    },
+    {
+      id: "5",
+      date: "2025-01-25",
+      title: "Birthday Party",
+      description: "Sarah's birthday celebration",
+      type: "notification",
+      time: "7:00 PM",
+    },
+  ];
 
   const tempFarmId = localStorage.getItem("rabbit_farm_id");
 
@@ -254,6 +321,7 @@ const DashboardContent: React.FC = () => {
         "earnings",
         "reports",
         "analytics",
+        "calender",
       ].indexOf(activeTab);
       const tabWidth = 70;
       tabsListRef.current.scrollTo({
@@ -361,7 +429,7 @@ const DashboardContent: React.FC = () => {
             <TabsList
               ref={tabsListRef}
               key={activeTab}
-              className="inline-flex justify-start w-full md:grid md:grid-cols-8 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
+              className="inline-flex justify-start w-full md:grid md:grid-cols-9 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
             >
               <TabsTrigger
                 value="overview"
@@ -410,6 +478,12 @@ const DashboardContent: React.FC = () => {
                 className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
               >
                 Analytics
+              </TabsTrigger>
+              <TabsTrigger
+                value="calender"
+                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
+              >
+                Calender
               </TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
@@ -502,18 +576,19 @@ const DashboardContent: React.FC = () => {
                     {alerts.map((alert, index) => (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
-                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                          : alert.variant === "secondary"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${
+                          alert.variant === "destructive"
+                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                            : alert.variant === "secondary"
                             ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
                             : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
-                          }`}
+                        }`}
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
                             {alert.type === "Medication Due" ||
-                              (alert.type === "Birth Expected" &&
-                                alert.variant === "destructive") ? (
+                            (alert.type === "Birth Expected" &&
+                              alert.variant === "destructive") ? (
                               <span className="text-red-800 dark:text-red-300">
                                 {alert.type}
                               </span>
@@ -531,8 +606,8 @@ const DashboardContent: React.FC = () => {
                           {alert.variant === "destructive"
                             ? "Overdue"
                             : alert.variant === "secondary"
-                              ? "Upcoming"
-                              : "Ready"}
+                            ? "Upcoming"
+                            : "Ready"}
                         </Badge>
                       </div>
                     ))}
@@ -581,6 +656,9 @@ const DashboardContent: React.FC = () => {
             </TabsContent>
             <TabsContent value="analytics">
               <AnalyticsCharts />
+            </TabsContent>
+            <TabsContent value="calender">
+              <Calendar events={sampleEvents} />
             </TabsContent>
           </Tabs>
         ) : (
