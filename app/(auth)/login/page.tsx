@@ -23,7 +23,6 @@ import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../../lib/auth-context";
 import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
-import { useSnackbar } from "notistack";
 import { useToast } from "@/lib/toast-provider";
 
 interface LoginFormData {
@@ -39,7 +38,6 @@ interface FormErrors {
 
 export default function LoginPage() {
   const { login, forgotPassword } = useAuth();
-  const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" });
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -175,9 +173,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await forgotPassword(forgotPasswordEmail);
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
       if (response.success) {
         setForgotPasswordEmail("");
         setIsForgotPasswordOpen(false);

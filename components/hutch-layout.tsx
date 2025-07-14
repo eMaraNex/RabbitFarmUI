@@ -15,7 +15,6 @@ import type { Hutch, HutchLayoutProps, Rabbit as RabbitType, Row } from "@/types
 import * as utils from "@/lib/utils";
 import axios from "axios";
 import { useAuth } from "@/lib/auth-context";
-import { useSnackbar } from "notistack";
 import { useToast } from "@/lib/toast-provider";
 
 export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect, onRowAdded, handleAddRow, }: HutchLayoutProps) {
@@ -32,7 +31,6 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const [newHutchData, setNewHutchData] = useState({ row_name: "", row_id: "", level: "", position: "1" });
   const [expandRowData, setExpandRowData] = useState({ row_name: "", row_id: "", additionalCapacity: "" });
   const { user } = useAuth();
-  const { enqueueSnackbar } = useSnackbar();
   const [selectedHutchDetails, setSelectedHutchDetails] = useState<Hutch | null>(null);
   const { showSuccess, showError, showWarn } = useToast();
 
@@ -158,10 +156,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       );
 
       if (response.data.success) {
-        enqueueSnackbar(
-          `Row ${expandRowData.row_name} capacity expanded by ${additionalCapacity} hutches!`,
-          { variant: "success" }
-        );
+        showSuccess('Success', `Row ${expandRowData.row_name} capacity expanded by ${additionalCapacity} hutches!`);
         setExpandCapacityOpen(false);
         setExpandRowData({ row_name: "", row_id: "", additionalCapacity: "" });
         if (onRowAdded) onRowAdded();
@@ -219,7 +214,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       await axios.delete(`${utils.apiUrl}/hutches/${user?.farm_id}/${hutch.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      enqueueSnackbar(`Hutch ${hutch.name} removed successfully!`, { variant: "success" });
+      showSuccess('Success', `Hutch ${hutch.name} removed successfully!`);
       setRemoveHutchOpen(false);
       setHutchToRemove(null);
       setSelectedHutch(null);
@@ -252,7 +247,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       showSuccess('Success', `Rabbit ${newRabbit.rabbit_id} has been added successfully!`)
 
     },
-    [enqueueSnackbar, onRowAdded]
+    [onRowAdded]
   );
 
   return (

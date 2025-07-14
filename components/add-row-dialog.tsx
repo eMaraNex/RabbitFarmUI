@@ -12,14 +12,12 @@ import axios from "axios";
 import * as utils from "@/lib/utils";
 import FarmCreationModal from "@/components/farm-creation-modal";
 import type { Row, Hutch } from "@/types";
-import { useSnackbar } from "notistack";
 import { AddRowDialogProps } from "@/types";
 import { planetNames } from "@/lib/constants";
 import { useToast } from "@/lib/toast-provider";
 
 export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialogProps) {
   const { user } = useAuth();
-  const { enqueueSnackbar } = useSnackbar();
   const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",

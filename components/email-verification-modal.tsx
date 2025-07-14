@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
-import { useSnackbar } from "notistack";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useToast } from "@/lib/toast-provider";
@@ -34,7 +33,6 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     userEmail,
     onVerificationSent
 }) => {
-    const { enqueueSnackbar } = useSnackbar();
     const [email, setEmail] = useState(userEmail);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<FormErrors>({});
@@ -84,9 +82,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             );
 
             if (response.data.success) {
-                enqueueSnackbar(response.data.message || "Verification email sent successfully!", {
-                    variant: "success",
-                });
+                showSuccess('Success', response.data.message);
                 onClose();
                 onVerificationSent?.();
             } else {

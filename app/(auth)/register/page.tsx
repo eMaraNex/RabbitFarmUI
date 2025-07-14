@@ -24,7 +24,6 @@ import { useAuth } from "../../../lib/auth-context";
 import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSnackbar } from "notistack";
 import { useToast } from "@/lib/toast-provider";
 
 interface FormData {
@@ -45,7 +44,6 @@ interface FormErrors {
 
 export default function RegisterPage() {
   const { register, forgotPassword } = useAuth();
-  const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     email: "",
