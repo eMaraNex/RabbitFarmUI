@@ -15,6 +15,7 @@ import { Mail, CheckCircle, AlertCircle } from "lucide-react";
 import { useSnackbar } from "notistack";
 import axios from "axios";
 import * as utils from "@/lib/utils";
+import { useToast } from "@/lib/toast-provider";
 
 interface EmailVerificationModalProps {
     isOpen: boolean;
@@ -37,6 +38,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     const [email, setEmail] = useState(userEmail);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<FormErrors>({});
+    const { showSuccess, showError, showWarn } = useToast();
 
     const validateEmail = (value: string): string | null => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -65,7 +67,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         const emailError = validateEmail(email);
         if (emailError) {
             setErrors({ email: emailError });
-            enqueueSnackbar("Please enter a valid email address", { variant: "error" });
+            showError('Error', "Please enter a valid email address")
             return;
         }
 
@@ -88,14 +90,11 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
                 onClose();
                 onVerificationSent?.();
             } else {
-                enqueueSnackbar(response.data.message || "Failed to send verification email", {
-                    variant: "error",
-                });
+                showError('Error', response.data.message)
             }
         } catch (error: any) {
-            console.error("Resend verification error:", error);
             const errorMessage = error.response?.data?.message || "Failed to send verification email";
-            enqueueSnackbar(errorMessage, { variant: "error" });
+            showError('Error', errorMessage)
         } finally {
             setIsLoading(false);
         }

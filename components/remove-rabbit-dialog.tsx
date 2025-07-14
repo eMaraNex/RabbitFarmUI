@@ -12,14 +12,13 @@ import axios from "axios";
 import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useCurrency } from "@/lib/currency-context";
-import { useSnackbar } from "notistack";
 import type { Rabbit as RabbitType, EarningsRecord, RemoveRabbitDialogProps } from "@/types";
 import { reasons, saleTypes } from "@/lib/constants";
+import { useToast } from "@/lib/toast-provider";
 
 export default function RemoveRabbitDialog({ hutch_id, hutch_name, rabbit, onClose, onRemovalSuccess }: RemoveRabbitDialogProps) {
   const { user } = useAuth();
   const { currency, getCurrencySymbol, getCurrencyRates } = useCurrency();
-  const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     reason: "",
     notes: "",
@@ -36,12 +35,13 @@ export default function RemoveRabbitDialog({ hutch_id, hutch_name, rabbit, onClo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const currencyRates = getCurrencyRates();
   const availableCurrencies = Object.keys(currencyRates) as Array<keyof typeof currencyRates>;
+  const { showError, showWarn, showSuccess } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!rabbit || !user?.farm_id) {
-      enqueueSnackbar("Missing rabbit or farm ID. Please try again.", { variant: "error" });
+      showError('Error', "Missing rabbit or farm ID. Please try again.")
       return;
     }
 
@@ -51,7 +51,7 @@ export default function RemoveRabbitDialog({ hutch_id, hutch_name, rabbit, onClo
     try {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) {
-        throw new Error("No authentication token found");
+        showError('Error', "No authentication token found")
       }
 
       // Create removal record - update rabbit removals table
@@ -117,17 +117,11 @@ export default function RemoveRabbitDialog({ hutch_id, hutch_name, rabbit, onClo
         h.id === hutch_id ? { ...h, isOccupied: false } : h
       );
       localStorage.setItem(`rabbit_farm_hutches_${user.farm_id}`, JSON.stringify(updatedHutches));
-
-      // Show success snackbar
-      enqueueSnackbar(`Rabbit ${rabbit.rabbit_id} removed successfully!`, { variant: "success" });
-
-      // Notify parent component of successful removal with rabbit ID
+      showSuccess('Success', `Rabbit ${rabbit.rabbit_id} removed successfully!`)
       onRemovalSuccess?.(rabbit.rabbit_id || "");
-
       onClose();
     } catch (error: any) {
-      console.error("Error removing rabbit:", error);
-      enqueueSnackbar(error.response?.data?.message || "Error removing rabbit. Please try again.", { variant: "error" });
+      showError('Error', error.response?.data?.message)
     } finally {
       setIsSubmitting(false);
     }

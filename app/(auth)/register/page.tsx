@@ -25,6 +25,7 @@ import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
+import { useToast } from "@/lib/toast-provider";
 
 interface FormData {
   email: string;
@@ -59,6 +60,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const { showError, showSuccess } = useToast();
 
   // Real-time validation function
   const validateField = (field: keyof FormData, value: string): string | null => {
@@ -137,7 +139,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!validateForm()) {
-      enqueueSnackbar("Please fix the errors in the form", { variant: "error" });
+      showError('Error', "Please fix the errors in the form")
       return;
     }
 
@@ -149,14 +151,12 @@ export default function RegisterPage() {
         formData.name,
         formData.phone
       );
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
       if (response.success) {
         setTimeout(() => router.push("/login"), 2000);
       }
     } catch (error) {
-      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+      showError('Error', error?.toString())
     } finally {
       setIsLoading(false);
     }
@@ -171,14 +171,12 @@ export default function RegisterPage() {
         "Admin User",
         ""
       );
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
       if (response.success) {
         setTimeout(() => router.push("/login"), 2000);
       }
     } catch (error) {
-      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+      showError('Error', error?.toString())
     } finally {
       setIsLoading(false);
     }
@@ -189,15 +187,13 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const response = await forgotPassword(forgotPasswordEmail);
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
       if (response.success) {
         setForgotPasswordEmail("");
         setIsForgotPasswordOpen(false);
       }
     } catch (error) {
-      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+      showError('Error', error?.toString())
     } finally {
       setIsLoading(false);
     }

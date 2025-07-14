@@ -15,6 +15,7 @@ import type { Row, Hutch } from "@/types";
 import { useSnackbar } from "notistack";
 import { AddRowDialogProps } from "@/types";
 import { planetNames } from "@/lib/constants";
+import { useToast } from "@/lib/toast-provider";
 
 export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialogProps) {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
   const [existingHutches, setExistingHutches] = useState<Hutch[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showSuccess, showError, showWarn } = useToast();
 
   const loadFromStorage = (farmId: string) => {
     try {
@@ -40,8 +42,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
       };
     } catch (error) {
-      console.error("Error loading from storage:", error);
-      enqueueSnackbar("Failed to load cached data.", { variant: "error" });
+      showError('Error', 'Failed to load cached data.');
       return { rows: [], hutches: [] };
     }
   };
@@ -56,8 +57,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
       localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows));
       localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches));
     } catch (error) {
-      console.error("Error saving to storage:", error);
-      enqueueSnackbar("Failed to save data to storage.", { variant: "error" });
+      showError('Error', "Failed to save data to storage.");
     }
   };
 
@@ -89,8 +89,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
         setExistingHutches(newHutches);
         saveToStorage(user.farm_id ?? '', { rows: newRows, hutches: newHutches });
       } catch (error) {
-        console.error("Error fetching data:", error);
-        enqueueSnackbar("Failed to fetch rows or hutches. Using cached data.", { variant: "warning" });
+        showError('Error', "Failed to fetch rows or hutches. Using cached data.");
         if (cachedData.rows.length || cachedData.hutches.length) {
           setExistingRows(cachedData.rows);
           setExistingHutches(cachedData.hutches);
@@ -163,7 +162,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
     }
 
     if (!user?.farm_id) {
-      enqueueSnackbar("Farm ID is missing. Please log in again.", { variant: "error" });
+      showWarn('Error', "Farm ID is missing. Please log in again.");
       return;
     }
 
@@ -177,7 +176,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
       const numLevels = parseInt(formData.levels);
 
       if (existingRows.some((row) => row.name === newRowName)) {
-        enqueueSnackbar(`Row "${newRowName}" already exists. Please choose a different name.`, { variant: "error" });
+        showWarn('Error', `Row "${newRowName}" already exists. Please choose a different name.`);
         setIsSubmitting(false);
         return;
       }
@@ -199,7 +198,7 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to create row");
+        showError('Error', response.data.message || "Failed to create row")
       }
 
       const newHutches: Hutch[] = [];
@@ -241,19 +240,14 @@ export default function AddRowDialog({ open, onClose, onRowAdded, }: AddRowDialo
 
       setFormData({ name: "", description: "", capacity: "6", levels: "3" });
       onClose();
-
-      enqueueSnackbar(`Successfully created row "${newRowName}" with ${capacity} hutches across ${numLevels} levels!`, {
-        variant: "success",
-      });
-
+      showSuccess('Success', `Successfully created row "${newRowName}" with ${capacity} hutches across ${numLevels} levels!`)
       if (onRowAdded) {
         onRowAdded();
       }
     } catch (error: any) {
-      console.error("Error creating row:", error);
       const errorMessage = error.response?.data?.message || "Error creating row. Please try again.";
+      showError('Error', errorMessage)
       setErrors({ submit: errorMessage });
-      enqueueSnackbar(errorMessage, { variant: "error" });
     } finally {
       setIsSubmitting(false);
     }

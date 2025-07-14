@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import type { EditRabbitDialogProps, Rabbit as RabbitType } from "@/types";
 import { Rabbit } from "lucide-react";
 import { breeds, colors } from "@/lib/constants";
+import { useToast } from "@/lib/toast-provider";
 
 
 export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabbitDialogProps) {
@@ -29,6 +30,7 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
         expected_birth_date: rabbit.expected_birth_date ? new Date(rabbit.expected_birth_date).toISOString().split("T")[0] : "",
     });
     const [error, setError] = useState<string | null>(null);
+    const { showSuccess, showError, showWarn } = useToast();
 
     // Check if the rabbit is pregnant and has been served
     const isPregnantAndServed = rabbit.is_pregnant && (rabbit.last_mating_date || rabbit.pregnancy_start_date);
@@ -36,7 +38,7 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.farm_id) {
-            setError("Missing farm ID. Please log in again.");
+            showError('Error', "Missing farm ID. Please log in again.");
             return;
         }
 
@@ -72,11 +74,10 @@ export default function EditRabbitDialog({ rabbit, onClose, onUpdate }: EditRabb
                 localStorage.setItem(`rabbit_farm_rabbits_${user.farm_id}`, JSON.stringify(updatedRabbits));
                 onClose();
             } else {
-                throw new Error("Failed to update rabbit data");
+                showError('Error', "Failed to update rabbit data");
             }
         } catch (err: any) {
-            console.error("Error updating rabbit:", err);
-            setError(err.response?.data?.message || "Failed to update rabbit data");
+            showError('Error', err.response?.data?.message);
         }
     };
 

@@ -17,6 +17,7 @@ import axios from "axios"
 import * as utils from "@/lib/utils"
 import { AddRabbitDialogProps, Hutch, Rabbit, Row } from "@/types"
 import { breeds, colors } from "@/lib/constants"
+import { useToast } from "@/lib/toast-provider"
 
 
 export default function AddRabbitDialog({ hutch_name, hutch_id, customHutches, onClose, onRabbitAdded }: AddRabbitDialogProps) {
@@ -42,6 +43,7 @@ export default function AddRabbitDialog({ hutch_name, hutch_id, customHutches, o
   const [hutchOpen, setHutchOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [selectedHutch, setSelectedHutch] = useState<Hutch | null>(null);
+  const { showSuccess, showError, showWarn } = useToast();
 
   useEffect(() => {
     if (customHutches && user?.farm_id) {
@@ -77,14 +79,14 @@ export default function AddRabbitDialog({ hutch_name, hutch_id, customHutches, o
     try {
       localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(rabbits));
     } catch (error) {
-      console.error("Error saving to storage:", error);
+      showError('Error', error?.toString())
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.farm_id) {
-      alert("Farm ID is missing. Please log in again.");
+      showWarn('Error', "Farm ID is missing. Please log in again.")
       return;
     }
 
@@ -129,11 +131,10 @@ export default function AddRabbitDialog({ hutch_name, hutch_id, customHutches, o
         onRabbitAdded(addedRabbit);
         onClose();
       } else {
-        throw new Error("Failed to create rabbit");
+        showError('Error', "Failed to create rabbit")
       }
     } catch (error: any) {
-      console.error("Error creating rabbit:", error);
-      alert(error.response?.data?.message || "Error creating rabbit. Please try again.");
+      showError('Error', `${error.response?.data?.message}`)
     }
   };
 

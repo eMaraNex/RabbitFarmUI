@@ -16,6 +16,7 @@ import * as utils from "@/lib/utils";
 import axios from "axios";
 import { useAuth } from "@/lib/auth-context";
 import { useSnackbar } from "notistack";
+import { useToast } from "@/lib/toast-provider";
 
 export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, onRabbitSelect, onRowAdded, handleAddRow, }: HutchLayoutProps) {
   const [selectedHutch, setSelectedHutch] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const [selectedHutchDetails, setSelectedHutchDetails] = useState<Hutch | null>(null);
+  const { showSuccess, showError, showWarn } = useToast();
 
   const getRabbitsInHutch = useCallback((hutch_name: string) => {
     return rabbits.filter((rabbit) => rabbit.hutch_name === hutch_name) ?? [];
@@ -58,7 +60,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       const cachedUser = JSON.parse(localStorage.getItem("rabbit_farm_user") || "{}");
       const farmId = user?.farm_id ?? cachedUser?.farm_id;
       if (!farmId || !token) {
-        enqueueSnackbar("Authentication required.", { variant: "error" });
+        showError('Error', 'Authentication required.')
         return [];
       }
 
@@ -70,7 +72,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       localStorage.setItem("rabbit_farm_rabbit_removals", JSON.stringify(filteredRecords));
       return filteredRecords;
     } catch (error) {
-      enqueueSnackbar("Error fetching removal history. Please try again later.", { variant: "error" });
+      showError('Error', 'Error fetching removal history. Please try again later.')
       return [];
     }
   }, [user]);
@@ -109,15 +111,12 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const handleAddHutch = (row_name: string) => {
     const row = rows.find((r) => r.name === row_name);
     if (!row) {
-      enqueueSnackbar("Row not found.", { variant: "error" });
+      showError('Error', "Row not found.")
       return;
     }
     const rowHutches = getRowHutches(row_name);
     if (rowHutches.length >= row.capacity) {
-      enqueueSnackbar(
-        `Row ${row_name} is at full capacity (${row.capacity} hutches). Please expand the capacity first to add more hutches.`,
-        { variant: "warning" }
-      );
+      showWarn('Error', `Row ${row_name} is at full capacity (${row.capacity} hutches). Please expand the capacity first to add more hutches.`)
       return;
     }
     setNewHutchData({
@@ -136,12 +135,12 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
 
       const additionalCapacity = parseInt(expandRowData.additionalCapacity);
       if (isNaN(additionalCapacity) || additionalCapacity <= 0) {
-        enqueueSnackbar("Please enter a valid positive number for additional capacity.", { variant: "error" });
+        showWarn('Error', "Please enter a valid positive number for additional capacity.")
         return;
       }
 
       if (additionalCapacity > 20) {
-        enqueueSnackbar("Maximum additional capacity is 20 hutches per expansion.", { variant: "error" });
+        showWarn('Error', "Maximum additional capacity is 20 hutches per expansion.")
         return;
       }
 
@@ -168,10 +167,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
         if (onRowAdded) onRowAdded();
       }
     } catch (error: any) {
-      enqueueSnackbar(
-        error.response?.data?.message || "Error expanding row capacity.",
-        { variant: "error" }
-      );
+      showError('Error', error.response?.data?.message);
     }
   };
 
@@ -181,7 +177,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       if (!row) throw new Error("Row not found");
       const rowHutches = getRowHutches(newHutchData.row_name);
       if (rowHutches.length >= row.capacity) {
-        enqueueSnackbar(`Cannot add more hutches to ${newHutchData.row_name}. Row capacity reached.`, { variant: "error" });
+        showWarn('Error', `Cannot add more hutches to ${newHutchData.row_name}. Row capacity reached.`);
         return;
       }
       const hutchName = `${newHutchData.row_name}-${newHutchData.level}${newHutchData.position}`;
@@ -202,11 +198,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       await axios.post(`${utils.apiUrl}/hutches/${user?.farm_id}`, newHutch, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      enqueueSnackbar(`Hutch ${hutchName} added successfully!`, { variant: "success" });
+      showSuccess('Success', `Hutch ${hutchName} added successfully!`)
       setAddHutchOpen(false);
       if (onRowAdded) onRowAdded();
     } catch (error: any) {
-      enqueueSnackbar(error.response?.data?.message || "Error adding hutch.", { variant: "error" });
+      showError('Error', error.response?.data?.message)
     }
   };
 
@@ -215,7 +211,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       const hutch = getHutch(hutchToRemove!);
       if (!hutch) throw new Error("Hutch not found");
       if (getRabbitsInHutch(hutch.name).length > 0) {
-        enqueueSnackbar("Cannot remove hutch with rabbits. Please remove rabbits first.", { variant: "error" });
+        showWarn('Warn', "Cannot remove hutch with rabbits. Please remove rabbits first.")
         return;
       }
       const token = localStorage.getItem("rabbit_farm_token");
@@ -229,7 +225,7 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
       setSelectedHutch(null);
       if (onRowAdded) onRowAdded();
     } catch (error: any) {
-      enqueueSnackbar(error.response?.data?.message || "Error removing hutch.", { variant: "error" });
+      showError('Error', error.response?.data?.message)
     }
   };
 
@@ -250,10 +246,11 @@ export default function HutchLayout({ hutches, rabbits: initialRabbits, rows, on
   const handleRabbitAdded = useCallback(
     (newRabbit: RabbitType) => {
       setRabbits((prev) => [...prev, newRabbit]);
-      enqueueSnackbar(`Rabbit ${newRabbit.rabbit_id} has been added successfully!`, { variant: "success" });
       setShowHistory(false);
       setAddRabbitOpen(false);
       if (onRowAdded) onRowAdded();
+      showSuccess('Success', `Rabbit ${newRabbit.rabbit_id} has been added successfully!`)
+
     },
     [enqueueSnackbar, onRowAdded]
   );

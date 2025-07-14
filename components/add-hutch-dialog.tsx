@@ -11,6 +11,7 @@ import { Plus, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import axios from "axios"
 import * as utils from "@/lib/utils"
+import { useToast } from "@/lib/toast-provider"
 
 export default function AddHutchDialog() {
   const { user } = useAuth()
@@ -25,6 +26,7 @@ export default function AddHutchDialog() {
   })
   const [rows, setRows] = useState<any[]>([])
   const [hutches, setHutches] = useState<any[]>([])
+  const { showError, showWarn } = useToast();
 
   const loadFromStorage = (farmId: string) => {
     try {
@@ -35,7 +37,7 @@ export default function AddHutchDialog() {
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
       }
     } catch (error) {
-      console.error("Error loading from storage:", error)
+      showError('Error', error?.toString())
       return { rows: [], hutches: [] }
     }
   }
@@ -45,7 +47,7 @@ export default function AddHutchDialog() {
       localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows))
       localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches))
     } catch (error) {
-      console.error("Error saving to storage:", error)
+      showError('Error', error?.toString())
     }
   }
 
@@ -71,7 +73,7 @@ export default function AddHutchDialog() {
           setHutches(newHutches)
           saveToStorage(user.farm_id ?? '', { rows: newRows, hutches: newHutches })
         } catch (error) {
-          console.error("Error fetching data:", error)
+          showError('Error', error?.toString())
           if (cachedData.rows.length || cachedData.hutches.length) {
             setRows(cachedData.rows)
             setHutches(cachedData.hutches)
@@ -106,13 +108,13 @@ export default function AddHutchDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user?.farm_id) {
-      alert("Farm ID is missing. Please log in again.")
+      showWarn('Error', "Farm ID is missing. Please log in again.")
       return
     }
 
     const currentHutchCount = getRowHutchCount(formData.rowName)
     if (currentHutchCount >= 18) {
-      alert("This row is full! Please add a new row first.")
+      showWarn('Error', "This row is full! Please add a new row first.")
       return
     }
 
@@ -148,11 +150,10 @@ export default function AddHutchDialog() {
           features: "",
         })
       } else {
-        throw new Error("Failed to create hutch")
+        showError('Error', "Failed to create hutch")
       }
     } catch (error: any) {
-      console.error("Error creating hutch:", error)
-      alert(error.response?.data?.message || "Error creating hutch. Please try again.")
+      showError('Error', `${error.response?.data?.message}`)
     }
   }
 
