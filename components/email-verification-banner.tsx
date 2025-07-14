@@ -5,46 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import EmailVerificationModal from "@/components/email-verification-modal";
 import { useAuth } from "@/lib/auth-context";
-import axios from "axios";
-import * as utils from "@/lib/utils";
 
 const EmailVerificationBanner: React.FC = () => {
-    const { user, refreshUser } = useAuth();
+    const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [isDismissed, setIsDismissed] = useState(false);
     const [dismissedAt, setDismissedAt] = useState<number | null>(null);
     const [verificationSent, setVerificationSent] = useState(false);
-    const [isCheckingVerification, setIsCheckingVerification] = useState(false);
-
-    useEffect(() => {
-        const checkVerificationStatus = async () => {
-            if (!user || user.email_verified || isCheckingVerification) return;
-            setIsCheckingVerification(true);
-            try {
-                const token = localStorage.getItem("rabbit_farm_token");
-                if (!token) return;
-                const response = await axios.get(`${utils.apiUrl}/auth/user`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (response.data.success && response.data.data.email_verified) {
-                    if (refreshUser) {
-                        await refreshUser();
-                    }
-                }
-            } catch (error) {
-                console.error("Error checking verification status:", error);
-            } finally {
-                setIsCheckingVerification(false);
-            }
-        };
-        checkVerificationStatus();
-        const handleFocus = () => {
-            checkVerificationStatus();
-        };
-        window.addEventListener('focus', handleFocus);
-        return () => window.removeEventListener('focus', handleFocus);
-    }, [user, isCheckingVerification, refreshUser]);
 
     useEffect(() => {
         if (dismissedAt) {
@@ -57,32 +24,6 @@ const EmailVerificationBanner: React.FC = () => {
         }
     }, [dismissedAt]);
 
-    useEffect(() => {
-        if (!user || user.email_verified || isDismissed || verificationSent) return;
-        const interval = setInterval(async () => {
-            if (isCheckingVerification) return;
-            setIsCheckingVerification(true);
-            try {
-                const token = localStorage.getItem("rabbit_farm_token");
-                if (!token) return;
-                const response = await axios.get(`${utils.apiUrl}/auth/user`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (response.data.success && response.data.data.email_verified) {
-                    if (refreshUser) {
-                        await refreshUser();
-                    }
-                }
-            } catch (error) {
-                console.error("Error checking verification status:", error);
-            } finally {
-                setIsCheckingVerification(false);
-            }
-        }, 30000);
-
-        return () => clearInterval(interval);
-    }, [user, isDismissed, verificationSent, isCheckingVerification, refreshUser]);
-
     const handleDismiss = () => {
         setIsDismissed(true);
         setDismissedAt(Date.now());
@@ -90,30 +31,7 @@ const EmailVerificationBanner: React.FC = () => {
 
     const handleVerificationSent = () => {
         setVerificationSent(true);
-        const quickCheck = setInterval(async () => {
-            if (isCheckingVerification) return;
-            setIsCheckingVerification(true);
-            try {
-                const token = localStorage.getItem("rabbit_farm_token");
-                if (!token) return;
-                const response = await axios.get(`${utils.apiUrl}/auth/user`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (response.data.success && response.data.data.email_verified) {
-                    if (refreshUser) {
-                        await refreshUser();
-                    }
-                    clearInterval(quickCheck);
-                }
-            } catch (error) {
-                console.error("Error checking verification status:", error);
-            } finally {
-                setIsCheckingVerification(false);
-            }
-        }, 5000);
-        setTimeout(() => clearInterval(quickCheck), 5 * 60 * 1000);
     };
-
     if (!user || user.email_verified || isDismissed || verificationSent) return null;
 
     return (
@@ -143,9 +61,8 @@ const EmailVerificationBanner: React.FC = () => {
                         size="sm"
                         onClick={() => setIsOpen(true)}
                         className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
-                        disabled={isCheckingVerification}
                     >
-                        {isCheckingVerification ? "Checking..." : "Verify Email"}
+                        Verify Email
                     </Button>
                 </div>
             </div>

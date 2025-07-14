@@ -25,5 +25,4 @@ export interface AuthContextType {
   forgotPassword: (email: string) => Promise<AuthResponse>;
   resetPassword: (params: { token: string; currentPassword: string; newPassword: string }) => Promise<AuthResponse>;
   isLoading: boolean;
-  refreshUser: () => Promise<void>;
 }
