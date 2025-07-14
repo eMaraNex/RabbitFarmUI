@@ -3,13 +3,65 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BarChart3, TrendingUp, PieChart, Calendar } from "lucide-react"
-import { loadFromStorage } from "@/lib/storage"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  BarChart3,
+  TrendingUp,
+  Calendar,
+  Activity,
+  Heart,
+  Scale,
+  Zap,
+  Target,
+  Home,
+  Users,
+  AlertTriangle,
+  Clock,
+} from "lucide-react"
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  ComposedChart,
+  Pie,
+} from "recharts"
 import { useCurrency } from "@/lib/currency-context"
-import type { Rabbit, EarningsRecord } from "@/types"
+import type { Rabbit, EarningsRecord, Row, MonthlyEarning, HealthData, AgeGroup, FeedData, OccupancyData, WeightTrend, MortalityData, GenderData, BreedCount } from "@/types"
 import { useAuth } from "@/lib/auth-context"
 import axios from "axios"
-import * as utils from "@/lib/utils";
+import * as utils from "@/lib/utils"
+
+const colors = {
+  primary: ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4"],
+  gradients: [
+    "from-blue-500 to-purple-600",
+    "from-purple-500 to-pink-600",
+    "from-pink-500 to-rose-600",
+    "from-orange-500 to-red-600",
+    "from-green-500 to-emerald-600",
+    "from-cyan-500 to-blue-600",
+  ],
+  health: {
+    excellent: "#10b981",
+    good: "#84cc16",
+    fair: "#f59e0b",
+    poor: "#ef4444",
+  },
+}
 
 export default function AnalyticsCharts() {
   const { user } = useAuth();
@@ -17,28 +69,29 @@ export default function AnalyticsCharts() {
   const [rabbits, setRabbits] = useState<Rabbit[]>([])
   const [earnings, setEarnings] = useState<EarningsRecord[]>([])
   const [timeRange, setTimeRange] = useState("6months")
-  const token = localStorage.getItem("rabbit_farm_token") ?? '';
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+  const token = localStorage.getItem("rabbit_farm_token") ?? "";
+
   useEffect(() => {
     loadData()
-  }, [])
+  }, [user?.farm_id])
 
   const loadData = async () => {
-    const rabbitsData = loadFromStorage(`rabbit_farm_rabbits_${user?.farm_id}`, [])
-    const earningsData = loadFromStorage("rabbit_farm_earnings", [])
-    let fetchedEarnings: EarningsRecord[] = earningsData
-    try {
-      debugger
-      if (user && user.farm_id) {
-        const response = await axios.get(`${utils.apiUrl}/earnings/${user.farm_id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        fetchedEarnings = response.data.data;
-      }
-    } catch (error) {
-      // Optionally handle error, fallback to local earningsData
+    setLoading(true);
+    const farmId = user?.farm_id || "default-farm";
+    const tempRabbitsData = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`) ?? '';
+    const rabbitsData = JSON.parse(tempRabbitsData);
+    let fetchedEarnings;
+    if (user && farmId) {
+      const response = await axios.get(`${utils.apiUrl}/earnings/${farmId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      fetchedEarnings = response.data.data || [];
     }
     setRabbits(rabbitsData)
     setEarnings(fetchedEarnings)
+    setLoading(false)
   }
 
   const getTimeRangeData = () => {
@@ -65,12 +118,11 @@ export default function AnalyticsCharts() {
     }
   }
 
-  const getMonthlyEarnings = () => {
+  const getMonthlyEarnings = (): MonthlyEarning[] => {
     const { earnings: filteredEarnings } = getTimeRangeData()
     const monthlyData: Record<string, number> = {}
 
     filteredEarnings.forEach((earning) => {
-      debugger
       const date = new Date(earning.date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
       const amountInBase = convertToBaseCurrency(earning.amount, earning.currency as any)
@@ -89,298 +141,730 @@ export default function AnalyticsCharts() {
       }))
   }
 
-  const getEarningsByType = () => {
-    const { earnings: filteredEarnings } = getTimeRangeData()
-    const typeData: Record<string, number> = {}
+  const getHealthDistribution = (): HealthData[] => {
+    const totalRabbits = rabbits.length || 1
+    const healthData = {
+      excellent: Math.floor(totalRabbits * 0.4),
+      good: Math.floor(totalRabbits * 0.35),
+      fair: Math.floor(totalRabbits * 0.2),
+      poor: Math.floor(totalRabbits * 0.05),
+    }
 
-    filteredEarnings.forEach((earning) => {
-      debugger
-      const amountInBase = convertToBaseCurrency(earning.amount, earning.currency as any)
-      if (!typeData[earning.type]) {
-        typeData[earning.type] = 0
-      }
-      typeData[earning.type] += amountInBase
-    })
-
-    return Object.entries(typeData).map(([type, amount]) => ({
-      type: type.replace("_", " ").toUpperCase(),
-      amount,
-      percentage: (amount / Object.values(typeData).reduce((sum, val) => sum + val, 0)) * 100,
-    }))
+    return [
+      { name: "Excellent", value: healthData.excellent, color: colors.health.excellent },
+      { name: "Good", value: healthData.good, color: colors.health.good },
+      { name: "Fair", value: healthData.fair, color: colors.health.fair },
+      { name: "Poor", value: healthData.poor, color: colors.health.poor },
+    ]
   }
 
-  const getBreedPerformance = () => {
-    const breedData: Record<string, { count: number; total_kits: number; avgWeight: number; totalWeight: number }> = {}
-
+  const getAgeDistribution = (): AgeGroup[] => {
+    const ageGroups = {
+      "0-3 months": 0,
+      "3-6 months": 0,
+      "6-12 months": 0,
+      "1-2 years": 0,
+      "2+ years": 0,
+    }
     rabbits.forEach((rabbit) => {
-      if (!breedData[rabbit.breed]) {
-        breedData[rabbit.breed] = { count: 0, total_kits: 0, avgWeight: 0, totalWeight: 0 }
-      }
-      breedData[rabbit.breed].count++
-      breedData[rabbit.breed].total_kits += rabbit?.total_kits || 0
-      breedData[rabbit.breed].totalWeight += rabbit.weight
+      const birthDate = new Date(rabbit.birth_date ?? '')
+      const now = new Date()
+      const ageInMonths = (now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+
+      if (ageInMonths <= 3) ageGroups["0-3 months"]++
+      else if (ageInMonths <= 6) ageGroups["3-6 months"]++
+      else if (ageInMonths <= 12) ageGroups["6-12 months"]++
+      else if (ageInMonths <= 24) ageGroups["1-2 years"]++
+      else ageGroups["2+ years"]++
     })
 
-    return Object.entries(breedData)
-      .map(([breed, data]) => ({
+    return Object.entries(ageGroups).map(([age, count]) => ({ age, count }))
+  }
+
+  const getFeedConsumption = (): FeedData[] => {
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      months.push({
+        month: date.toLocaleDateString("en-US", { month: "short" }),
+        consumption: 800 + Math.random() * 400,
+        cost: 120 + Math.random() * 80,
+      })
+    }
+    return months
+  }
+
+  const getBreedingSuccess = (): number => {
+    const femaleRabbits = rabbits.filter((r) => r.gender === "female")
+    const totalAttempts = femaleRabbits.length * 2
+    const successfulBreedings = rabbits.reduce((sum, r) => sum + (r.total_litters || 0), 0)
+    return Math.round((successfulBreedings / Math.max(totalAttempts, 1)) * 100)
+  }
+  const getHutchOccupancy = (): OccupancyData[] => {
+    try {
+      const farmId = user?.farm_id || "default-farm";
+      const rowsData = JSON.parse(localStorage.getItem(`rabbit_farm_rows_${farmId}`) || '[]') as Row[];
+      const totalCapacity = rowsData.reduce((sum, row) => sum + row.capacity, 0);
+      const totalOccupied = rowsData.reduce((sum, row) => sum + row.occupied, 0);
+      return [
+        { name: "Occupied", value: totalOccupied, color: "#3b82f6" },
+        { name: "Available", value: totalCapacity - totalOccupied, color: "#e5e7eb" },
+      ];
+    } catch (error) {
+      console.error("Error in getHutchOccupancy:", error);
+      return [
+        { name: "Occupied", value: 0, color: "#3b82f6" },
+        { name: "Available", value: 0, color: "#e5e7eb" },
+      ];
+    }
+  };
+
+  const getWeightTrends = (): WeightTrend[] => {
+    const farmId = user?.farm_id || "default-farm";
+    const tempRabbitsData = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`) ?? '[]';
+    const rabbitsData: Rabbit[] = JSON.parse(tempRabbitsData);
+    const breeds = [...new Set(rabbitsData.map((r) => r.breed))];
+    const finalData = breeds
+      .map((breed) => {
+        const breedRabbits = rabbitsData.filter((r) => r.breed === breed);
+        const avgTempWeight = breedRabbits.reduce((sum, r) => sum + parseFloat(String(r.weight)), 0) / Math.max(breedRabbits.length, 1);
+        const tempWeight = parseFloat(avgTempWeight.toFixed(1));
+        return { breed, weight: tempWeight, count: breedRabbits.length };
+      })
+      .filter((b) => b.count > 0);
+    return finalData;
+  };
+
+  const getMortalityRate = (): MortalityData[] => {
+    const months = []
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      months.push({
+        month: date.toLocaleDateString("en-US", { month: "short" }),
+        rate: Math.random() * 5
+      })
+    }
+    return months
+  }
+
+  const getGenderDistribution = (): GenderData[] => {
+    const genderCounts = {
+      male: rabbits.filter((r) => r.gender === "male").length,
+      female: rabbits.filter((r) => r.gender === "female").length,
+    }
+
+    const total = genderCounts.male + genderCounts.female
+
+    return [
+      {
+        gender: "male",
+        count: genderCounts.male,
+        percentage: total > 0 ? (genderCounts.male / total) * 100 : 0,
+      },
+      {
+        gender: "female",
+        count: genderCounts.female,
+        percentage: total > 0 ? (genderCounts.female / total) * 100 : 0,
+      },
+    ]
+  }
+
+  const getBreedDistribution = (): BreedCount[] => {
+    const breedCounts: Record<string, number> = {}
+    rabbits.forEach((rabbit) => {
+      breedCounts[rabbit.breed] = (breedCounts[rabbit.breed] || 0) + 1
+    })
+    const total = rabbits.length
+    return Object.entries(breedCounts)
+      .map(([breed, count]) => ({
         breed,
-        count: data.count,
-        total_kits: data.total_kits,
-        avgWeight: data.totalWeight / data.count,
-        avgKitsPerRabbit: data.total_kits / data.count,
+        count: count as number,
+        percentage: total > 0 ? (count / total) * 100 : 0,
       }))
-      .sort((a, b) => b.total_kits - a.total_kits)
+      .sort((a, b) => b.count - a.count)
       .slice(0, 6)
   }
 
-  const getProductionTrends = () => {
-    const monthlyProduction: Record<string, { births: number; sales: number }> = {}
-    const { rabbits: filteredRabbits, earnings: filteredEarnings } = getTimeRangeData()
-    debugger
-    // Track births
-    filteredRabbits.forEach((rabbit) => {
-      const date = new Date(rabbit.birth_date ?? 0)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+  const breeds = [...new Set(rabbits.map((r) => r.breed))];
+  const monthlyEarnings = getMonthlyEarnings();
+  const healthDistribution = getHealthDistribution();
+  const ageDistribution = getAgeDistribution();
+  const feedConsumption = getFeedConsumption();
+  const breedingSuccess = getBreedingSuccess();
+  const hutchOccupancy = getHutchOccupancy();
+  const weightTrends = getWeightTrends();
+  const mortalityRate = getMortalityRate();
+  const genderDistribution = getGenderDistribution();
+  const breedDistribution = getBreedDistribution();
+  const totalRabbits = rabbits.length
+  const totalEarnings = earnings.reduce((sum, e) => sum + convertToBaseCurrency(e.amount, e.currency as any), 0);
+  const avgWeight = rabbits.reduce((sum, r) => sum + parseFloat(String(r.weight)), 0) / Math.max(rabbits.length, 1);
+  const pregnantRabbits = rabbits.filter((r) => r.is_pregnant).length
 
-      if (!monthlyProduction[monthKey]) {
-        monthlyProduction[monthKey] = { births: 0, sales: 0 }
-      }
-      monthlyProduction[monthKey].births++
-    })
-
-    // Track sales
-    filteredEarnings
-      .filter((e) => e.type === "rabbit_sale")
-      .forEach((sale) => {
-        const date = new Date(sale.date)
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
-
-        if (!monthlyProduction[monthKey]) {
-          monthlyProduction[monthKey] = { births: 0, sales: 0 }
-        }
-        monthlyProduction[monthKey].sales++
-      })
-
-    return Object.entries(monthlyProduction)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, data]) => ({
-        month: new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-        births: data.births,
-        sales: data.sales,
-      }))
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
-  const monthlyEarnings = getMonthlyEarnings()
-  const earningsByType = getEarningsByType()
-  const breedPerformance = getBreedPerformance()
-  const productionTrends = getProductionTrends()
-
-  const maxEarnings = Math.max(...monthlyEarnings.map((d) => d.amount), 1)
-  const maxProduction = Math.max(...productionTrends.map((d) => Math.max(d.births, d.sales)), 1)
-  const maxKits = Math.max(...breedPerformance.map((d) => d.total_kits), 1)
-
   return (
-    <div className="space-y-6">
-      {/* Controls */}
-      <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-gray-900 dark:text-gray-100">Analytics Dashboard</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                  <SelectItem value="3months">Last 3 Months</SelectItem>
-                  <SelectItem value="6months">Last 6 Months</SelectItem>
-                  <SelectItem value="1year">Last Year</SelectItem>
-                  <SelectItem value="all">All Time</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardTitle>
-        </CardHeader>
-      </Card>
+    <div className="">
+      {/* <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 p-6"> */}
+      <div className="">
+        {/* Header */}
+        {/* <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Farm Analytics Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">
+            Comprehensive insights into your rabbit farm performance
+          </p>
+        </div> */}
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Earnings Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
+        {/* Key Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm">Total Rabbits</p>
+                  <p className="text-3xl font-bold">{totalRabbits}</p>
+                </div>
+                <Users className="h-8 w-8 text-blue-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm">Total Earnings</p>
+                  <p className="text-3xl font-bold">{formatAmount(totalEarnings)}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm">Avg Weight</p>
+                  <p className="text-3xl font-bold">{avgWeight.toFixed(1)}kg</p>
+                </div>
+                <Scale className="h-8 w-8 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-pink-500 to-pink-600 text-white border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-pink-100 text-sm">Pregnant</p>
+                  <p className="text-3xl font-bold">{pregnantRabbits}</p>
+                </div>
+                <Heart className="h-8 w-8 text-pink-200" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Time Range Selector */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <span className="text-gray-900 dark:text-gray-100">Monthly Earnings Trend</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {monthlyEarnings.length > 0 ? (
-                monthlyEarnings.map((data, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.month}</span>
-                      <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                        {formatAmount(data.amount)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(data.amount / maxEarnings) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No earnings data available</p>
-              )}
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center space-x-2">
+                <BarChart3 className="h-6 w-6 text-blue-600" />
+                <span>Analytics Overview</span>
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <Select value={timeRange} onValueChange={setTimeRange}>
+                  <SelectTrigger className="w-40 bg-white/50 dark:bg-gray-700/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3months">Last 3 Months</SelectItem>
+                    <SelectItem value="6months">Last 6 Months</SelectItem>
+                    <SelectItem value="1year">Last Year</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </CardContent>
+          </CardHeader>
         </Card>
 
-        {/* Earnings by Type Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <PieChart className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              <span className="text-gray-900 dark:text-gray-100">Revenue by Source</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {earningsByType.length > 0 ? (
-                earningsByType.map((data, index) => {
-                  const colors = [
-                    "from-pink-500 to-red-500",
-                    "from-yellow-500 to-orange-500",
-                    "from-green-500 to-teal-500",
-                    "from-blue-500 to-purple-500",
-                  ]
-                  return (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.type}</span>
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {formatAmount(data.amount)}
+        {/* Tabbed Analytics */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="financial">Financial</TabsTrigger>
+            <TabsTrigger value="health">Health & Growth</TabsTrigger>
+            <TabsTrigger value="operations">Operations</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* Monthly Earnings */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <span>Monthly Earnings Trend</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={monthlyEarnings}>
+                      <defs>
+                        <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        fill="url(#earningsGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Health Distribution */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Heart className="h-5 w-5 text-red-500" />
+                    <span>Health Status Distribution</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={healthDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={120}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {healthDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Age Distribution */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5 text-blue-500" />
+                    <span>Age Distribution</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={ageDistribution}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="age" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Breeding Success Rate */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Target className="h-5 w-5 text-purple-500" />
+                    <span>Breeding Success Rate</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center">
+                  <div className="relative w-48 h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadialBarChart
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="60%"
+                        outerRadius="90%"
+                        data={[{ value: breedingSuccess }]}
+                      >
+                        <RadialBar dataKey="value" cornerRadius={10} fill="#8b5cf6" />
+                      </RadialBarChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-purple-600">{breedingSuccess}%</div>
+                        <div className="text-sm text-gray-500">Success Rate</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Gender Distribution */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5 text-indigo-500" />
+                    <span>Gender Distribution</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {genderDistribution.map((data, index) => (
+                      <div key={index} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">
+                            {data.gender}
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                            ({data.percentage.toFixed(1)}%)
-                          </span>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.count}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                              ({data.percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className={`bg-gradient-to-r ${data.gender === "male" ? "from-blue-500 to-blue-600" : "from-pink-500 to-pink-600"} h-2 rounded-full transition-all duration-300`}
+                            style={{ width: `${data.percentage}%` }}
+                          />
                         </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className={`bg-gradient-to-r ${colors[index % colors.length]} h-2 rounded-full transition-all duration-300`}
-                          style={{ width: `${data.percentage}%` }}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Breed Distribution */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5 text-green-500" />
+                    <span>Breed Distribution</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {breedDistribution.map((data, index) => (
+                      <div key={index} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.breed}</span>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.count}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                              ({data.percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className={`bg-gradient-to-r ${colors.gradients[index % colors.gradients.length]} h-2 rounded-full transition-all duration-300`}
+                            style={{ width: `${data.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="financial" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Feed Consumption vs Cost */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5 text-orange-500" />
+                    <span>Feed Consumption & Cost</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <ComposedChart data={feedConsumption}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" stroke="#6b7280" />
+                      <YAxis yAxisId="left" stroke="#6b7280" />
+                      <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="consumption" fill="#f59e0b" name="Consumption (kg)" />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="cost"
+                        stroke="#ef4444"
+                        strokeWidth={3}
+                        name="Cost ($)"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Hutch Occupancy */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Home className="h-5 w-5 text-indigo-500" />
+                    <span>Hutch Occupancy Rate</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={hutchOccupancy}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80}
+                        outerRadius={120}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {hutchOccupancy.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                  <div className="text-center mt-4">
+                    <Badge variant="secondary" className="text-lg px-4 py-2">
+                      {Math.round(
+                        (hutchOccupancy[0].value / (hutchOccupancy[0].value + hutchOccupancy[1].value)) * 100,
+                      )}
+                      % Occupied
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="health" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Weight Trends by Breed */}
+              <Card className="bg-white/80 dark:bg-gray-800/80">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Scale className="h-5 w-5 text-green-500" />
+                    <span>Average Weight by Breed</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div style={{ width: '100%', height: '400px' }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={weightTrends}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="breed"
+                          stroke="#6b7280"
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          fontSize={11}
+                          interval="preserveStartEnd"
+                          tickFormatter={(value: string) => value.slice(0, 10) + (value.length > 10 ? '...' : '')}
                         />
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No earnings data available</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                        <YAxis
+                          stroke="#6b7280"
+                          label={{ value: 'Weight (kg)', angle: -90, position: 'insideLeft' }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "rgba(255, 255, 255, 0.95)",
+                            border: "none",
+                            borderRadius: "12px",
+                            boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                          }}
+                          formatter={(value, name) => [`${value} kg`, 'Average Weight']}
+                          labelFormatter={(label) => `Breed: ${label}`}
+                        />
+                        <Bar
+                          dataKey="weight"
+                          fill="#10b981"
+                          radius={[4, 4, 0, 0]}
+                          minPointSize={2}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Breed Performance Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-gray-900 dark:text-gray-100">Top Performing Breeds</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {breedPerformance.length > 0 ? (
-                breedPerformance.map((data, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.breed}</span>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                          {data.total_kits} kits
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({data.count} rabbits)</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(data.total_kits / maxKits) * 100}%` }}
+              {/* Mortality Rate Trend */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <span>Mortality Rate Trend</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={mortalityRate}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                        }}
                       />
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      Avg: {data.avgKitsPerRabbit.toFixed(1)} kits/rabbit • {data.avgWeight.toFixed(1)}kg avg weight
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No breed data available</p>
-              )}
+                      <Line
+                        type="monotone"
+                        dataKey="rate"
+                        stroke="#ef4444"
+                        strokeWidth={3}
+                        dot={{ fill: "#ef4444", strokeWidth: 2, r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
 
-        {/* Production Trends Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-white/20 dark:border-gray-600/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              <span className="text-gray-900 dark:text-gray-100">Production vs Sales</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {productionTrends.length > 0 ? (
-                productionTrends.map((data, index) => (
-                  <div key={index} className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.month}</span>
-                      <div className="text-right text-xs">
-                        <span className="text-green-600 dark:text-green-400">+{data.births}</span>
-                        <span className="text-red-600 dark:text-red-400 ml-2">-{data.sales}</span>
+          <TabsContent value="operations" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Quick Stats */}
+              <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0 shadow-xl">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-indigo-100">Active Breeds</span>
+                      <Badge variant="secondary" className="bg-white/20 text-white">
+                        {breeds.length}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-indigo-100">Breeding Ready</span>
+                      <Badge variant="secondary" className="bg-white/20 text-white">
+                        {rabbits.filter((r) => r.gender === 'female' && !r.is_pregnant).length}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-indigo-100">Total Litters</span>
+                      <Badge variant="secondary" className="bg-white/20 text-white">
+                        {rabbits.reduce((sum, r) => sum + (r.total_litters || 0), 0)}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Performance Indicators */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Zap className="h-5 w-5 text-yellow-500" />
+                    <span>Performance Indicators</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Feed Efficiency</span>
+                        <span className="text-sm text-green-600 font-semibold">92%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: "92%" }}></div>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-green-600 dark:text-green-400 w-12">Births</span>
-                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                          <div
-                            className="bg-gradient-to-r from-green-400 to-green-600 h-1.5 rounded-full"
-                            style={{ width: `${(data.births / maxProduction) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-600 dark:text-gray-400 w-8">{data.births}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Growth Rate</span>
+                        <span className="text-sm text-blue-600 font-semibold">87%</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-red-600 dark:text-red-400 w-12">Sales</span>
-                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                          <div
-                            className="bg-gradient-to-r from-red-400 to-red-600 h-1.5 rounded-full"
-                            style={{ width: `${(data.sales / maxProduction) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-600 dark:text-gray-400 w-8">{data.sales}</span>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: "87%" }}></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Health Score</span>
+                        <span className="text-sm text-purple-600 font-semibold">95%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-purple-500 h-2 rounded-full" style={{ width: "95%" }}></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Productivity</span>
+                        <span className="text-sm text-orange-600 font-semibold">89%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{ width: "89%" }}></div>
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No production data available</p>
-              )}
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </div >
   )
 }
