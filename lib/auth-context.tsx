@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
         setAuthHeader(token);
         router.push("/");
-        showSuccess('Success', "Login successful");
+        // showSuccess('Success', "Login successful");
         return { success: true, message: "Login successful", data: { user: userData, token } };
       }
       return { success: false, message: "Invalid email or password" };
@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push("/login");
         return { success: true, message: "Registration successful. Please log in." };
       }
-      showSuccess('Success', "Registration successful. Please log in.");
+      // showSuccess('Success', "Registration successful. Please log in.");
       return { success: false, message: "Failed to register" };
     } catch (error) {
       return { success: false, message: getErrorMessage(error) };
