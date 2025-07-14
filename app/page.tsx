@@ -20,7 +20,7 @@ import EmailVerificationBanner from "@/components/email-verification-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
 import AddKitDialog from "@/components/add-kit-dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from '@/lib/toast-provider';
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
@@ -35,7 +35,7 @@ import { Alert, ServerAlert } from "@/types";
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
-  const { toast } = useToast();
+  const { showError } = useToast();
   const [selectedRabbit, setSelectedRabbit] = useState<RabbitType | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [rabbits, setRabbits] = useState<RabbitType[]>([]);
@@ -218,13 +218,9 @@ const DashboardContent: React.FC = () => {
         setRabbits(cachedData.rabbits);
       }
       setDataLoaded(true);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch data from server.",
-      });
+      showError('Error', "Failed to fetch data from server.");
     }
-  }, [user, loadFromStorage, saveToStorage, toast]);
+  }, [user, loadFromStorage, saveToStorage]);
 
   const handleRabbitsUpdate = useCallback(
     (updatedRabbits: RabbitType[]) => {

@@ -45,7 +45,7 @@ export default function AnalyticsCharts() {
 
     return {
       earnings: earnings.filter((e) => new Date(e.date) >= startDate),
-      rabbits: rabbits.filter((r) => new Date(r.created_at || r.birth_date) >= startDate),
+      rabbits: rabbits.filter((r) => new Date(r.created_at ?? r.birth_date ?? "") >= startDate),
     }
   }
 
@@ -121,7 +121,7 @@ export default function AnalyticsCharts() {
 
     // Track births
     filteredRabbits.forEach((rabbit) => {
-      const date = new Date(rabbit.birth_date)
+      const date = new Date(rabbit.birth_date ?? 0)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
 
       if (!monthlyProduction[monthKey]) {

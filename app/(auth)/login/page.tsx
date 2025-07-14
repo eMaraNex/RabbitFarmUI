@@ -23,7 +23,7 @@ import { Rabbit, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../../lib/auth-context";
 import ThemeToggle from "../../../components/theme-toggle";
 import Link from "next/link";
-import { useSnackbar } from "notistack";
+import { useToast } from "@/lib/toast-provider";
 
 interface LoginFormData {
   email: string;
@@ -38,13 +38,13 @@ interface FormErrors {
 
 export default function LoginPage() {
   const { login, forgotPassword } = useAuth();
-  const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" });
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const { showError, showSuccess } = useToast();
 
   const validateField = (field: keyof LoginFormData | 'forgot_email', value: string): string | null => {
     switch (field) {
@@ -134,18 +134,16 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!validateForm()) {
-      enqueueSnackbar("Please fix the errors in the form", { variant: "error" });
+      showError('Error', "Please fix the errors in the form")
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await login(formData.email, formData.password);
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
     } catch (error) {
-      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+      showError('Error', error?.toString())
     } finally {
       setIsLoading(false);
     }
@@ -155,11 +153,9 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await login("admin@org.com", "admin@2025");
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
     } catch (error) {
-      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+      showError('Error', error?.toString())
     } finally {
       setIsLoading(false);
     }
@@ -170,16 +166,14 @@ export default function LoginPage() {
     const emailError = validateField('forgot_email', forgotPasswordEmail);
     if (emailError) {
       setErrors(prev => ({ ...prev, forgot_email: emailError }));
-      enqueueSnackbar("Please enter a valid email address", { variant: "error" });
+      showError('Error', "Please enter a valid email address")
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await forgotPassword(forgotPasswordEmail);
-      enqueueSnackbar(response.message, {
-        variant: response.success ? "success" : "error",
-      });
+      showSuccess('Success', response.message);
       if (response.success) {
         setForgotPasswordEmail("");
         setIsForgotPasswordOpen(false);
@@ -190,7 +184,7 @@ export default function LoginPage() {
         });
       }
     } catch (error) {
-      enqueueSnackbar("An unexpected error occurred", { variant: "error" });
+      showError('Error', error?.toString())
     } finally {
       setIsLoading(false);
     }

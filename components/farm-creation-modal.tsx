@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import axios from "axios";
@@ -17,9 +16,10 @@ import { MapPin, Building, Ruler, Globe, Clock, Locate, Check, ChevronsUpDown } 
 import type { FarmCreationModalProps } from "@/types/farms";
 import { timezones } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useToast } from '@/lib/toast-provider';
 
 const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, onFarmCreated }) => {
-    const { toast } = useToast();
+    const { showSuccess, showError } = useToast();
     const { user } = useAuth();
     const [formData, setFormData] = useState({
         id: "",
@@ -63,19 +63,11 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
                 longitude: longitude.toString(),
                 location: address,
             }));
-            toast({
-                title: "Location Fetched",
-                description: "Current coordinates and address have been filled. You can edit the address manually.",
-                className: "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
-            });
+            showSuccess('Success', "Current coordinates and address have been filled. You can edit the address manually.");
         } catch (error: any) {
             const errorMessage = error.message || "Failed to fetch current location or address. Please ensure location services are enabled.";
             setErrors((prev) => ({ ...prev, location: errorMessage }));
-            toast({
-                title: "Error",
-                description: errorMessage,
-                variant: "destructive",
-            });
+            showError('Error', errorMessage);
         } finally {
             setIsFetchingLocation(false);
         }
@@ -131,14 +123,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
             if (user) {
                 user.farm_id = farmId;
             }
-
-            toast({
-                title: "Farm Created",
-                description: `${formData.name} has been successfully created!`,
-                className:
-                    "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
-            });
-
+            showSuccess('Success', `${formData.name} has been successfully created!`);
             // Reset form
             setFormData({
                 id: "",
@@ -161,11 +146,7 @@ const FarmCreationModal: React.FC<FarmCreationModalProps> = ({ isOpen, onClose, 
                 error.response?.data?.message ||
                 "Failed to create farm. Please try again.";
             setErrors({ submit: errorMessage });
-            toast({
-                title: "Error",
-                description: errorMessage,
-                variant: "destructive",
-            });
+            showError('Error', errorMessage);
         } finally {
             setIsLoading(false);
         }

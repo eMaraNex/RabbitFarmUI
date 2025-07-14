@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from '@/lib/toast-provider';
 import { Rabbit, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import * as utils from "@/lib/utils";
@@ -16,7 +16,7 @@ import { colors } from "@/lib/constants";
 
 export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose, onKitAdded }: AddKitDialogProps) {
     const { user } = useAuth();
-    const { toast } = useToast();
+    const { showSuccess, showError } = useToast();
     const [actualBirthDate, setActualBirthDate] = useState<string>(new Date().toISOString().split("T")[0]);
     const [kits, setKits] = useState<KitFormData[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -58,17 +58,12 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
                     setSelectedBuckOption(buckOptionsArray[0]);
                 }
             } catch (error) {
-                console.error("Error fetching initial data:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Warning",
-                    description: "Could not fetch breeding history. You can still proceed.",
-                });
+                showError('Error', "Could not fetch breeding history. You can still proceed.");
             }
         };
 
         fetchInitialData();
-    }, [user, toast]);
+    }, [user]);
 
     // Memoized function to add a new kit
     const addKit = useCallback(() => {
@@ -105,44 +100,24 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
 
     const validateKits = (): boolean => {
         if (!actualBirthDate || isNaN(new Date(actualBirthDate).getTime())) {
-            toast({
-                variant: "destructive",
-                title: "Invalid data",
-                description: "A valid actual birth date is required.",
-            });
+            showError('Error', "A valid actual birth date is required.");
             return false;
         }
         if (kits.length === 0) {
-            toast({
-                variant: "destructive",
-                title: "Missing data",
-                description: "At least one kit is required.",
-            });
+            showError('Error', "At least one kit is required.");
             return false;
         }
         for (const kit of kits) {
             if (!kit.kit_number || !kit.status) {
-                toast({
-                    variant: "destructive",
-                    title: "Invalid data",
-                    description: `Kit number and status are required for kit ${kit.kit_number || 'unnamed'}.`,
-                });
+                showError('Error', `Kit number and status are required for kit ${kit.kit_number || 'unnamed'}.`);
                 return false;
             }
             if (kit.birth_weight && kit.birth_weight.trim() !== "" && (isNaN(parseFloat(kit.birth_weight)) || parseFloat(kit.birth_weight) <= 0)) {
-                toast({
-                    variant: "destructive",
-                    title: "Invalid birth weight",
-                    description: `Birth weight for kit ${kit.kit_number} must be a positive number.`,
-                });
+                showError('Error', `Birth weight for kit ${kit.kit_number} must be a positive number.`);
                 return false;
             }
             if (kits.filter((k) => k.kit_number === kit.kit_number).length > 1) {
-                toast({
-                    variant: "destructive",
-                    title: "Duplicate kit number",
-                    description: `Kit number ${kit.kit_number} is duplicated.`,
-                });
+                showError('Error', `Kit number ${kit.kit_number} is duplicated.`);
                 return false;
             }
         }
@@ -152,11 +127,7 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.farm_id || !doeId) {
-            toast({
-                variant: "destructive",
-                title: "Missing data",
-                description: "Farm ID or doe information is required.",
-            });
+            showError('Error', "Farm ID or doe information is required.");
             return;
         }
 
@@ -234,22 +205,14 @@ export default function AddKitDialog({ rabbit, doeId, doeName, buckName, onClose
             );
 
             if (response.data.success) {
-                toast({
-                    title: "Success",
-                    description: `${kits.length} kit${kits.length !== 1 ? "s" : ""} added successfully.`,
-                });
+                showSuccess('Success', `${kits.length} kit${kits.length !== 1 ? "s" : ""} added successfully.`);
                 onKitAdded();
                 onClose();
             } else {
                 throw new Error(response.data.message || "Failed to create kit records");
             }
         } catch (error: any) {
-            console.error("Error creating kits:", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: error.response?.data?.message || error.message || "Failed to add kit records.",
-            });
+            showError('Error', error.response?.data?.message || error.message);
         } finally {
             setIsLoading(false);
         }
