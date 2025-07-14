@@ -85,7 +85,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
       const { data, pagination } = response.data.data;
       setRabbits(data);
       setTotalItems(Number(pagination?.totalItems || 0));
-      showSuccess('Success', "Loaded rabbit data successfully.");
+      // showSuccess('Success', "Loaded rabbit data successfully.");
     } catch (err) {
       console.error("Error fetching rabbits:", err);
       setError("Failed to load rabbit data.");
