@@ -223,8 +223,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem("rabbit_farm_token");
+      if (!token) return;
+      const response = await axios.get(`${utils.apiUrl}/auth/user`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setUser(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, forgotPassword, resetPassword, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, forgotPassword, resetPassword, isLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
