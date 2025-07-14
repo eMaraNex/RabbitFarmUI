@@ -7,22 +7,38 @@ import { BarChart3, TrendingUp, PieChart, Calendar } from "lucide-react"
 import { loadFromStorage } from "@/lib/storage"
 import { useCurrency } from "@/lib/currency-context"
 import type { Rabbit, EarningsRecord } from "@/types"
+import { useAuth } from "@/lib/auth-context"
+import axios from "axios"
+import * as utils from "@/lib/utils";
 
 export default function AnalyticsCharts() {
+  const { user } = useAuth();
   const { formatAmount, convertToBaseCurrency } = useCurrency()
   const [rabbits, setRabbits] = useState<Rabbit[]>([])
   const [earnings, setEarnings] = useState<EarningsRecord[]>([])
   const [timeRange, setTimeRange] = useState("6months")
-
+  const token = localStorage.getItem("rabbit_farm_token") ?? '';
   useEffect(() => {
     loadData()
   }, [])
 
-  const loadData = () => {
-    const rabbitsData = loadFromStorage("rabbits", [])
-    const earningsData = loadFromStorage("earnings", [])
+  const loadData = async () => {
+    const rabbitsData = loadFromStorage(`rabbit_farm_rabbits_${user?.farm_id}`, [])
+    const earningsData = loadFromStorage("rabbit_farm_earnings", [])
+    let fetchedEarnings: EarningsRecord[] = earningsData
+    try {
+      debugger
+      if (user && user.farm_id) {
+        const response = await axios.get(`${utils.apiUrl}/earnings/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        fetchedEarnings = response.data.data;
+      }
+    } catch (error) {
+      // Optionally handle error, fallback to local earningsData
+    }
     setRabbits(rabbitsData)
-    setEarnings(earningsData)
+    setEarnings(fetchedEarnings)
   }
 
   const getTimeRangeData = () => {
@@ -54,6 +70,7 @@ export default function AnalyticsCharts() {
     const monthlyData: Record<string, number> = {}
 
     filteredEarnings.forEach((earning) => {
+      debugger
       const date = new Date(earning.date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
       const amountInBase = convertToBaseCurrency(earning.amount, earning.currency as any)
@@ -77,6 +94,7 @@ export default function AnalyticsCharts() {
     const typeData: Record<string, number> = {}
 
     filteredEarnings.forEach((earning) => {
+      debugger
       const amountInBase = convertToBaseCurrency(earning.amount, earning.currency as any)
       if (!typeData[earning.type]) {
         typeData[earning.type] = 0
@@ -118,7 +136,7 @@ export default function AnalyticsCharts() {
   const getProductionTrends = () => {
     const monthlyProduction: Record<string, { births: number; sales: number }> = {}
     const { rabbits: filteredRabbits, earnings: filteredEarnings } = getTimeRangeData()
-
+    debugger
     // Track births
     filteredRabbits.forEach((rabbit) => {
       const date = new Date(rabbit.birth_date ?? 0)
