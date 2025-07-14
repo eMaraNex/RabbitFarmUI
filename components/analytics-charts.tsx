@@ -119,8 +119,8 @@ export default function AnalyticsCharts() {
   }
 
   const getMonthlyEarnings = (): MonthlyEarning[] => {
-    const { earnings: filteredEarnings } = getTimeRangeData()
-    const monthlyData: Record<string, number> = {}
+    const { earnings: filteredEarnings } = getTimeRangeData();
+    const monthlyData: Record<string, number> = {};
 
     filteredEarnings.forEach((earning) => {
       const date = new Date(earning.date)
@@ -132,7 +132,6 @@ export default function AnalyticsCharts() {
       }
       monthlyData[monthKey] += amountInBase
     })
-
     return Object.entries(monthlyData)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, amount]) => ({
@@ -413,46 +412,6 @@ export default function AnalyticsCharts() {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {/* Monthly Earnings */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                    <span>Monthly Earnings Trend</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={monthlyEarnings}>
-                      <defs>
-                        <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "rgba(255, 255, 255, 0.95)",
-                          border: "none",
-                          borderRadius: "12px",
-                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="amount"
-                        stroke="#10b981"
-                        strokeWidth={3}
-                        fill="url(#earningsGradient)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
               {/* Health Distribution */}
               <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
                 <CardHeader>
@@ -512,6 +471,38 @@ export default function AnalyticsCharts() {
                 </CardContent>
               </Card>
 
+              {/* Breed Distribution */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5 text-green-500" />
+                    <span>Breed Distribution</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {breedDistribution.map((data, index) => (
+                      <div key={index} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.breed}</span>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.count}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                              ({data.percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className={`bg-gradient-to-r ${colors.gradients[index % colors.gradients.length]} h-2 rounded-full transition-all duration-300`}
+                            style={{ width: `${data.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
               {/* Breeding Success Rate */}
               <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
                 <CardHeader>
@@ -578,43 +569,50 @@ export default function AnalyticsCharts() {
                 </CardContent>
               </Card>
 
-              {/* Breed Distribution */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <BarChart3 className="h-5 w-5 text-green-500" />
-                    <span>Breed Distribution</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {breedDistribution.map((data, index) => (
-                      <div key={index} className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.breed}</span>
-                          <div className="text-right">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.count}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                              ({data.percentage.toFixed(1)}%)
-                            </span>
-                          </div>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div
-                            className={`bg-gradient-to-r ${colors.gradients[index % colors.gradients.length]} h-2 rounded-full transition-all duration-300`}
-                            style={{ width: `${data.percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="financial" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Hutch Occupancy */}
+              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Home className="h-5 w-5 text-indigo-500" />
+                    <span>Hutch Occupancy Rate</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={hutchOccupancy}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80}
+                        outerRadius={120}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {hutchOccupancy.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                  <div className="text-center mt-4">
+                    <Badge variant="secondary" className="text-lg px-4 py-2">
+                      {Math.round(
+                        (hutchOccupancy[0].value / (hutchOccupancy[0].value + hutchOccupancy[1].value)) * 100,
+                      )}
+                      % Occupied
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Feed Consumption vs Cost */}
               <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
                 <CardHeader>
@@ -652,43 +650,43 @@ export default function AnalyticsCharts() {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-
-              {/* Hutch Occupancy */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-xl">
+              {/* Monthly Earnings */}
+              <Card className="bg-white/80 dark:bg-gray-800/80">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Home className="h-5 w-5 text-indigo-500" />
-                    <span>Hutch Occupancy Rate</span>
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <span>Monthly Earnings Trend</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <RechartsPieChart>
-                      <Pie
-                        data={hutchOccupancy}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={80}
-                        outerRadius={120}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {hutchOccupancy.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </RechartsPieChart>
+                    <AreaChart data={monthlyEarnings}>
+                      <defs>
+                        <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        fill="url(#earningsGradient)"
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
-                  <div className="text-center mt-4">
-                    <Badge variant="secondary" className="text-lg px-4 py-2">
-                      {Math.round(
-                        (hutchOccupancy[0].value / (hutchOccupancy[0].value + hutchOccupancy[1].value)) * 100,
-                      )}
-                      % Occupied
-                    </Badge>
-                  </div>
                 </CardContent>
               </Card>
             </div>
