@@ -22,7 +22,7 @@ import EditRabbitDialog from "@/components/edit-rabbit-dialog";
 import AddKitDialog from "@/components/add-kit-dialog";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from '@/lib/toast-provider';
 import * as utils from "@/lib/utils";
 import RabbitListSkeleton from "./skeletons/rabbits-list/skeleton";
 import AddRabbitDialog from "@/components/add-rabbit-dialog";
@@ -41,12 +41,11 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
-  const { toast } = useToast();
   const [pageSize, setPageSize] = useState<number>(10);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [addRabbitOpen, setAddRabbitOpen] = useState<boolean>(false);
   const isMounted = useRef(true);
-
+  const { showSuccess, showError } = useToast();
   const handleAddRabbit = () => {
     setAddRabbitOpen(true);
   };
@@ -86,22 +85,20 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
       const { data, pagination } = response.data.data;
       setRabbits(data);
       setTotalItems(Number(pagination?.totalItems || 0));
+      showSuccess('Success', "Loaded rabbit data successfully.");
     } catch (err) {
       console.error("Error fetching rabbits:", err);
       setError("Failed to load rabbit data.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load rabbit data.",
-      });
+      showError("Error", "Failed to load rabbit data.");
     } finally {
       setLoading(false);
     }
-  }, [farmId, page, pageSize, sortField, sortOrder, debouncedSearchTerm, toast]);
+  }, [farmId, page, pageSize]);
 
   useEffect(() => {
     fetchRabbits();
-  }, [fetchRabbits]);
+  }, []);
+
   useEffect(() => {
     if (debouncedSearchTerm !== searchTerm) return;
     if (page !== 1) {
@@ -130,15 +127,11 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
 
   const handleAddKit = useCallback((rabbit: RabbitType) => {
     if (!rabbit.is_pregnant) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Cannot add kit records because the rabbit is not pregnant.",
-      });
+      showError('Error', "Cannot add kit records because the rabbit is not pregnant.")
       return;
     }
     setAddKitRabbit(rabbit);
-  }, [toast]);
+  }, []);
 
   const handleDelete = useCallback((rabbitId: string) => {
     console.log(`Delete rabbit ${rabbitId} (not implemented)`);
@@ -508,10 +501,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
           onRabbitAdded={(newRabbit) => {
             setAddRabbitOpen(false);
             refetchRabbits();
-            toast({
-              title: "Success",
-              description: `Rabbit ${newRabbit.rabbit_id} added successfully!`,
-            });
+            showSuccess('Sucess', `Rabbit ${newRabbit.rabbit_id} added successfully!`);
           }}
         />
       )}

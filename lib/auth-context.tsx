@@ -6,6 +6,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import * as utils from "./utils";
 import { AuthContextType, AuthResponse, User } from "@/types";
+import { useToast } from "./toast-provider";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -13,6 +14,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { showError, showWarn, showSuccess } = useToast();
 
   // Function to decode JWT and check expiration
   const isTokenExpired = (token: string): boolean => {
@@ -123,8 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("rabbit_farm_data", JSON.stringify(farmData.data.data));
         setUser(userData);
         setAuthHeader(token);
-
         router.push("/");
+        showSuccess('Success', "Login successful");
         return { success: true, message: "Login successful", data: { user: userData, token } };
       }
       return { success: false, message: "Invalid email or password" };
@@ -143,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push("/login");
         return { success: true, message: "Registration successful. Please log in." };
       }
+      showSuccess('Success', "Registration successful. Please log in.");
       return { success: false, message: "Failed to register" };
     } catch (error) {
       return { success: false, message: getErrorMessage(error) };

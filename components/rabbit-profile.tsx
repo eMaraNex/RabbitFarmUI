@@ -10,6 +10,7 @@ import * as utils from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import type { HealthRecord, RabbitProfileProps, Rabbit as RabbitType } from "@/types";
 import EditRabbitDialog from "./edit-rabbit-dialog";
+import { useToast } from "@/lib/toast-provider";
 
 export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { showError } = useToast();
 
   const calculateAge = (birth_date: string): number => {
     const birth = new Date(birth_date);
@@ -28,7 +30,7 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
   useEffect(() => {
     const fetchRabbit = async () => {
       if (!user?.farm_id || !rabbit.id) {
-        setError("Missing farm ID or rabbit ID. Please try again.");
+        showError('Error', "Missing farm ID or rabbit ID. Please try again.")
         setLoading(false);
         return;
       }
@@ -41,7 +43,7 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
       try {
         const token = localStorage.getItem("rabbit_farm_token");
         if (!token) {
-          throw new Error("No authentication token found");
+          showError('Error', "No authentication token found")
         }
 
         // Try localStorage first
@@ -69,11 +71,10 @@ export default function RabbitProfile({ rabbit, onClose }: RabbitProfileProps) {
           const updatedRabbits = cachedRabbits.filter((r: RabbitType) => r.id !== rabbit.id).concat(response.data.data);
           localStorage.setItem(`rabbit_farm_rabbits_${user.farm_id}`, JSON.stringify(updatedRabbits));
         } else {
-          throw new Error("Failed to fetch rabbit data");
+          showError('Error', "Failed to fetch rabbit data")
         }
       } catch (err: any) {
-        console.error("Error fetching rabbit:", err);
-        setError(err.response?.data?.message || "Failed to load rabbit data");
+        showError('Error', err.response?.data?.message)
       } finally {
         setLoading(false);
       }

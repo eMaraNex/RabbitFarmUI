@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
-import NotistackProvider from '@/lib/snackbar';
 import { ThemeProvider } from '@/lib/theme-context';
 import { CurrencyProvider } from '@/lib/currency-context';
 import { JSX, ReactNode } from 'react';
 import PWAInstaller from '@/components/PWAInstaller.';
+import { ToastProvider } from '@/lib/toast-provider';
 
 export const metadata: Metadata = {
   title: 'Sungura Master',
@@ -107,14 +107,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       </head>
       <body>
         <AuthProvider>
-          <NotistackProvider>
-            <CurrencyProvider>
-              <ThemeProvider>
+          <CurrencyProvider>
+            <ThemeProvider>
+              <ToastProvider>
                 <PWAInstaller />
                 {children}
-              </ThemeProvider>
-            </CurrencyProvider>
-          </NotistackProvider>
+              </ToastProvider >
+            </ThemeProvider>
+          </CurrencyProvider>
         </AuthProvider>
       </body>
     </html>

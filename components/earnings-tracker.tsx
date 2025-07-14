@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth-context";
 import axios from "axios";
 import * as utils from "@/lib/utils";
 import type { EarningsRecord, ProductionRecord } from "@/types";
+import { useToast } from "@/lib/toast-provider";
 
 export default function EarningsTracker() {
   const { currency, formatAmount, convertToBaseCurrency, getCurrencySymbol } = useCurrency();
@@ -26,6 +27,7 @@ export default function EarningsTracker() {
   const [customDateRange, setCustomDateRange] = useState({ start: "", end: "" });
   const [addEarningsOpen, setAddEarningsOpen] = useState(false);
   const [addProductionOpen, setAddProductionOpen] = useState(false);
+  const { showSuccess, showError, showWarn } = useToast();
 
   const [earningsForm, setEarningsForm] = useState<{
     type: "rabbit_sale" | "urine_sale" | "manure_sale" | "other";
@@ -73,7 +75,7 @@ export default function EarningsTracker() {
     try {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) {
-        throw new Error("No authentication token found");
+        showError('Error', "No authentication token found")
       }
 
       const response = await axios.get(`${utils.apiUrl}/earnings/${user?.farm_id}`, {
@@ -82,7 +84,7 @@ export default function EarningsTracker() {
 
       setEarnings(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching earnings:", error);
+      showError('Error', error?.toString())
       setEarnings([]);
     }
   };
@@ -136,14 +138,14 @@ export default function EarningsTracker() {
     e.preventDefault();
 
     if (!user?.farm_id) {
-      alert("Missing farm ID. Please try again.");
+      showWarn('Error', "Missing farm ID. Please try again.");
       return;
     }
 
     try {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) {
-        throw new Error("No authentication token found");
+        showError('Error', "No authentication token found")
       }
 
       const newEarning: EarningsRecord = {
@@ -176,8 +178,7 @@ export default function EarningsTracker() {
       });
       setAddEarningsOpen(false);
     } catch (error: any) {
-      console.error("Error adding earnings:", error);
-      alert(error.response?.data?.message || "Error adding earnings. Please try again.");
+      showError('Error', error.response?.data?.message);
     }
   };
 
@@ -185,7 +186,7 @@ export default function EarningsTracker() {
     e.preventDefault();
 
     if (!user?.farm_id) {
-      alert("Missing farm ID. Please try again.");
+      showWarn('Error', "Missing farm ID. Please try again.");
       return;
     }
 
@@ -206,7 +207,7 @@ export default function EarningsTracker() {
       try {
         const token = localStorage.getItem("rabbit_farm_token");
         if (!token) {
-          throw new Error("No authentication token found");
+          showError('Error', "No authentication token found")
         }
 
         const saleEarning: EarningsRecord = {
@@ -226,8 +227,7 @@ export default function EarningsTracker() {
         const updatedEarnings = [...earnings, saleEarning];
         setEarnings(updatedEarnings);
       } catch (error: any) {
-        console.error("Error adding production sale earnings:", error);
-        alert(error.response?.data?.message || "Error adding production sale earnings. Please try again.");
+        showError('Error', 'Error adding production sale earnings')
       }
     }
 
