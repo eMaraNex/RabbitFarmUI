@@ -25,3 +25,22 @@ export interface ServerAlert {
   is_deleted: boolean;
   rabbit?: Rabbit;
 }
+export interface AlertCalendar {
+  id: string;
+  name: string;
+  alert_start_date: string | null;
+  alert_end_date: string | null;
+  alert_type: string;
+  severity: string;
+  message: string;
+  status: string;
+  farm_id: string;
+  user_id: string;
+  rabbit_id: string;
+  hutch_id: string;
+  notify_on: string[];
+  created_on: string;
+  updated_on: string;
+  is_active: boolean;
+  is_deleted: boolean;
+}

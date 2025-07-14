@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,7 +22,7 @@ import AnalyticsCharts from "@/components/analytics-charts";
 import CurrencySelector from "@/components/currency-selector";
 import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
-import Calendar from "@/components/calender";
+import Calendar, { CalendarEvent } from "@/components/calender";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
@@ -32,7 +38,7 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/shared/header";
 import SkeletonDashboard from "@/components/skeletons/dashboard/skeleton";
 import Sidebar from "@/components/shared/sidebar";
-import { Alert, ServerAlert } from "@/types";
+import { Alert, ServerAlert, AlertCalendar } from "@/types";
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
@@ -46,72 +52,7 @@ const DashboardContent: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const sampleEvents: any[] = [
-    {
-      id: "1",
-      date: "2024-12-15",
-      title: "Team Meeting",
-      description: "Weekly team sync meeting",
-      type: "event",
-      time: "10:00 AM",
-    },
-    {
-      id: "6",
-      date: "2024-12-15",
-      title: "Team Meeting",
-      description: "Weekly team sync meeting",
-      type: "event",
-      time: "10:00 AM",
-    },
-    {
-      id: "7",
-      date: "2024-12-15",
-      title: "Team Meeting",
-      description: "Weekly team sync meeting",
-      type: "event",
-      time: "10:00 AM",
-    },
-    {
-      id: "8",
-      date: "2024-12-15",
-      title: "Team Meeting",
-      description: "Weekly team sync meeting",
-      type: "event",
-      time: "10:00 AM",
-    },
-    {
-      id: "2",
-      date: "2024-12-20",
-      title: "Project Deadline",
-      description: "Submit final project deliverables",
-      type: "event",
-      time: "5:00 PM",
-    },
-    {
-      id: "3",
-      date: "2025-01-15",
-      title: "Doctor Appointment",
-      description: "Annual health checkup",
-      type: "notification",
-      time: "2:00 PM",
-    },
-    {
-      id: "4",
-      date: "2025-01-20",
-      title: "Conference Call",
-      description: "Client presentation meeting",
-      type: "notification",
-      time: "11:00 AM",
-    },
-    {
-      id: "5",
-      date: "2025-01-25",
-      title: "Birthday Party",
-      description: "Sarah's birthday celebration",
-      type: "notification",
-      time: "7:00 PM",
-    },
-  ];
+  const [calendarEvents, setCalendarEvents] = useState<AlertCalendar[]>([]);
 
   const tempFarmId = localStorage.getItem("rabbit_farm_id");
 
@@ -146,6 +87,36 @@ const DashboardContent: React.FC = () => {
   };
   const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
   const farmDetails = cachedFarmDetails ? JSON.parse(cachedFarmDetails) : [];
+
+  function transformRawEvents(rawData: AlertCalendar[]): CalendarEvent[] {
+    const transformedEvents: CalendarEvent[] = [];
+    const today = new Date();
+    // today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
+
+    rawData.forEach(rawItem => {
+      rawItem.notify_on.forEach(notifyDateStr => {
+        const notifyDate = new Date(notifyDateStr);
+        // notifyDate.setHours(0, 0, 0, 0); // Normalize notifyDate to start of day
+
+        // Determine type based on whether the notify_on date is in the past or future/today
+        const type: "event" | "notification" =
+          notifyDate < today ? "event" : "notification";
+
+        const time: string | undefined = undefined;
+
+        transformedEvents.push({
+          id: rawItem.id,
+          date: notifyDate.toISOString().split("T")[0], // YYYY-MM-DD format
+          title: rawItem.name,
+          description: rawItem.message,
+          type: type,
+          time: time,
+        });
+      });
+    });
+
+    return transformedEvents;
+  }
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -213,21 +184,29 @@ const DashboardContent: React.FC = () => {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("No authentication token found");
 
-      const [rowsResponse, hutchesResponse, rabbitsResponse, alertsResponse] =
-        await Promise.all([
-          axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${utils.apiUrl}/alerts/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+      const [
+        rowsResponse,
+        hutchesResponse,
+        rabbitsResponse,
+        alertsResponse,
+        calenderResponse,
+      ] = await Promise.all([
+        axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/alerts/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/alerts/calendar/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
       let newRabbits = rabbitsResponse.data.data || [];
       newRabbits = newRabbits.map((r: any) => ({
@@ -235,35 +214,37 @@ const DashboardContent: React.FC = () => {
         expected_birth_date:
           r.is_pregnant && r.pregnancy_start_date
             ? new Date(
-              new Date(r.pregnancy_start_date).getTime() +
-              (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
-            ).toISOString()
+                new Date(r.pregnancy_start_date).getTime() +
+                  (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
+              ).toISOString()
             : r.expected_birth_date,
       }));
 
       const newRows = rowsResponse.data.data || [];
       const newHutches = hutchesResponse.data.data || [];
+      const calendarAlerts = calenderResponse.data.data || [];
       const serverAlerts: ServerAlert[] = alertsResponse.data.data || [];
       const mappedAlerts: Alert[] = serverAlerts.map(alert => ({
         type:
           alert.alert_type === "birth"
             ? "Birth Expected"
             : alert.alert_type === "medication"
-              ? "Medication Due"
-              : alert.name,
+            ? "Medication Due"
+            : alert.name,
         message: alert.message,
         variant:
           alert.severity === "high"
             ? "destructive"
             : alert.severity === "medium"
-              ? "secondary"
-              : "outline",
+            ? "secondary"
+            : "outline",
       }));
       // Update state
       setRows(newRows);
       setHutches(newHutches);
       setRabbits(newRabbits);
       setAlerts(mappedAlerts);
+      setCalendarEvents(calendarAlerts);
 
       // Save to local storage
       saveToStorage(user.farm_id, {
@@ -361,6 +342,8 @@ const DashboardContent: React.FC = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const events =  transformRawEvents(calendarEvents);
+  
   const totalRabbits = rabbits.length;
   const does = rabbits.filter(r => r.gender === "female").length;
   const bucks = rabbits.filter(r => r.gender === "male").length;
@@ -372,7 +355,7 @@ const DashboardContent: React.FC = () => {
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
       new Date(r.expected_birth_date).getTime() <=
-      new Date().getTime() + 7 * 24 * 60 * 60 * 1000
+        new Date().getTime() + 7 * 24 * 60 * 60 * 1000
   ).length;
 
   if (!dataLoaded) {
@@ -658,7 +641,7 @@ const DashboardContent: React.FC = () => {
               <AnalyticsCharts />
             </TabsContent>
             <TabsContent value="calender">
-              <Calendar events={sampleEvents} />
+              <Calendar events={events} />
             </TabsContent>
           </Tabs>
         ) : (
