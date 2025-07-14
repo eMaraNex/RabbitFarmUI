@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +22,7 @@ import AnalyticsCharts from "@/components/analytics-charts";
 import CurrencySelector from "@/components/currency-selector";
 import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
+import Calendar, { CalendarEvent } from "@/components/calender";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
@@ -31,7 +38,7 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/shared/header";
 import SkeletonDashboard from "@/components/skeletons/dashboard/skeleton";
 import Sidebar from "@/components/shared/sidebar";
-import { Alert, ServerAlert } from "@/types";
+import { Alert, ServerAlert, AlertCalendar } from "@/types";
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
@@ -45,6 +52,7 @@ const DashboardContent: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<AlertCalendar[]>([]);
 
   const tempFarmId = localStorage.getItem("rabbit_farm_id");
 
@@ -79,6 +87,36 @@ const DashboardContent: React.FC = () => {
   };
   const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
   const farmDetails = cachedFarmDetails ? JSON.parse(cachedFarmDetails) : [];
+
+  function transformRawEvents(rawData: AlertCalendar[]): CalendarEvent[] {
+    const transformedEvents: CalendarEvent[] = [];
+    const today = new Date();
+    // today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
+
+    rawData.forEach(rawItem => {
+      rawItem.notify_on.forEach(notifyDateStr => {
+        const notifyDate = new Date(notifyDateStr);
+        // notifyDate.setHours(0, 0, 0, 0); // Normalize notifyDate to start of day
+
+        // Determine type based on whether the notify_on date is in the past or future/today
+        const type: "event" | "notification" =
+          notifyDate < today ? "event" : "notification";
+
+        const time: string | undefined = undefined;
+
+        transformedEvents.push({
+          id: rawItem.id,
+          date: notifyDate.toISOString().split("T")[0], // YYYY-MM-DD format
+          title: rawItem.name,
+          description: rawItem.message,
+          type: type,
+          time: time,
+        });
+      });
+    });
+
+    return transformedEvents;
+  }
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
@@ -146,21 +184,29 @@ const DashboardContent: React.FC = () => {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("No authentication token found");
 
-      const [rowsResponse, hutchesResponse, rabbitsResponse, alertsResponse] =
-        await Promise.all([
-          axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${utils.apiUrl}/alerts/${user.farm_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+      const [
+        rowsResponse,
+        hutchesResponse,
+        rabbitsResponse,
+        alertsResponse,
+        calenderResponse,
+      ] = await Promise.all([
+        axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/hutches/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/rabbits/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/alerts/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${utils.apiUrl}/alerts/calendar/${user.farm_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
       let newRabbits = rabbitsResponse.data.data || [];
       newRabbits = newRabbits.map((r: any) => ({
@@ -168,35 +214,37 @@ const DashboardContent: React.FC = () => {
         expected_birth_date:
           r.is_pregnant && r.pregnancy_start_date
             ? new Date(
-              new Date(r.pregnancy_start_date).getTime() +
-              (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
-            ).toISOString()
+                new Date(r.pregnancy_start_date).getTime() +
+                  (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
+              ).toISOString()
             : r.expected_birth_date,
       }));
 
       const newRows = rowsResponse.data.data || [];
       const newHutches = hutchesResponse.data.data || [];
+      const calendarAlerts = calenderResponse.data.data || [];
       const serverAlerts: ServerAlert[] = alertsResponse.data.data || [];
       const mappedAlerts: Alert[] = serverAlerts.map(alert => ({
         type:
           alert.alert_type === "birth"
             ? "Birth Expected"
             : alert.alert_type === "medication"
-              ? "Medication Due"
-              : alert.name,
+            ? "Medication Due"
+            : alert.name,
         message: alert.message,
         variant:
           alert.severity === "high"
             ? "destructive"
             : alert.severity === "medium"
-              ? "secondary"
-              : "outline",
+            ? "secondary"
+            : "outline",
       }));
       // Update state
       setRows(newRows);
       setHutches(newHutches);
       setRabbits(newRabbits);
       setAlerts(mappedAlerts);
+      setCalendarEvents(calendarAlerts);
 
       // Save to local storage
       saveToStorage(user.farm_id, {
@@ -254,6 +302,7 @@ const DashboardContent: React.FC = () => {
         "earnings",
         "reports",
         "analytics",
+        "calender",
       ].indexOf(activeTab);
       const tabWidth = 70;
       tabsListRef.current.scrollTo({
@@ -293,6 +342,8 @@ const DashboardContent: React.FC = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const events =  transformRawEvents(calendarEvents);
+  
   const totalRabbits = rabbits.length;
   const does = rabbits.filter(r => r.gender === "female").length;
   const bucks = rabbits.filter(r => r.gender === "male").length;
@@ -304,7 +355,7 @@ const DashboardContent: React.FC = () => {
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
       new Date(r.expected_birth_date).getTime() <=
-      new Date().getTime() + 7 * 24 * 60 * 60 * 1000
+        new Date().getTime() + 7 * 24 * 60 * 60 * 1000
   ).length;
 
   if (!dataLoaded) {
@@ -361,7 +412,7 @@ const DashboardContent: React.FC = () => {
             <TabsList
               ref={tabsListRef}
               key={activeTab}
-              className="inline-flex justify-start w-full md:grid md:grid-cols-8 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
+              className="inline-flex justify-start w-full md:grid md:grid-cols-9 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
             >
               <TabsTrigger
                 value="overview"
@@ -410,6 +461,12 @@ const DashboardContent: React.FC = () => {
                 className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
               >
                 Analytics
+              </TabsTrigger>
+              <TabsTrigger
+                value="calender"
+                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
+              >
+                Calender
               </TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
@@ -502,18 +559,19 @@ const DashboardContent: React.FC = () => {
                     {alerts.map((alert, index) => (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
-                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                          : alert.variant === "secondary"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${
+                          alert.variant === "destructive"
+                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                            : alert.variant === "secondary"
                             ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
                             : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
-                          }`}
+                        }`}
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
                             {alert.type === "Medication Due" ||
-                              (alert.type === "Birth Expected" &&
-                                alert.variant === "destructive") ? (
+                            (alert.type === "Birth Expected" &&
+                              alert.variant === "destructive") ? (
                               <span className="text-red-800 dark:text-red-300">
                                 {alert.type}
                               </span>
@@ -531,8 +589,8 @@ const DashboardContent: React.FC = () => {
                           {alert.variant === "destructive"
                             ? "Overdue"
                             : alert.variant === "secondary"
-                              ? "Upcoming"
-                              : "Ready"}
+                            ? "Upcoming"
+                            : "Ready"}
                         </Badge>
                       </div>
                     ))}
@@ -581,6 +639,9 @@ const DashboardContent: React.FC = () => {
             </TabsContent>
             <TabsContent value="analytics">
               <AnalyticsCharts />
+            </TabsContent>
+            <TabsContent value="calender">
+              <Calendar events={events} />
             </TabsContent>
           </Tabs>
         ) : (
