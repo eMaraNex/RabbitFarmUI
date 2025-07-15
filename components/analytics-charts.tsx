@@ -207,14 +207,14 @@ export default function AnalyticsCharts() {
       const totalCapacity = rowsData.reduce((sum, row) => sum + row.capacity, 0);
       const totalOccupied = rowsData.reduce((sum, row) => sum + row.occupied, 0);
       return [
-        { name: "Occupied", value: totalOccupied, color: "#3b82f6" },
-        { name: "Available", value: totalCapacity - totalOccupied, color: "#e5e7eb" },
+        { name: "Occupied", value: totalOccupied, color: "#10b981" },
+        { name: "Available", value: totalCapacity - totalOccupied, color: "#3b82f6" },
       ];
     } catch (error) {
       console.error("Error in getHutchOccupancy:", error);
       return [
-        { name: "Occupied", value: 0, color: "#3b82f6" },
-        { name: "Available", value: 0, color: "#e5e7eb" },
+        { name: "Occupied", value: 0, color: "#10b981" },
+        { name: "Available", value: 0, color: "#3b82f6" },
       ];
     }
   };
