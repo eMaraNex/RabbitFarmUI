@@ -93,11 +93,11 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
     } finally {
       setLoading(false);
     }
-  }, [farmId, page, pageSize]);
+  }, [farmId, page, pageSize, sortField, sortOrder, debouncedSearchTerm]);
 
   useEffect(() => {
     fetchRabbits();
-  }, []);
+  }, [fetchRabbits]);
 
   useEffect(() => {
     if (debouncedSearchTerm !== searchTerm) return;
