@@ -9,3 +9,4 @@ export * from "./earnings";
 export * from "./farms";
 export * from "./auth";
 export * from "./shared";
+export * from './analytics';

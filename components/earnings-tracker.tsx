@@ -36,7 +36,7 @@ export default function EarningsTracker() {
     amount: string;
     date: string;
     weight?: string;
-    sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin";
+    sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin" | "bulk" | "processed" | "other";
     includes_urine?: boolean;
     includes_manure?: boolean;
     buyer_name?: string;
@@ -46,6 +46,7 @@ export default function EarningsTracker() {
     amount: "",
     date: new Date().toISOString().split("T")[0],
     notes: "",
+    sale_type: "other",
   });
 
   const [productionForm, setProductionForm] = useState({
@@ -59,6 +60,44 @@ export default function EarningsTracker() {
     salePrice: "",
     buyerName: "",
   });
+
+  const getSaleTypeOptions = (earningType: string) => {
+    switch (earningType) {
+      case "rabbit_sale":
+        return [
+          { value: "whole", label: "Whole Rabbit" },
+          { value: "meat_only", label: "Meat Only" },
+          { value: "skin_only", label: "Skin Only" },
+          { value: "meat_and_skin", label: "Meat and Skin" },
+        ];
+      case "urine_sale":
+      case "manure_sale":
+        return [
+          { value: "bulk", label: "Bulk Sale" },
+          { value: "processed", label: "Processed" },
+          { value: "other", label: "Other" },
+        ];
+      default:
+        return [
+          { value: "other", label: "Other" },
+          { value: "bulk", label: "Bulk" },
+          { value: "processed", label: "Processed" },
+        ];
+    }
+  };
+
+  // Auto-set sale_type based on earning type
+  const getDefaultSaleType = (earningType: string) => {
+    switch (earningType) {
+      case "rabbit_sale":
+        return "whole";
+      case "urine_sale":
+      case "manure_sale":
+        return "bulk";
+      default:
+        return "other";
+    }
+  };
 
   useEffect(() => {
     if (user?.farm_id) {
@@ -147,15 +186,15 @@ export default function EarningsTracker() {
       if (!token) {
         showError('Error', "No authentication token found")
       }
-
+      const finalSaleType = earningsForm.sale_type || getDefaultSaleType(earningsForm.type);
       const newEarning: EarningsRecord = {
         type: earningsForm.type,
         rabbit_id: earningsForm.rabbit_id,
         hutch_id: earningsForm.hutch_id,
         weight: earningsForm.weight ? Number.parseFloat(earningsForm.weight) : 0,
-        sale_type: earningsForm.sale_type,
-        includes_urine: earningsForm.includes_urine,
-        includes_manure: earningsForm.includes_manure,
+        sale_type: finalSaleType,
+        includes_urine: earningsForm.includes_urine || false,
+        includes_manure: earningsForm.includes_manure || false,
         buyer_name: earningsForm.buyer_name,
         amount: Number.parseFloat(earningsForm.amount),
         currency: currency,
@@ -175,8 +214,10 @@ export default function EarningsTracker() {
         amount: "",
         date: new Date().toISOString().split("T")[0],
         notes: "",
+        sale_type: "other",
       });
       setAddEarningsOpen(false);
+      showSuccess('Success', 'Earnings record added successfully!');
     } catch (error: any) {
       showError('Error', error.response?.data?.message);
     }
@@ -215,6 +256,7 @@ export default function EarningsTracker() {
           amount: Number.parseFloat(productionForm.salePrice),
           currency: currency,
           date: productionForm.date,
+          sale_type: "bulk",
           buyer_name: productionForm.buyerName || "",
           notes: `Sale of ${productionForm.quantity} ${productionForm.unit} ${productionForm.type}${productionForm.buyerName ? ` to ${productionForm.buyerName}` : ""}`,
           farm_id: user.farm_id,
@@ -226,6 +268,7 @@ export default function EarningsTracker() {
 
         const updatedEarnings = [...earnings, saleEarning];
         setEarnings(updatedEarnings);
+        showSuccess('Success', 'Production and sale recorded successfully!');
       } catch (error: any) {
         showError('Error', 'Error adding production sale earnings')
       }
@@ -508,10 +551,10 @@ export default function EarningsTracker() {
                           setEarningsForm({
                             ...earningsForm,
                             type: value,
+                            sale_type: getDefaultSaleType(value),
                             ...(value !== "rabbit_sale" && {
                               rabbit_id: undefined,
                               hutch_id: undefined,
-                              sale_type: undefined,
                               weight: undefined,
                               includes_urine: undefined,
                               includes_manure: undefined,
@@ -531,6 +574,29 @@ export default function EarningsTracker() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Sale Type - Always show for all types */}
+                    <div>
+                      <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Sale Type</Label>
+                      <Select
+                        value={earningsForm.sale_type}
+                        onValueChange={(value: "whole" | "meat_only" | "skin_only" | "meat_and_skin" | "bulk" | "processed" | "other") =>
+                          setEarningsForm({ ...earningsForm, sale_type: value })
+                        }
+                      >
+                        <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
+                          <SelectValue placeholder="Select sale type" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                          {getSaleTypeOptions(earningsForm.type).map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {earningsForm.type === "rabbit_sale" && (
                       <div className="space-y-3 sm:space-y-4">
                         <div>
@@ -550,25 +616,6 @@ export default function EarningsTracker() {
                             className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
                             placeholder="e.g., Mercury-A1"
                           />
-                        </div>
-                        <div>
-                          <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Sale Type</Label>
-                          <Select
-                            value={earningsForm.sale_type}
-                            onValueChange={(value: "whole" | "meat_only" | "skin_only" | "meat_and_skin") =>
-                              setEarningsForm({ ...earningsForm, sale_type: value })
-                            }
-                          >
-                            <SelectTrigger className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-xs sm:text-sm">
-                              <SelectValue placeholder="Select sale type" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                              <SelectItem value="whole">Whole Rabbit</SelectItem>
-                              <SelectItem value="meat_only">Meat Only</SelectItem>
-                              <SelectItem value="skin_only">Skin Only</SelectItem>
-                              <SelectItem value="meat_and_skin">Meat and Skin</SelectItem>
-                            </SelectContent>
-                          </Select>
                         </div>
                         <div>
                           <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Weight (kg)</Label>
@@ -612,6 +659,19 @@ export default function EarningsTracker() {
                         </div>
                       </div>
                     )}
+
+                    {(earningsForm.type === "urine_sale" || earningsForm.type === "manure_sale") && (
+                      <div>
+                        <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Buyer Name</Label>
+                        <Input
+                          value={earningsForm.buyer_name || ""}
+                          onChange={(e) => setEarningsForm({ ...earningsForm, buyer_name: e.target.value })}
+                          className="bg-white/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
+                          placeholder="Optional"
+                        />
+                      </div>
+                    )}
+
                     <div>
                       <Label className="text-gray-900 dark:text-gray-100 text-xs sm:text-sm">Amount ({getCurrencySymbol()})</Label>
                       <Input
