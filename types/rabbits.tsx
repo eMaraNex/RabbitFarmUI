@@ -28,7 +28,14 @@ export interface Rabbit {
     notes?: string;
     actual_birth_date?: string;
     pregnancy_start_date?: string;
-    birth_history?: any[]
+    birth_history?: any[];
+    health_records?: any[];
+    feeding_schedule?: {
+        daily_amount: string | number;
+        feed_type: string;
+        times: string[];
+        last_fed: string;
+    };
 }
 
 export interface RemovalRecord {

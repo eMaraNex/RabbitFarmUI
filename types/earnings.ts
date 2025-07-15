@@ -6,7 +6,7 @@ export interface EarningsRecord {
   currency: string;
   date: string;
   weight?: number;
-  sale_type?: "whole" | "meat_only" | "skin_only" | "meat_and_skin";
+  sale_type: "whole" | "meat_only" | "skin_only" | "meat_and_skin" | "bulk" | "processed" | "other" | undefined;
   includes_urine?: boolean;
   includes_manure?: boolean;
   buyer_name?: string;

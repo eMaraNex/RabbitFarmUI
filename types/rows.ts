@@ -4,7 +4,7 @@ export interface Row {
   farm_id?: string;
   description?: string;
   capacity: number;
-  occupied?: number;
+  occupied: number;
   is_deleted: number;
   levels: string[];
   created_at?: string;
