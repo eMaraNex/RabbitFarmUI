@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import type React from "react";
+
+import { useState, useCallback, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 
 export interface CalendarEvent {
   id: string;
-  date: string; // YYYY-MM-DD format
+  date: string; // YYYY-MM-DD format (UTC)
   title: string;
   description?: string;
   type: "event" | "notification";
@@ -35,15 +37,19 @@ export default function Calendar({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const today = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
+  const today = useMemo(() => {
+    const d = new Date();
+    return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); // Today's date in UTC
+  }, []);
 
-  // Get first day of month and number of days
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-  const firstDayWeekday = firstDayOfMonth.getDay();
-  const daysInMonth = lastDayOfMonth.getDate();
+  const currentMonth = currentDate.getUTCMonth();
+  const currentYear = currentDate.getUTCFullYear();
+
+  // Get first day of month and number of days (all in UTC context)
+  const firstDayOfMonth = new Date(Date.UTC(currentYear, currentMonth, 1));
+  const lastDayOfMonth = new Date(Date.UTC(currentYear, currentMonth + 1, 0));
+  const firstDayWeekday = firstDayOfMonth.getUTCDay(); // 0 for Sunday, 6 for Saturday
+  const daysInMonth = lastDayOfMonth.getUTCDate();
 
   // Generate calendar days
   const calendarDays = [];
@@ -75,52 +81,99 @@ export default function Calendar({
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const navigateMonth = (direction: "prev" | "next") => {
+  const navigateMonth = useCallback((direction: "prev" | "next") => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
       if (direction === "prev") {
-        newDate.setMonth(prev.getMonth() - 1);
+        newDate.setUTCMonth(prev.getUTCMonth() - 1);
       } else {
-        newDate.setMonth(prev.getMonth() + 1);
+        newDate.setUTCMonth(prev.getUTCMonth() + 1);
       }
       return newDate;
     });
-  };
+  }, []);
 
-  const formatDate = (day: number) => {
-    return `${currentYear}-${String(currentMonth + 1).padStart(
-      2,
-      "0"
-    )}-${String(day).padStart(2, "0")}`;
-  };
+  const handleMonthChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newMonth = Number.parseInt(e.target.value, 10);
+      setCurrentDate(prev => {
+        const newDate = new Date(prev);
+        newDate.setUTCMonth(newMonth);
+        return newDate;
+      });
+    },
+    []
+  );
 
-  const getEventsForDate = (day: number) => {
-    const dateStr = formatDate(day);
-    return events.filter(event => event.date === dateStr);
-  };
+  const handleYearChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newYear = Number.parseInt(e.target.value, 10);
+      setCurrentDate(prev => {
+        const newDate = new Date(prev);
+        newDate.setUTCFullYear(newYear);
+        return newDate;
+      });
+    },
+    []
+  );
 
-  const isToday = (day: number) => {
-    return (
-      today.getDate() === day &&
-      today.getMonth() === currentMonth &&
-      today.getFullYear() === currentYear
-    );
-  };
+  // Formats a day number into a UTC YYYY-MM-DD string
+  const formatDateString = useCallback(
+    (day: number) => {
+      const date = new Date(Date.UTC(currentYear, currentMonth, day));
+      return date.toISOString().split("T")[0];
+    },
+    [currentYear, currentMonth]
+  );
 
-  const isPastDate = (day: number) => {
-    const date = new Date(currentYear, currentMonth, day);
-    return date < today;
-  };
+  const getEventsForDate = useCallback(
+    (day: number) => {
+      const dateStr = formatDateString(day);
+      return events.filter(event => event.date === dateStr);
+    },
+    [events, formatDateString]
+  );
 
-  const handleDateClick = (day: number) => {
-    const dateStr = formatDate(day);
-    setSelectedDate(dateStr);
-    onDateClick?.(dateStr);
-  };
+  const isToday = useCallback(
+    (day: number) => {
+      const date = new Date(Date.UTC(currentYear, currentMonth, day));
+      return date.getTime() === today.getTime();
+    },
+    [currentYear, currentMonth, today]
+  );
 
-  const selectedDateEvents = selectedDate
-    ? events.filter(event => event.date === selectedDate)
-    : [];
+  const isPastDate = useCallback(
+    (day: number) => {
+      const date = new Date(Date.UTC(currentYear, currentMonth, day));
+      return date < today;
+    },
+    [currentYear, currentMonth, today]
+  );
+
+  const handleDateClick = useCallback(
+    (day: number) => {
+      const dateStr = formatDateString(day);
+      setSelectedDate(dateStr);
+      onDateClick?.(dateStr);
+    },
+    [formatDateString, onDateClick]
+  );
+
+  const selectedDateEvents = useMemo(() => {
+    return selectedDate
+      ? events.filter(event => event.date === selectedDate)
+      : [];
+  }, [selectedDate, events]);
+
+  const yearOptions = useMemo(() => {
+    const years = [];
+    const startYear = new Date().getFullYear() - 5; // 5 years back
+    const endYear = new Date().getFullYear() + 5; // 5 years forward
+    for (let year = startYear; year <= endYear; year++) {
+      years.push(year);
+    }
+    return years;
+  }, []);
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-4 px-2 sm:px-4">
@@ -128,9 +181,32 @@ export default function Calendar({
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-4">
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-base sm:text-xl">
-              {monthNames[currentMonth]} {currentYear}
-            </span>
+            <div className="flex gap-2">
+              <select
+                value={currentMonth}
+                onChange={handleMonthChange}
+                className="bg-background border rounded-md px-2 py-1 text-sm sm:text-base"
+                aria-label="Select month"
+              >
+                {monthNames.map((month, index) => (
+                  <option key={month} value={index}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={currentYear}
+                onChange={handleYearChange}
+                className="bg-background border rounded-md px-2 py-1 text-sm sm:text-base"
+                aria-label="Select year"
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
           </CardTitle>
           <div className="flex gap-1">
             <Button
@@ -138,6 +214,7 @@ export default function Calendar({
               size="sm"
               onClick={() => navigateMonth("prev")}
               className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
+              aria-label="Previous month"
             >
               <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline ml-1">Prev</span>
@@ -147,6 +224,7 @@ export default function Calendar({
               size="sm"
               onClick={() => navigateMonth("next")}
               className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
+              aria-label="Next month"
             >
               <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline ml-1">Next</span>
@@ -187,19 +265,19 @@ export default function Calendar({
                 <div
                   key={day}
                   className={`
-          p-0.5 sm:p-1 h-12 sm:h-16 border rounded-md sm:rounded-lg cursor-pointer transition-colors relative
-          ${
-            isToday(day)
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-muted"
-          }
-          ${
-            selectedDate === formatDate(day)
-              ? "ring-1 sm:ring-2 ring-primary"
-              : ""
-          }
-          ${isPastDate(day) ? "text-muted-foreground" : ""}
-        `}
+                    p-0.5 sm:p-1 h-12 sm:h-16 border rounded-md sm:rounded-lg cursor-pointer transition-colors relative
+                    ${
+                      isToday(day)
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }
+                    ${
+                      selectedDate === formatDateString(day)
+                        ? "ring-1 sm:ring-2 ring-primary"
+                        : ""
+                    }
+                    ${isPastDate(day) ? "text-muted-foreground" : ""}
+                  `}
                   onClick={() => handleDateClick(day)}
                 >
                   <div className="text-xs sm:text-sm font-medium">{day}</div>
@@ -247,12 +325,16 @@ export default function Calendar({
               <span className="text-sm sm:text-base">
                 Events for{" "}
                 <span className="block sm:inline">
-                  {new Date(selectedDate).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {new Date(selectedDate + "T00:00:00Z").toLocaleDateString(
+                    "en-US",
+                    {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      timeZone: "UTC", // Ensure consistent display
+                    }
+                  )}
                 </span>
               </span>
             </CardTitle>
@@ -357,12 +439,16 @@ export default function Calendar({
               <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="text-sm sm:text-base">
                 <span className="block sm:inline">
-                  {new Date(selectedDate).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {new Date(selectedDate + "T00:00:00Z").toLocaleDateString(
+                    "en-US",
+                    {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      timeZone: "UTC", // Ensure consistent display
+                    }
+                  )}
                 </span>
               </span>
             </CardTitle>
