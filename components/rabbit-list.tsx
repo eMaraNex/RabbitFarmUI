@@ -28,8 +28,10 @@ import RabbitListSkeleton from "./skeletons/rabbits-list/skeleton";
 import AddRabbitDialog from "@/components/add-rabbit-dialog";
 import Table from "./shared/table";
 import Pagination from "./shared/pagination";
+import { useAuth } from "@/lib/auth-context";
 
 const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
+  const { user } = useAuth();
   const [rabbits, setRabbits] = useState<RabbitType[]>([]);
   const [selectedRabbits, setSelectedRabbits] = useState<string[]>([]);
   const [editingRabbit, setEditingRabbit] = useState<RabbitType | null>(null);
@@ -59,7 +61,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
   }, [searchTerm]);
 
   const fetchRabbits = useCallback(async () => {
-    if (!farmId) return;
+    if (!user?.farm_id) return;
 
     setLoading(true);
     setError(null);
@@ -72,7 +74,7 @@ const RabbitList: React.FC<RabbitListProps> = ({ farmId }) => {
 
 
       const response = await axios.post(
-        `${utils.apiUrl}/rabbits/${farmId}/details`,
+        `${utils.apiUrl}/rabbits/${user?.farm_id}/details`,
         {
           page: Number(page),
           limit: Number(pageSize),
