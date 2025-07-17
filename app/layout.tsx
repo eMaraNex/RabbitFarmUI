@@ -9,7 +9,16 @@ import { ToastProvider } from '@/lib/toast-provider';
 
 export const metadata: Metadata = {
   title: 'Sungura Master',
-  description: 'Professional software to help manage farming operations efficiently.',
+  description: 'Professional software to help manage farming operations efficiently with comprehensive tools and analytics.',
+  keywords: ['rabbit farming', 'cuniculture', 'rabbit farming in Kenya', 'farm management', 'agriculture', 'livestock', 'farming software', 'productivity'],
+  authors: [{ name: 'Sungura Master Team' }],
+  creator: 'Sungura Master',
+  publisher: 'Sungura Master',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -48,8 +57,16 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
       { url: '/icons/icon-48x48.png', sizes: '48x48', type: 'image/png' },
       { url: '/icons/icon-72x72.png', sizes: '72x72', type: 'image/png' },
+      { url: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/icons/icon-128x128.png', sizes: '128x128', type: 'image/png' },
+      { url: '/icons/icon-144x144.png', sizes: '144x144', type: 'image/png' },
+      { url: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-384x384.png', sizes: '384x384', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
       { url: '/icons/apple-icon-180x180.png', sizes: '180x180', type: 'image/png' },
@@ -72,6 +89,7 @@ export const metadata: Metadata = {
     'msapplication-TileColor': '#22c55e',
     'msapplication-TileImage': '/icons/ms-icon-144x144.png',
     'msapplication-config': '/browserconfig.xml',
+    'theme-color': '#22c55e',
   },
 };
 
@@ -81,38 +99,79 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#22c55e',
+  colorScheme: 'light',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>): JSX.Element {
   return (
     <html lang="en">
       <head>
+        {/* Preload critical resources */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preload" href="/icons/icon-192x192.png" as="image" />
+
+        {/* Additional PWA meta tags */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Sungura Master" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-TileColor" content="#22c55e" />
+        <meta name="msapplication-tap-highlight" content="no" />
+
+        {/* Enhanced Service Worker Registration */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                    console.log('SW registered: ', registration);
-                  }).catch(function(registrationError) {
-                    console.log('SW registration failed: ', registrationError);
-                  });
+                window.addEventListener('load', async function() {
+                  try {
+                    const registration = await navigator.serviceWorker.register('/sw.js', {
+                      scope: '/'
+                    });
+                    
+                    console.log('🐰 Sungura Master SW registered successfully:', registration);
+                    
+                    // Listen for updates
+                    registration.addEventListener('updatefound', () => {
+                      console.log('🔄 New version of Sungura Master available');
+                    });
+                    
+                    // Check for updates periodically
+                    setInterval(() => {
+                      registration.update();
+                    }, 60000); // Check every minute
+                    
+                  } catch (error) {
+                    console.error('🚨 SW registration failed:', error);
+                  }
                 });
               }
+              
+              // Handle app install prompt
+              window.addEventListener('beforeinstallprompt', (e) => {
+                console.log('💾 Install prompt available');
+                window.deferredPrompt = e;
+              });
+              
+              // Handle successful app install
+              window.addEventListener('appinstalled', (e) => {
+                console.log('✅ Sungura Master installed successfully');
+                window.deferredPrompt = null;
+              });
             `,
           }}
         />
       </head>
-      <body>
+      <body className="antialiased">
         <AuthProvider>
           <CurrencyProvider>
             <ThemeProvider>
               <ToastProvider>
                 <PWAInstaller />
                 {children}
-              </ToastProvider >
+              </ToastProvider>
             </ThemeProvider>
           </CurrencyProvider>
         </AuthProvider>
