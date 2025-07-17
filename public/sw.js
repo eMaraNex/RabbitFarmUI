@@ -1,51 +1,83 @@
-const CACHE_NAME = 'sungura-master-v2';
+const CACHE_NAME = 'sungura-master-v3';
 const OFFLINE_URL = '/offline.html';
 
 const urlsToCache = [
     '/',
+    '/dashboard',
+    '/reports',
     '/offline.html',
     '/manifest.json',
+    '/icons/icon-32x32.png',
+    '/icons/icon-48x48.png',
+    '/icons/icon-72x72.png',
+    '/icons/icon-96x96.png',
+    '/icons/icon-128x128.png',
+    '/icons/icon-144x144.png',
+    '/icons/icon-152x152.png',
     '/icons/icon-192x192.png',
+    '/icons/icon-384x384.png',
     '/icons/icon-512x512.png',
 ];
 
-// Helper function to check if request should be cached
+// Enhanced cache helper with quota management
 function shouldCache(request) {
-    if (request.method !== 'GET') {
-        return false;
-    }
-
-    if (!request.url.startsWith('http')) {
-        return false;
-    }
+    if (request.method !== 'GET') return false;
+    if (!request.url.startsWith('http')) return false;
 
     const url = new URL(request.url);
-    if (url.pathname.includes('/api/') ||
-        url.pathname.includes('/_next/static/chunks/') ||
-        url.pathname.includes('sockjs-node') ||
-        url.pathname.includes('hot-update')) {
-        return false;
-    }
+    const pathname = url.pathname;
 
-    return true;
+    // Skip API calls, development assets, and dynamic content
+    const skipPatterns = [
+        '/api/',
+        '/_next/static/chunks/',
+        'sockjs-node',
+        'hot-update',
+        '.map',
+        '/screenshots/' // Skip screenshots to save space
+    ];
+
+    return !skipPatterns.some(pattern => pathname.includes(pattern));
 }
 
-// Safe cache operation with retry
+// Improved cache management with quota awareness
 async function safeCachePut(cacheName, request, response) {
     try {
+        // Check if we have enough quota
+        if ('storage' in navigator && 'estimate' in navigator.storage) {
+            const estimate = await navigator.storage.estimate();
+            const usedPercentage = estimate.usage / estimate.quota;
+
+            // If we're using more than 80% of quota, clean up old caches
+            if (usedPercentage > 0.8) {
+                await cleanupOldCaches();
+            }
+        }
+
         const cache = await caches.open(cacheName);
-        await cache.put(request, response);
+
+        // Clone response to avoid consuming it
+        const responseClone = response.clone();
+        await cache.put(request, responseClone);
+
         return true;
     } catch (error) {
-        // If caching fails, try to clean up old cache and retry once
-        try {
-            await caches.delete(cacheName);
-            const newCache = await caches.open(cacheName);
-            await newCache.put(request, response);
-            return true;
-        } catch (retryError) {
-            return false;
-        }
+        console.warn('Cache put failed:', error);
+        return false;
+    }
+}
+
+// Enhanced cleanup function
+async function cleanupOldCaches() {
+    try {
+        const cacheNames = await caches.keys();
+        const deletePromises = cacheNames
+            .filter(name => name !== CACHE_NAME)
+            .map(name => caches.delete(name));
+
+        await Promise.all(deletePromises);
+    } catch (error) {
+        console.warn('Cache cleanup failed:', error);
     }
 }
 
@@ -54,63 +86,79 @@ async function safeCacheMatch(request) {
     try {
         return await caches.match(request);
     } catch (error) {
+        console.warn('Cache match failed:', error);
         return null;
     }
 }
 
-// Install event
+// Install event with progressive enhancement
 self.addEventListener('install', (event) => {
     event.waitUntil(
         (async () => {
             try {
+                console.log('Installing Sungura Master...');
+
                 const cache = await caches.open(CACHE_NAME);
-                await cache.addAll(urlsToCache);
-                await self.skipWaiting();
-            } catch (error) {
-                // If initial caching fails, still proceed but cache individual files
-                try {
-                    const cache = await caches.open(CACHE_NAME);
-                    for (const url of urlsToCache) {
-                        try {
-                            await cache.add(url);
-                        } catch (individualError) {
-                            // Skip files that fail to cache
-                            continue;
-                        }
+
+                // Cache essential files first
+                const essentialFiles = [
+                    '/',
+                    '/offline.html',
+                    '/manifest.json',
+                    '/icons/icon-192x192.png',
+                    '/icons/icon-512x512.png'
+                ];
+
+                await cache.addAll(essentialFiles);
+
+                // Cache remaining files progressively
+                const remainingFiles = urlsToCache.filter(url => !essentialFiles.includes(url));
+
+                for (const url of remainingFiles) {
+                    try {
+                        await cache.add(url);
+                    } catch (error) {
+                        console.warn(`Failed to cache ${url}:`, error);
                     }
-                    await self.skipWaiting();
-                } catch (fallbackError) {
-                    // Even if everything fails, still activate the service worker
-                    await self.skipWaiting();
                 }
+
+                console.log('Sungura Master installed successfully!');
+                await self.skipWaiting();
+
+            } catch (error) {
+                console.error('Installation failed:', error);
+                // Still proceed with installation even if caching fails
+                await self.skipWaiting();
             }
         })()
     );
 });
 
-// Activate event
+// Activate event with better client management
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         (async () => {
             try {
-                const cacheNames = await caches.keys();
-                await Promise.allSettled(
-                    cacheNames.map((cacheName) => {
-                        if (cacheName !== CACHE_NAME) {
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
+                console.log('Activating Sungura Master...');
+
+                // Clean up old caches
+                await cleanupOldCaches();
+
+                // Take control of all clients
                 await self.clients.claim();
+
+                console.log('Sungura Master activated successfully!');
+
             } catch (error) {
-                // If cleanup fails, still claim clients
+                console.error('Activation failed:', error);
+                // Still claim clients even if cleanup fails
                 await self.clients.claim();
             }
         })()
     );
 });
 
-// Fetch event with robust error handling
+// Enhanced fetch event with better error handling
 self.addEventListener('fetch', (event) => {
     if (!shouldCache(event.request)) {
         return;
@@ -120,32 +168,48 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             (async () => {
                 try {
-                    // Try network first
+                    // Network-first strategy for documents
                     const networkResponse = await fetch(event.request);
 
-                    // If successful, try to cache it
                     if (networkResponse.status === 200) {
-                        const responseClone = networkResponse.clone();
-                        safeCachePut(CACHE_NAME, event.request, responseClone);
+                        safeCachePut(CACHE_NAME, event.request, networkResponse.clone());
                     }
 
                     return networkResponse;
                 } catch (networkError) {
-                    // Network failed, try cache
+                    // Fallback to cache
                     const cachedResponse = await safeCacheMatch(event.request);
                     if (cachedResponse) {
                         return cachedResponse;
                     }
 
-                    // Try offline page
+                    // Return offline page
                     const offlineResponse = await safeCacheMatch(OFFLINE_URL);
                     if (offlineResponse) {
                         return offlineResponse;
                     }
 
-                    // Last resort - basic offline response
+                    // Final fallback
                     return new Response(
-                        '<!DOCTYPE html><html><head><title>Offline</title></head><body><h1>You are offline</h1><p>Please check your internet connection.</p></body></html>',
+                        `<!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Sungura Master - Offline</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1">
+                            <style>
+                                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                                       text-align: center; padding: 50px 20px; color: #333; }
+                                .logo { font-size: 2rem; color: #22c55e; margin-bottom: 1rem; }
+                                .message { font-size: 1.2rem; margin-bottom: 2rem; }
+                                .hint { color: #666; font-size: 0.9rem; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="logo">🐰 Sungura Master</div>
+                            <div class="message">You're currently offline</div>
+                            <div class="hint">Please check your internet connection and try again.</div>
+                        </body>
+                        </html>`,
                         {
                             status: 200,
                             headers: { 'Content-Type': 'text/html' }
@@ -155,36 +219,32 @@ self.addEventListener('fetch', (event) => {
             })()
         );
     } else {
+        // Cache-first strategy for assets
         event.respondWith(
             (async () => {
-                // Try cache first for assets
                 const cachedResponse = await safeCacheMatch(event.request);
                 if (cachedResponse) {
                     return cachedResponse;
                 }
 
                 try {
-                    // Try network
                     const networkResponse = await fetch(event.request);
 
-                    // Cache successful responses
-                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                        const responseToCache = networkResponse.clone();
-                        safeCachePut(CACHE_NAME, event.request, responseToCache);
+                    if (networkResponse && networkResponse.status === 200) {
+                        safeCachePut(CACHE_NAME, event.request, networkResponse.clone());
                     }
 
                     return networkResponse;
                 } catch (networkError) {
-                    // For assets, return a basic error response or try to serve a fallback
+                    // Fallback for different asset types
                     if (event.request.destination === 'image') {
-                        // Return a simple 1x1 transparent image for failed images
+                        // Return placeholder image
                         return new Response(
                             new Uint8Array([71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0, 255, 255, 255, 0, 0, 0, 33, 249, 4, 1, 0, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59]),
                             { headers: { 'Content-Type': 'image/gif' } }
                         );
                     }
 
-                    // For other assets, return empty response
                     return new Response('', { status: 204 });
                 }
             })()
@@ -192,35 +252,58 @@ self.addEventListener('fetch', (event) => {
     }
 });
 
-// Handle push notifications with error recovery
+// Enhanced push notification handling
 self.addEventListener('push', (event) => {
     if (event.data) {
+        const data = event.data.json();
+
         const options = {
-            body: event.data.text(),
+            body: data.body || 'New update from Sungura Master',
             icon: '/icons/icon-192x192.png',
             badge: '/icons/icon-72x72.png',
-            vibrate: [100, 50, 100],
+            vibrate: [200, 100, 200],
             data: {
                 dateOfArrival: Date.now(),
-                primaryKey: 1
-            }
+                primaryKey: data.id || 1,
+                url: data.url || '/'
+            },
+            actions: [
+                {
+                    action: 'view',
+                    title: 'View',
+                    icon: '/icons/icon-48x48.png'
+                },
+                {
+                    action: 'dismiss',
+                    title: 'Dismiss'
+                }
+            ]
         };
 
         event.waitUntil(
-            (async () => {
-                try {
-                    await self.registration.showNotification('Sungura Master', options);
-                } catch (error) {
-                    // Fallback notification with minimal options
-                    try {
-                        await self.registration.showNotification('Sungura Master', {
-                            body: event.data.text()
-                        });
-                    } catch (fallbackError) {
-                        // Notification completely failed - could log to analytics or ignore
-                    }
-                }
-            })()
+            self.registration.showNotification('Sungura Master', options)
+        );
+    }
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    if (event.action === 'view') {
+        const url = event.notification.data.url || '/';
+        event.waitUntil(
+            clients.openWindow(url)
+        );
+    }
+});
+
+// Background sync for offline actions
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'background-sync') {
+        event.waitUntil(
+            // Handle background sync tasks
+            console.log('Background sync triggered')
         );
     }
 });
