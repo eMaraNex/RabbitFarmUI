@@ -1,12 +1,7 @@
 "use client";
 
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
+import type React from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,12 +17,12 @@ import AnalyticsCharts from "@/components/analytics-charts";
 import CurrencySelector from "@/components/currency-selector";
 import AddRowDialog from "@/components/add-row-dialog";
 import FarmBanner from "@/components/farm-banner";
-import Calendar, { CalendarEvent } from "@/components/calender";
+import Calendar, { type CalendarEvent } from "@/components/calender";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import ProtectedRoute from "@/components/auth/protected-route";
 import ThemeToggle from "@/components/theme-toggle";
 import AddKitDialog from "@/components/add-kit-dialog";
-import { useToast } from '@/lib/toast-provider';
+import { useToast } from "@/lib/toast-provider";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { CurrencyProvider } from "@/lib/currency-context";
@@ -36,9 +31,9 @@ import * as utils from "@/lib/utils";
 import type { Rabbit as RabbitType } from "@/types";
 import { useRouter } from "next/navigation";
 import Header from "@/components/shared/header";
-import SkeletonDashboard from "@/components/skeletons/dashboard/skeleton";
 import Sidebar from "@/components/shared/sidebar";
-import { Alert, ServerAlert, AlertCalendar } from "@/types";
+import type { Alert, ServerAlert, AlertCalendar } from "@/types";
+import SkeletonDashboard from "@/components/skeletons/dashboard/skeleton";
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth();
@@ -48,132 +43,92 @@ const DashboardContent: React.FC = () => {
   const [rabbits, setRabbits] = useState<RabbitType[]>([]);
   const [hutches, setHutches] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
-  const [farmName, setFarmName] = useState<String>("");
+  const [farmName, setFarmName] = useState<string>("");
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<AlertCalendar[]>([]);
 
   const tempFarmId = localStorage.getItem("rabbit_farm_id");
-
   let farmId;
   try {
     farmId = tempFarmId ? JSON.parse(tempFarmId) : null;
   } catch (e) {
     farmId = tempFarmId;
   }
+  const finalFarmId = farmId && typeof farmId === "object" ? farmId.farmId : farmId;
+  const [hasFarm, setHasFarm] = useState<boolean>(!!finalFarmId && finalFarmId !== "");
 
-  const finalFarmId =
-    farmId && typeof farmId === "object" ? farmId.farmId : farmId;
-
-  // Set hasFarm to true only if finalFarmId is a non-empty string
-  const [hasFarm, setHasFarm] = useState<boolean>(
-    !!finalFarmId && finalFarmId !== ""
-  );
-
-  const [breedingRefreshTrigger, setBreedingRefreshTrigger] =
-    useState<number>(0);
+  const [breedingRefreshTrigger, setBreedingRefreshTrigger] = useState<number>(0);
   const [showAddKitDialog, setShowAddKitDialog] = useState<boolean>(false);
-  const [selectedRabbitForKit, setSelectedRabbitForKit] =
-    useState<RabbitType | null>(null);
+  const [selectedRabbitForKit, setSelectedRabbitForKit] = useState<RabbitType | null>(null);
   const [buckIdForKit, setBuckIdForKit] = useState<string>("");
   const tabsListRef = useRef<HTMLDivElement>(null);
   const notifiedRabbitsRef = useRef<Set<string>>(new Set());
-  const router = useRouter();
+  const router = useRouter()
   const [addRowOpen, setAddRowOpen] = useState<boolean>(false);
 
   const handleAddRow = () => {
     setAddRowOpen(true);
-  };
+  }
+
   const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
   const farmDetails = cachedFarmDetails ? JSON.parse(cachedFarmDetails) : [];
 
   function transformRawEvents(rawData: AlertCalendar[]): CalendarEvent[] {
     const transformedEvents: CalendarEvent[] = [];
     const today = new Date();
-    // today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
-
-    rawData.forEach(rawItem => {
-      rawItem.notify_on.forEach(notifyDateStr => {
+    rawData.forEach((rawItem) => {
+      rawItem.notify_on.forEach((notifyDateStr) => {
         const notifyDate = new Date(notifyDateStr);
-        // notifyDate.setHours(0, 0, 0, 0); // Normalize notifyDate to start of day
-
-        // Determine type based on whether the notify_on date is in the past or future/today
-        const type: "event" | "notification" =
-          notifyDate < today ? "event" : "notification";
-
+        const type: "event" | "notification" = notifyDate < today ? "event" : "notification";
         const time: string | undefined = undefined;
-
         transformedEvents.push({
           id: rawItem.id,
-          date: notifyDate.toISOString().split("T")[0], // YYYY-MM-DD format
+          date: notifyDate.toISOString().split("T")[0],
           title: rawItem.name,
           description: rawItem.message,
           type: type,
           time: time,
-        });
-      });
-    });
-
-    return transformedEvents;
+        })
+      })
+    })
+    return transformedEvents
   }
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
       const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`);
-      const cachedHutches = localStorage.getItem(
-        `rabbit_farm_hutches_${farmId}`
-      );
-      const cachedRabbits = localStorage.getItem(
-        `rabbit_farm_rabbits_${farmId}`
-      );
-      const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
+      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`)
+      const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`);
       return {
         rows: cachedRows ? JSON.parse(cachedRows) : [],
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
         rabbits: cachedRabbits ? JSON.parse(cachedRabbits) : [],
-      };
+      }
     } catch (error) {
       console.error("Error loading from storage:", error);
       return { rows: [], hutches: [], rabbits: [] };
     }
   }, []);
 
-  const saveToStorage = useCallback(
-    (farmId: string, data: { rows: any[]; hutches: any[]; rabbits: any[] }) => {
-      try {
-        localStorage.setItem(
-          `rabbit_farm_rows_${farmId}`,
-          JSON.stringify(data.rows)
-        );
-        localStorage.setItem(
-          `rabbit_farm_hutches_${farmId}`,
-          JSON.stringify(data.hutches)
-        );
-        localStorage.setItem(
-          `rabbit_farm_rabbits_${farmId}`,
-          JSON.stringify(data.rabbits)
-        );
-      } catch (error) {
-        console.error("Error saving to storage:", error);
-      }
-    },
-    []
-  );
+  const saveToStorage = useCallback((farmId: string, data: { rows: any[]; hutches: any[]; rabbits: any[] }) => {
+    try {
+      localStorage.setItem(`rabbit_farm_rows_${farmId}`, JSON.stringify(data.rows));
+      localStorage.setItem(`rabbit_farm_hutches_${farmId}`, JSON.stringify(data.hutches));
+      localStorage.setItem(`rabbit_farm_rabbits_${farmId}`, JSON.stringify(data.rabbits));
+    } catch (error) {
+      console.error("Error saving to storage:", error);
+    }
+  }, [])
 
   const loadData = useCallback(async () => {
     if (!user?.farm_id) {
       setDataLoaded(true);
       return;
     }
-
-    // Check local storage first
     const cachedData = loadFromStorage(user.farm_id);
-    if (
-      cachedData.rows.length ||
-      cachedData.hutches.length ||
-      cachedData.rabbits.length
-    ) {
+    if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
       setRows(cachedData.rows);
       setHutches(cachedData.hutches);
       setRabbits(cachedData.rabbits);
@@ -184,13 +139,7 @@ const DashboardContent: React.FC = () => {
       const token = localStorage.getItem("rabbit_farm_token");
       if (!token) throw new Error("No authentication token found");
 
-      const [
-        rowsResponse,
-        hutchesResponse,
-        rabbitsResponse,
-        alertsResponse,
-        calenderResponse,
-      ] = await Promise.all([
+      const [rowsResponse, hutchesResponse, rabbitsResponse, alertsResponse, calenderResponse] = await Promise.all([
         axios.get(`${utils.apiUrl}/rows/list/${user.farm_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -214,9 +163,9 @@ const DashboardContent: React.FC = () => {
         expected_birth_date:
           r.is_pregnant && r.pregnancy_start_date
             ? new Date(
-                new Date(r.pregnancy_start_date).getTime() +
-                  (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000
-              ).toISOString()
+              new Date(r.pregnancy_start_date).getTime() +
+              (utils.PREGNANCY_DURATION_DAYS || 31) * 24 * 60 * 60 * 1000,
+            ).toISOString()
             : r.expected_birth_date,
       }));
 
@@ -224,49 +173,38 @@ const DashboardContent: React.FC = () => {
       const newHutches = hutchesResponse.data.data || [];
       const calendarAlerts = calenderResponse.data.data || [];
       const serverAlerts: ServerAlert[] = alertsResponse.data.data || [];
-      const mappedAlerts: Alert[] = serverAlerts.map(alert => ({
+
+      const mappedAlerts: Alert[] = serverAlerts.map((alert) => ({
         type:
           alert.alert_type === "birth"
             ? "Birth Expected"
             : alert.alert_type === "medication"
-            ? "Medication Due"
-            : alert.name,
+              ? "Medication Due"
+              : alert.name,
         message: alert.message,
-        variant:
-          alert.severity === "high"
-            ? "destructive"
-            : alert.severity === "medium"
-            ? "secondary"
-            : "outline",
-      }));
-      // Update state
+        variant: alert.severity === "high" ? "destructive" : alert.severity === "medium" ? "secondary" : "outline",
+      }))
+
       setRows(newRows);
       setHutches(newHutches);
       setRabbits(newRabbits);
       setAlerts(mappedAlerts);
       setCalendarEvents(calendarAlerts);
-
-      // Save to local storage
       saveToStorage(user.farm_id, {
         rows: newRows,
         hutches: newHutches,
         rabbits: newRabbits,
-      });
-
+      })
       setDataLoaded(true);
     } catch (error) {
       console.error("Error fetching data:", error);
-      if (
-        cachedData.rows.length ||
-        cachedData.hutches.length ||
-        cachedData.rabbits.length
-      ) {
+      if (cachedData.rows.length || cachedData.hutches.length || cachedData.rabbits.length) {
         setRows(cachedData.rows);
         setHutches(cachedData.hutches);
         setRabbits(cachedData.rabbits);
       }
       setDataLoaded(true);
-      showError('Error', "Failed to fetch data from server.");
+      showError("Error", "Failed to fetch data from server.");
     }
   }, [user, loadFromStorage, saveToStorage]);
 
@@ -276,10 +214,10 @@ const DashboardContent: React.FC = () => {
       if (user?.farm_id) {
         saveToStorage(user.farm_id, { rows, hutches, rabbits: updatedRabbits });
       }
-      setBreedingRefreshTrigger(prev => prev + 1);
+      setBreedingRefreshTrigger((prev) => prev + 1);
     },
-    [user, rows, hutches, saveToStorage]
-  );
+    [user, rows, hutches, saveToStorage],
+  )
 
   useEffect(() => {
     loadData();
@@ -303,6 +241,7 @@ const DashboardContent: React.FC = () => {
         "reports",
         "analytics",
         "calender",
+        "pricing",
       ].indexOf(activeTab);
       const tabWidth = 70;
       tabsListRef.current.scrollTo({
@@ -342,20 +281,16 @@ const DashboardContent: React.FC = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const events =  transformRawEvents(calendarEvents);
-  
+  const events = transformRawEvents(calendarEvents);
   const totalRabbits = rabbits.length;
-  const does = rabbits.filter(r => r.gender === "female").length;
-  const bucks = rabbits.filter(r => r.gender === "male").length;
-  const pregnantDoes = rabbits.filter(
-    r => r.is_pregnant && utils.isRabbitMature(r).isMature
-  ).length;
+  const does = rabbits.filter((r) => r.gender === "female").length;
+  const bucks = rabbits.filter((r) => r.gender === "male").length;
+  const pregnantDoes = rabbits.filter((r) => r.is_pregnant && utils.isRabbitMature(r).isMature).length;
   const upcomingBirths = rabbits.filter(
-    r =>
+    (r) =>
       r.expected_birth_date &&
       utils.isRabbitMature(r).isMature &&
-      new Date(r.expected_birth_date).getTime() <=
-        new Date().getTime() + 7 * 24 * 60 * 60 * 1000
+      new Date(r.expected_birth_date).getTime() <= new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
   ).length;
 
   if (!dataLoaded) {
@@ -383,13 +318,10 @@ const DashboardContent: React.FC = () => {
         handleRowAdded={handleRowAdded}
         hasFarm={hasFarm}
         handleAddRow={handleAddRow}
-        addRowOpen={false}
+        addRowOpen={addRowOpen}
       />
       {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={toggleSidebar}
-        ></div>
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={toggleSidebar}></div>
       )}
       {showAddKitDialog && selectedRabbitForKit && (
         <AddKitDialog
@@ -404,71 +336,78 @@ const DashboardContent: React.FC = () => {
       <main className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {user && !user.email_verified && <EmailVerificationBanner />}
         {hasFarm ? (
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6 sm:space-y-8"
-          >
-            <TabsList
-              ref={tabsListRef}
-              key={activeTab}
-              className="inline-flex justify-start w-full md:grid md:grid-cols-9 overflow-x-auto scroll-smooth whitespace-nowrap bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative shadow-sm md:shadow-none"
-            >
-              <TabsTrigger
-                value="overview"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
+            <div className="w-full overflow-hidden">
+              <TabsList
+                ref={tabsListRef}
+                className="flex w-full h-12 p-1 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-white/20 dark:border-gray-700/20 rounded-lg shadow-sm overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
               >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="hutches"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Hutches
-              </TabsTrigger>
-              <TabsTrigger
-                value="breeding"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Breeding
-              </TabsTrigger>
-              <TabsTrigger
-                value="health"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Health
-              </TabsTrigger>
-              <TabsTrigger
-                value="feeding"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Feeding
-              </TabsTrigger>
-              <TabsTrigger
-                value="earnings"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Earnings
-              </TabsTrigger>
-              <TabsTrigger
-                value="reports"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Reports
-              </TabsTrigger>
-              <TabsTrigger
-                value="analytics"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger
-                value="calender"
-                className="flex-1 min-w-[70px] data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm font-medium"
-              >
-                Calender
-              </TabsTrigger>
-            </TabsList>
+                <TabsTrigger
+                  value="overview"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="hutches"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Hutches
+                </TabsTrigger>
+                <TabsTrigger
+                  value="breeding"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Breeding
+                </TabsTrigger>
+                <TabsTrigger
+                  value="health"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=next]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Health
+                </TabsTrigger>
+                <TabsTrigger
+                  value="feeding"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Feeding
+                </TabsTrigger>
+                <TabsTrigger
+                  value="earnings"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Earnings
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reports"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Reports
+                </TabsTrigger>
+                <TabsTrigger
+                  value="analytics"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger
+                  value="calender"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                >
+                  Calendar
+                </TabsTrigger>
+                <TabsTrigger
+                  value="pricing"
+                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
+                  onClick={() => router.push("/pricing")}
+                >
+                  {/* <CreditCard className="h-3 w-3 mr-1 flex-shrink-0" /> */}
+                  <span className="sm:inline">Pricing</span>
+                  {/* <span className="sm:hidden">$</span> */}
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
             <TabsContent value="overview" className="space-y-6 sm:space-y-8">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                 <Card
@@ -476,9 +415,7 @@ const DashboardContent: React.FC = () => {
                   onClick={() => router.push("/rabbits")}
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">
-                      Total Rabbits
-                    </CardTitle>
+                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Total Rabbits</CardTitle>
                     <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
                       <Rabbit className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
@@ -494,9 +431,7 @@ const DashboardContent: React.FC = () => {
                 </Card>
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">
-                      Pregnant Does
-                    </CardTitle>
+                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Pregnant Does</CardTitle>
                     <div className="p-1.5 sm:p-2 bg-gradient-to-r from-pink-500 to-red-500 rounded-lg">
                       <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
@@ -512,27 +447,21 @@ const DashboardContent: React.FC = () => {
                 </Card>
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">
-                      Health Alerts
-                    </CardTitle>
+                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Health Alerts</CardTitle>
                     <div className="p-1.5 sm:p-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg">
                       <Pill className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      {alerts.filter(a => a.type === "Medication Due").length}
+                      {alerts.filter((a) => a.type === "Medication Due").length}
                     </div>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
-                      Medication due
-                    </p>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">Medication due</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:shadow-lg transition-all duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">
-                      Active Rows
-                    </CardTitle>
+                    <CardTitle className="text-xs sm:text-sm font-medium dark:text-gray-200">Active Rows</CardTitle>
                     <div className="p-1.5 sm:p-2 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg">
                       <Building className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
@@ -559,45 +488,35 @@ const DashboardContent: React.FC = () => {
                     {alerts.map((alert, index) => (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${
-                          alert.variant === "destructive"
-                            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
-                            : alert.variant === "secondary"
+                        className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border ${alert.variant === "destructive"
+                          ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800"
+                          : alert.variant === "secondary"
                             ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800"
                             : "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800"
-                        }`}
+                          }`}
                       >
                         <div>
                           <p className="font-medium text-sm sm:text-base">
                             {alert.type === "Medication Due" ||
-                            (alert.type === "Birth Expected" &&
-                              alert.variant === "destructive") ? (
-                              <span className="text-red-800 dark:text-red-300">
-                                {alert.type}
-                              </span>
+                              (alert.type === "Birth Expected" && alert.variant === "destructive") ? (
+                              <span className="text-red-800 dark:text-red-300">{alert.type}</span>
                             ) : (
-                              <span className="text-amber-800 dark:text-amber-300">
-                                {alert.type}
-                              </span>
+                              <span className="text-amber-800 dark:text-amber-300">{alert.type}</span>
                             )}
                           </p>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                            {alert.message}
-                          </p>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{alert.message}</p>
                         </div>
                         <Badge variant={alert.variant} className="text-xs">
                           {alert.variant === "destructive"
                             ? "Overdue"
                             : alert.variant === "secondary"
-                            ? "Upcoming"
-                            : "Ready"}
+                              ? "Upcoming"
+                              : "Ready"}
                         </Badge>
                       </div>
                     ))}
                     {alerts.length === 0 && (
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">
-                        No alerts at this time.
-                      </p>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">No alerts at this time.</p>
                     )}
                   </div>
                 </CardContent>
@@ -612,18 +531,10 @@ const DashboardContent: React.FC = () => {
                 onRowAdded={handleRowAdded}
                 handleAddRow={handleAddRow}
               />
-              {selectedRabbit && (
-                <RabbitProfile
-                  rabbit={selectedRabbit}
-                  onClose={() => setSelectedRabbit(null)}
-                />
-              )}
+              {selectedRabbit && <RabbitProfile rabbit={selectedRabbit} onClose={() => setSelectedRabbit(null)} />}
             </TabsContent>
             <TabsContent value="breeding">
-              <BreedingManager
-                rabbits={rabbits}
-                onRabbitsUpdate={handleRabbitsUpdate}
-              />
+              <BreedingManager rabbits={rabbits} onRabbitsUpdate={handleRabbitsUpdate} />
             </TabsContent>
             <TabsContent value="health">
               <HealthTracker rabbits={rabbits} />
@@ -653,25 +564,18 @@ const DashboardContent: React.FC = () => {
                   <Rabbit className="h-6 w-6 text-green-600 dark:text-green-400" />
                   <span>Welcome to Rabbit Farming</span>
                 </CardTitle>
-                <p className="text-gray-600 dark:text-gray-300 text-center">
-                  No farm created yet
-                </p>
+                <p className="text-gray-600 dark:text-gray-300 text-center">No farm created yet</p>
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                  Get started by creating your farm to manage your rabbits,
-                  hutches, and more.
+                  Get started by creating your farm to manage your rabbits, hutches, and more.
                 </p>
               </CardContent>
             </Card>
           </>
         )}
       </main>
-      <AddRowDialog
-        open={addRowOpen}
-        onClose={() => setAddRowOpen(false)}
-        onRowAdded={handleRowAdded}
-      />
+      <AddRowDialog open={addRowOpen} onClose={() => setAddRowOpen(false)} onRowAdded={handleRowAdded} />
     </div>
   );
 };

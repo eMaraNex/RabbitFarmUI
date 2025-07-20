@@ -6,6 +6,7 @@ import { CurrencyProvider } from '@/lib/currency-context';
 import { JSX, ReactNode } from 'react';
 import PWAInstaller from '@/components/PWAInstaller.';
 import { ToastProvider } from '@/lib/toast-provider';
+import { SubscriptionProvider } from '@/lib/subscription-context';
 
 export const metadata: Metadata = {
   title: 'Sungura Master',
@@ -165,16 +166,18 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         />
       </head>
       <body className="antialiased">
-        <AuthProvider>
-          <CurrencyProvider>
-            <ThemeProvider>
-              <ToastProvider>
-                <PWAInstaller />
-                {children}
-              </ToastProvider>
-            </ThemeProvider>
-          </CurrencyProvider>
-        </AuthProvider>
+        <SubscriptionProvider>
+          <AuthProvider>
+            <CurrencyProvider>
+              <ThemeProvider>
+                <ToastProvider>
+                  <PWAInstaller />
+                  {children}
+                </ToastProvider>
+              </ThemeProvider>
+            </CurrencyProvider>
+          </AuthProvider>
+        </SubscriptionProvider>
       </body>
     </html>
   );

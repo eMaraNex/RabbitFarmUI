@@ -3,11 +3,8 @@ const OFFLINE_URL = '/offline.html';
 
 const urlsToCache = [
     '/',
-    '/dashboard',
-    '/reports',
     '/offline.html',
     '/manifest.json',
-    '/icons/icon-32x32.png',
     '/icons/icon-48x48.png',
     '/icons/icon-72x72.png',
     '/icons/icon-96x96.png',

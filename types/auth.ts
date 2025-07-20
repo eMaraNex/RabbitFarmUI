@@ -9,6 +9,9 @@ export interface User {
   farm_id?: string;
   role_id?: string;
   email_verified?: boolean;
+  avatar?: string;
+  phone?: string;
+  phone_verified?: boolean;
 }
 
 export interface AuthResponse {
