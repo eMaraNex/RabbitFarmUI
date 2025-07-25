@@ -30,7 +30,6 @@ import axios from "axios";
 import * as utils from "@/lib/utils";
 import type { Rabbit as RabbitType } from "@/types";
 import { useRouter } from "next/navigation";
-import Header from "@/components/shared/header";
 import Sidebar from "@/components/shared/sidebar";
 import type { Alert, ServerAlert, AlertCalendar } from "@/types";
 import SkeletonDashboard from "@/components/skeletons/dashboard/skeleton";
@@ -65,12 +64,12 @@ const DashboardContent: React.FC = () => {
   const [buckIdForKit, setBuckIdForKit] = useState<string>("");
   const tabsListRef = useRef<HTMLDivElement>(null);
   const notifiedRabbitsRef = useRef<Set<string>>(new Set());
-  const router = useRouter()
+  const router = useRouter();
   const [addRowOpen, setAddRowOpen] = useState<boolean>(false);
 
   const handleAddRow = () => {
     setAddRowOpen(true);
-  }
+  };
 
   const cachedFarmDetails = localStorage.getItem(`rabbit_farm_data`);
   const farmDetails = cachedFarmDetails ? JSON.parse(cachedFarmDetails) : [];
@@ -90,22 +89,22 @@ const DashboardContent: React.FC = () => {
           description: rawItem.message,
           type: type,
           time: time,
-        })
-      })
-    })
-    return transformedEvents
+        });
+      });
+    });
+    return transformedEvents;
   }
 
   const loadFromStorage = useCallback((farmId: string) => {
     try {
       const cachedRows = localStorage.getItem(`rabbit_farm_rows_${farmId}`);
-      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`)
+      const cachedHutches = localStorage.getItem(`rabbit_farm_hutches_${farmId}`);
       const cachedRabbits = localStorage.getItem(`rabbit_farm_rabbits_${farmId}`);
       return {
         rows: cachedRows ? JSON.parse(cachedRows) : [],
         hutches: cachedHutches ? JSON.parse(cachedHutches) : [],
         rabbits: cachedRabbits ? JSON.parse(cachedRabbits) : [],
-      }
+      };
     } catch (error) {
       console.error("Error loading from storage:", error);
       return { rows: [], hutches: [], rabbits: [] };
@@ -120,7 +119,7 @@ const DashboardContent: React.FC = () => {
     } catch (error) {
       console.error("Error saving to storage:", error);
     }
-  }, [])
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!user?.farm_id) {
@@ -183,7 +182,7 @@ const DashboardContent: React.FC = () => {
               : alert.name,
         message: alert.message,
         variant: alert.severity === "high" ? "destructive" : alert.severity === "medium" ? "secondary" : "outline",
-      }))
+      }));
 
       setRows(newRows);
       setHutches(newHutches);
@@ -194,7 +193,7 @@ const DashboardContent: React.FC = () => {
         rows: newRows,
         hutches: newHutches,
         rabbits: newRabbits,
-      })
+      });
       setDataLoaded(true);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -217,7 +216,7 @@ const DashboardContent: React.FC = () => {
       setBreedingRefreshTrigger((prev) => prev + 1);
     },
     [user, rows, hutches, saveToStorage],
-  )
+  );
 
   useEffect(() => {
     loadData();
@@ -299,16 +298,6 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <Header
-        user={user}
-        rows={rows}
-        logout={logout}
-        toggleSidebar={toggleSidebar}
-        CurrencySelector={CurrencySelector}
-        ThemeToggle={ThemeToggle}
-        handleAddRow={handleAddRow}
-        farmName={farmDetails?.name}
-      />
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={toggleSidebar}
@@ -340,71 +329,72 @@ const DashboardContent: React.FC = () => {
             <div className="w-full overflow-hidden">
               <TabsList
                 ref={tabsListRef}
-                className="flex w-full h-12 p-1 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-white/20 dark:border-gray-700/20 rounded-lg shadow-sm overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
+                className="flex w-full h-12 p-1 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-white/20 dark:border-gray-700/20 rounded-lg shadow-sm overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent snap-x snap-mandatory"
+                style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <TabsTrigger
-                  value="overview"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="hutches"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Hutches
-                </TabsTrigger>
-                <TabsTrigger
-                  value="breeding"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Breeding
-                </TabsTrigger>
-                <TabsTrigger
-                  value="health"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=next]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Health
-                </TabsTrigger>
-                <TabsTrigger
-                  value="feeding"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Feeding
-                </TabsTrigger>
-                <TabsTrigger
-                  value="earnings"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Earnings
-                </TabsTrigger>
-                <TabsTrigger
-                  value="reports"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Reports
-                </TabsTrigger>
-                <TabsTrigger
-                  value="analytics"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Analytics
-                </TabsTrigger>
-                <TabsTrigger
-                  value="calender"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                >
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger
-                  value="pricing"
-                  className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white whitespace-nowrap"
-                  onClick={() => router.push("/pricing")}
-                >
-                  {/* <CreditCard className="h-3 w-3 mr-1 flex-shrink-0" /> */}
-                  <span className="sm:inline">Pricing</span>
-                  {/* <span className="sm:hidden">$</span> */}
-                </TabsTrigger>
+                <div className="flex flex-nowrap">
+                  <TabsTrigger
+                    value="overview"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="hutches"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Hutches
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="breeding"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Breeding
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="health"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Health
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="feeding"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Feeding
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="earnings"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Earnings
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="reports"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Reports
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="analytics"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Analytics
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="calender"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                  >
+                    Calendar
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="pricing"
+                    className="flex-shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white snap-start min-w-[80px] text-center"
+                    onClick={() => router.push("/pricing")}
+                  >
+                    <span className="sm:inline">Pricing</span>
+                  </TabsTrigger>
+                </div>
               </TabsList>
             </div>
 
