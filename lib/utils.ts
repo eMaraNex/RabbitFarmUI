@@ -73,9 +73,10 @@ export function isBreedingReady(rabbit: any): boolean {
     return ageInMonths >= 6
   }
 }
+const normalizeUrl = (url: any) => url.replace(/\/$/, '');
 
 export const baseUrl = process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_API_URL : "https://sunguramasterapi.vercel.app";
-export const apiUrl = `${baseUrl}/api/v1`;
+export const apiUrl = `${normalizeUrl(baseUrl)}/api/v1`;
 
 export function formatRabbitCount(does: number, bucks: number): string {
   const doeText = does === 1 ? "1 doe" : does > 1 ? `${does} does` : "";
