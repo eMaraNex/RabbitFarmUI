@@ -74,7 +74,7 @@ export function isBreedingReady(rabbit: any): boolean {
   }
 }
 
-export const baseUrl = process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:5000";
+export const baseUrl = process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_API_URL : "https://sunguramasterapi.vercel.app";
 export const apiUrl = `${baseUrl}/api/v1`;
 
 export function formatRabbitCount(does: number, bucks: number): string {
