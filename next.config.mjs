@@ -9,6 +9,17 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    workerThreads: false,
+    cpus: 1
+  },
+  webpack: (config, { isServer }) => {
+    config.optimization.minimize = false
+    if (!isServer) {
+      config.resolve.fallback.fs = false
+    }
+    return config
+  },
   async headers() {
     return [
       {
