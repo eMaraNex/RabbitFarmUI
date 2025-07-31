@@ -8,6 +8,7 @@ import PWAInstaller from '@/components/PWAInstaller.';
 import { ToastProvider } from '@/lib/toast-provider';
 import { SubscriptionProvider } from '@/lib/subscription-context';
 import ClientHeaderWrapper from '@/components/ClientHeaderWrapper';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'Sungura Master',
@@ -157,14 +158,16 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
               <ThemeProvider>
                 <ToastProvider>
                   <PWAInstaller />
-                  <ClientHeaderWrapper />
-                  {children}
+                  <ErrorBoundary>
+                    <ClientHeaderWrapper />
+                    {children}
+                  </ErrorBoundary>
                 </ToastProvider>
               </ThemeProvider>
             </CurrencyProvider>
           </AuthProvider>
         </SubscriptionProvider>
-      </body>
-    </html>
+      </body >
+    </html >
   );
 }
