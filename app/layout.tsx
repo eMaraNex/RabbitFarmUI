@@ -6,6 +6,8 @@ import { CurrencyProvider } from '@/lib/currency-context';
 import { JSX, ReactNode } from 'react';
 import PWAInstaller from '@/components/PWAInstaller.';
 import { ToastProvider } from '@/lib/toast-provider';
+import { SubscriptionProvider } from '@/lib/subscription-context';
+import ClientHeaderWrapper from '@/components/ClientHeaderWrapper';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
@@ -107,12 +109,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en">
       <head>
-        {/* Preload critical resources */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="/icons/icon-192x192.png" as="image" />
-
-        {/* Additional PWA meta tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Sungura Master" />
@@ -120,8 +119,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#22c55e" />
         <meta name="msapplication-tap-highlight" content="no" />
-
-        {/* Enhanced Service Worker Registration */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -131,32 +128,21 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
                     const registration = await navigator.serviceWorker.register('/sw.js', {
                       scope: '/'
                     });
-                    
                     console.log('🐰 Sungura Master SW registered successfully:', registration);
-                    
-                    // Listen for updates
                     registration.addEventListener('updatefound', () => {
                       console.log('🔄 New version of Sungura Master available');
                     });
-                    
-                    // Check for updates periodically
                     setInterval(() => {
                       registration.update();
-                    }, 60000); // Check every minute
-                    
+                    }, 60000);
                   } catch (error) {
                     console.error('🚨 SW registration failed:', error);
                   }
                 });
               }
-              
-              // Handle app install prompt
               window.addEventListener('beforeinstallprompt', (e) => {
-                console.log('💾 Install prompt available');
                 window.deferredPrompt = e;
               });
-              
-              // Handle successful app install
               window.addEventListener('appinstalled', (e) => {
                 console.log('✅ Sungura Master installed successfully');
                 window.deferredPrompt = null;
@@ -166,19 +152,22 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         />
       </head>
       <body className="antialiased">
-        <AuthProvider>
-          <CurrencyProvider>
-            <ThemeProvider>
-              <ToastProvider>
-                <PWAInstaller />
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
-              </ToastProvider>
-            </ThemeProvider>
-          </CurrencyProvider>
-        </AuthProvider>
-      </body>
-    </html>
+        <SubscriptionProvider>
+          <AuthProvider>
+            <CurrencyProvider>
+              <ThemeProvider>
+                <ToastProvider>
+                  <PWAInstaller />
+                  <ErrorBoundary>
+                    <ClientHeaderWrapper />
+                    {children}
+                  </ErrorBoundary>
+                </ToastProvider>
+              </ThemeProvider>
+            </CurrencyProvider>
+          </AuthProvider>
+        </SubscriptionProvider>
+      </body >
+    </html >
   );
 }
