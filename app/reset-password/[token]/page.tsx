@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import * as utils from "@/lib/utils";
 import { Eye, EyeOff } from 'lucide-react';
+import { useToast } from '@/lib/toast-provider';
 
 const ResetPasswordPage = () => {
     const router = useRouter();
@@ -13,12 +14,12 @@ const ResetPasswordPage = () => {
         password: '',
         newPassword: '',
     });
-    const [error, setError] = useState('');
     const [isTokenValid, setIsTokenValid] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
+    const { showError, showSuccess } = useToast();
 
     useEffect(() => {
         const validateToken = async () => {
@@ -27,10 +28,10 @@ const ResetPasswordPage = () => {
                 if (response.data.success) {
                     setIsTokenValid(true);
                 } else {
-                    setError(response.data.message || 'Invalid or expired reset token');
+                    showError('Error', response.data.message || 'Invalid or expired reset token');
                 }
             } catch (err) {
-                setError('Error validating token');
+                showError('Error', 'Error validating token');
             } finally {
                 setIsLoading(false);
             }
@@ -45,7 +46,7 @@ const ResetPasswordPage = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (formData.password !== formData.newPassword) {
-            setError('Passwords do not match');
+            showError('Error', 'Passwords do not match');
             return;
         }
 
@@ -59,13 +60,13 @@ const ResetPasswordPage = () => {
                 }
             );
             if (response.data.success) {
-                alert('Password reset successfully');
+                showSuccess('Success', 'Password reset successfully');
                 router.push('/login');
             } else {
-                setError(response.data.message || 'Error resetting password');
+                showError('Error', response.data.message || 'Error resetting password');
             }
         } catch (err) {
-            setError('Error resetting password');
+            showError('Error', 'Error resetting password');
         } finally {
             setIsSubmitting(false);
         }
@@ -73,30 +74,19 @@ const ResetPasswordPage = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-gray-600">Validating token...</p>
-            </div>
-        );
-    }
-
-    if (!isTokenValid) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <div className="bg-white p-8 rounded-lg shadow-md">
-                    <p className="text-red-500">{error}</p>
-                </div>
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+                <p className="text-gray-600 dark:text-gray-300">Validating token...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Reset Password</h2>
-                {error && <p className="text-red-500 mb-4">{error}</p>}
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Reset Password</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                             New Password
                         </label>
                         <div className="relative">
@@ -108,19 +98,19 @@ const ResetPasswordPage = () => {
                                 onChange={handleChange}
                                 required
                                 minLength={8}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="mt-1 block w-full pl-3 pr-10 py-2 h-12 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                             >
                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
                     </div>
-                    <div className="mb-6">
-                        <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                    <div className="space-y-2">
+                        <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                             Confirm New Password
                         </label>
                         <div className="relative">
@@ -132,12 +122,12 @@ const ResetPasswordPage = () => {
                                 onChange={handleChange}
                                 required
                                 minLength={8}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="mt-1 block w-full pl-3 pr-10 py-2 h-12 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowNewPassword(!showNewPassword)}
-                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                             >
                                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
@@ -146,7 +136,7 @@ const ResetPasswordPage = () => {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
+                        className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white py-2 px-4 h-12 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? 'Resetting...' : 'Reset Password'}
                     </button>
