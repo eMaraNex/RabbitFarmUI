@@ -6,6 +6,7 @@ import axios from 'axios';
 import * as utils from "@/lib/utils";
 import { Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/lib/toast-provider';
+import SkeletonLoader from '@/components/skeletons/reset-password/page';
 
 const ResetPasswordPage = () => {
     const router = useRouter();
@@ -73,9 +74,24 @@ const ResetPasswordPage = () => {
     };
 
     if (isLoading) {
+        return <SkeletonLoader />;
+    }
+
+    if (!isTokenValid) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
-                <p className="text-gray-600 dark:text-gray-300">Validating token...</p>
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
+                    <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Invalid Token</h2>
+                    <p className="text-center text-gray-600 dark:text-gray-300 mb-6">
+                        The password reset link is invalid or has expired.
+                    </p>
+                    <button
+                        onClick={() => router.push('/login')}
+                        className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white py-2 px-4 h-12 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        Request New Reset Link
+                    </button>
+                </div>
             </div>
         );
     }
